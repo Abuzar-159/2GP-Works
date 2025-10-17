@@ -1,305 +1,301 @@
 <template>
-    <template if:true={isLoading}>
+      <template if:true={isLoading}>
         <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
     </template>
     <div class="slds-p-around_medium body" style="background:#F7F8F9; min-height: 81vh;">
-        <template if:false={isShipmentRatesOpen}>
+            <template if:false={isShipmentRatesOpen}>
 
-            <div class="slds-grid slds-wrap slds-gutters">
+        <div class="slds-grid slds-wrap slds-gutters">
 
-                <div class="slds-col slds-size_1-of-1 slds-large-size_7-of-12">
+            <div class="slds-col slds-size_1-of-1 slds-large-size_7-of-12">
 
-                    <div class="slds-m-bottom_medium slds-border_bottom slds-border_top slds-border_left slds-border_right"
-                        style="border-radius: 4px; background: white; border:1px solid #ede8e8;">
-                        <div class="slds-p-around_medium">
-                            <img src={freightviewImg} alt="Freightview Logo" style="height:70px;"
-                                class="slds-m-right_small" />
-                        </div>
+                <div class="slds-m-bottom_medium slds-border_bottom slds-border_top slds-border_left slds-border_right"
+                    style="border-radius: 4px; background: white; border:1px solid #ede8e8;">
+                    <div class="slds-p-around_medium">
+                        <img src={freightviewImg} alt="Freightview Logo" style="height:70px;"
+                            class="slds-m-right_small" />
+                    </div>
+                </div>
+
+                <div class="slds-m-bottom_medium slds-border_bottom slds-border_top slds-border_left slds-border_right"
+                    style="border-radius: 4px; background: white;border:1px solid #ede8e8;">
+
+                    <div class="slds-p-around_x-small slds-text-heading_small"
+                        style="border-bottom: 1px solid #e0e5ee;">
+                        <lightning-icon icon-name="action:map" size="x-small"
+                            class="slds-m-right_x-small"></lightning-icon>
+                        <span class="slds-text-heading_small">Where is this shipment going?</span>
                     </div>
 
-                    <div class="slds-m-bottom_medium slds-border_bottom slds-border_top slds-border_left slds-border_right"
-                        style="border-radius: 4px; background: white;border:1px solid #ede8e8;">
+                    <div class="slds-p-horizontal_small slds-p-vertical_small">
+                        <div class="slds-grid slds-wrap slds-gutters_small">
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <label class="slds-form-element__label" for="unique-input-id">
+                                    To Address
+                                </label>
+                                <c-custom-input-lookup-l-w-c obj-name="Address__c" search-placeholder="Search address"
+                                    icon-name="standard:address" is-value-selected={toAddressSelected}
+                                    selected-value={toAddress.Id} selected-name={toAddress.Name}
+                                    selected-name-url={toAddressUrl} hide-remove="true"> </c-custom-input-lookup-l-w-c>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <div class="slds-grid">
+                                    <label>Company</label>&nbsp;
+                                    <div class="required">*</div>
+                                </div>
+                                <template lwc:if={toContact.Company__c}>
+                                    <lightning-input type="text" label={label.CompanyLabel}
+                                        value={toContact.Company__r.Name} variant="label-hidden"></lightning-input>
+                                </template>
+                                <template lwc:elseif={toAddress.Customer__r.Company_txt__c}>
+                                    <lightning-input type="text" label={label.CompanyLabel}
+                                        value={toAddress.Customer__r.Company_txt__c}
+                                        variant="label-hidden"></lightning-input>
+                                </template>
+                                <template lwc:else>
+                                    <lightning-input type="text" label={label.CompanyLabel}
+                                        value={toContact.Account.Name} variant="label-hidden"></lightning-input>
+                                </template>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <div class="slds-grid">
+                                    <label>Email</label>&nbsp;
+                                    <div class="required">*</div>
+                                </div>
+                                <div lwc:if={toContact.Email}>
+                                    <lightning-input type="text" label="Email"  value={toContact.Email}
+                                        variant="label-hidden"></lightning-input>
+                                </div>
+                                <div lwc:else>
+                                    <lightning-input type="text" label="Email"  value={toContact.Account.Email__c}
+                                        variant="label-hidden"></lightning-input>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="Address Line 1"
+                                    value={toAddress.Address_Line1__c}></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="Address Line 2" value={toAddress.Address_Line2__c} ></lightning-input>
+                            </div>
 
-                        <div class="slds-p-around_x-small slds-text-heading_small"
-                            style="border-bottom: 1px solid #e0e5ee;">
-                            <lightning-icon icon-name="action:map" size="x-small"
-                                class="slds-m-right_x-small"></lightning-icon>
-                            <span class="slds-text-heading_small">Where is this shipment going?</span>
-                        </div>
+                            
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                 <div class="slds-grid">
+                                                <label>{label.PhoneLabel}</label>&nbsp;
+                                                <div class="required">*</div>
+                                            </div>
+                                            <div lwc:if={toContact.Phone}>
+                                                <lightning-input type="text" label={label.PhoneLabel}
+                                                    value={toContact.Phone} variant="label-hidden"></lightning-input>
+                                            </div>
+                                            <div lwc:else>
+                                                <lightning-input type="text" label={label.PhoneLabel}
+                                                    value={toContact.Account.Phone}
+                                                    variant="label-hidden"></lightning-input>
+                                            </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="City/Town" value={toAddress.City__c}></lightning-input>
+                            </div>
 
-                        <div class="slds-p-horizontal_small slds-p-vertical_small">
-                            <div class="slds-grid slds-wrap slds-gutters_small">
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <label class="slds-form-element__label" for="unique-input-id">
-                                        To Address
-                                    </label>
-                                    <c-custom-input-lookup-l-w-c obj-name="Address__c"
-                                        search-placeholder="Search address" icon-name="standard:address"
-                                        is-value-selected={toAddressSelected} selected-value={toAddress.Id}
-                                        selected-name={toAddress.Name} selected-name-url={toAddressUrl}
-                                        hide-remove="true"> </c-custom-input-lookup-l-w-c>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <div class="slds-grid">
-                                        <label>Company</label>&nbsp;
-                                        <div class="required">*</div>
-                                    </div>
-                                    <template lwc:if={toContact.Company__c}>
-                                        <lightning-input type="text" label={label.CompanyLabel}
-                                            value={toContact.Company__r.Name} variant="label-hidden"></lightning-input>
-                                    </template>
-                                    <template lwc:elseif={toAddress.Customer__r.Company_txt__c}>
-                                        <lightning-input type="text" label={label.CompanyLabel}
-                                            value={toAddress.Customer__r.Company_txt__c}
-                                            variant="label-hidden"></lightning-input>
-                                    </template>
-                                    <template lwc:else>
-                                        <lightning-input type="text" label={label.CompanyLabel}
-                                            value={toContact.Account.Name} variant="label-hidden"></lightning-input>
-                                    </template>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <div class="slds-grid">
-                                        <label>Email</label>&nbsp;
-                                        <div class="required">*</div>
-                                    </div>
-                                    <div lwc:if={toContact.Email}>
-                                        <lightning-input type="text" label="Email" value={toContact.Email}
-                                            variant="label-hidden"></lightning-input>
-                                    </div>
-                                    <div lwc:else>
-                                        <lightning-input type="text" label="Email" value={toContact.Account.Email__c}
-                                            variant="label-hidden"></lightning-input>
-                                    </div>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="Address Line 1"
-                                        value={toAddress.Address_Line1__c}></lightning-input>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="Address Line 2"
-                                        value={toAddress.Address_Line2__c}></lightning-input>
-                                </div>
-
-
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <div class="slds-grid">
-                                        <label>{label.PhoneLabel}</label>&nbsp;
-                                        <div class="required">*</div>
-                                    </div>
-                                    <div lwc:if={toContact.Phone}>
-                                        <lightning-input type="text" label={label.PhoneLabel} value={toContact.Phone}
-                                            variant="label-hidden"></lightning-input>
-                                    </div>
-                                    <div lwc:else>
-                                        <lightning-input type="text" label={label.PhoneLabel}
-                                            value={toContact.Account.Phone} variant="label-hidden"></lightning-input>
-                                    </div>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="City/Town" value={toAddress.City__c}></lightning-input>
-                                </div>
-
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <div
-                                        class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
-                                        <div class="slds-grid">
-                                            <label>Contact</label>
-                                            <div class="required">*</div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                               <div
+                                            class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                            <div class="slds-grid">
+                                                <label>Contact</label>
+                                                <div class="required">*</div>
+                                            </div>
+                                            <!-- <div lwc:if={toContact.Name}> -->
+                                                <lightning-input type="text" value={toContact.Name} variant="label-hidden"></lightning-input>
+                                            <!-- </div> -->
                                         </div>
-                                        <!-- <div lwc:if={toContact.Name}> -->
-                                        <lightning-input type="text" value={toContact.Name}
-                                            variant="label-hidden"></lightning-input>
-                                        <!-- </div> -->
-                                    </div>
-                                </div>
-
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="State/Province"
-                                        value={toAddress.State__c}></lightning-input>
-                                </div>
-
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3 slds-align-bottom">
-                                    <lightning-input type="checkbox" label="Is Residential"
-                                        onclick={setToShipmentType}></lightning-input>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="Zip/Postal Code"
-                                        value={toAddress.Postal_Code__c}></lightning-input>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="Country" value={toAddress.Country__c}></lightning-input>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="Opens at" value={formattedOpensAt}></lightning-input>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="Closes at" value={formattedClosesAt}></lightning-input>
-                                </div>
-
                             </div>
+                            
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="State/County" value={toAddress.State__c}></lightning-input>
+                            </div>
+
+                            <!-- <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3 slds-align-bottom">
+                                <lightning-input type="checkbox" label="Is Residential" onclick={setToShipmentType}
+                                   ></lightning-input>
+                            </div> -->
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="Zip/Postal Code"
+                                    value={toAddress.Postal_Code__c}></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="Country" value={toAddress.Country__c}></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="Opens at" value={formattedOpensAt}></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="Closes at" value={formattedClosesAt}></lightning-input>
+                            </div>
+
                         </div>
                     </div>
+                </div>
 
-                    <div class="slds-m-bottom_medium slds-border_bottom slds-border_left slds-border_right slds-border_top"
-                        style="border-radius: 4px; background: white;border:1px solid #ede8e8;">
-                        <div class="slds-p-around_x-small slds-text-heading_small"
-                            style="border-bottom: 1px solid #e0e5ee;">
-                            <lightning-icon icon-name="action:map" size="x-small"
-                                class="slds-m-right_x-small"></lightning-icon>
-                            <span class="slds-text-heading_small">Where is this shipment coming from?</span>
-                        </div>
-                        <div class="slds-p-horizontal_small slds-p-vertical_small">
-                            <div class="slds-grid slds-wrap slds-gutters_small">
+                <div class="slds-m-bottom_medium slds-border_bottom slds-border_left slds-border_right slds-border_top"
+                    style="border-radius: 4px; background: white;border:1px solid #ede8e8;">
+                    <div class="slds-p-around_x-small slds-text-heading_small"
+                        style="border-bottom: 1px solid #e0e5ee;">
+                        <lightning-icon icon-name="action:map" size="x-small"
+                            class="slds-m-right_x-small"></lightning-icon>
+                        <span class="slds-text-heading_small">Where is this shipment coming from?</span>
+                    </div>
+                    <div class="slds-p-horizontal_small slds-p-vertical_small">
+                        <div class="slds-grid slds-wrap slds-gutters_small">
 
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <label class="slds-form-element__label" for="unique-input-id">
-                                        From Address
-                                    </label>
-                                    <c-custom-input-lookup-l-w-c obj-name="Address__c"
-                                        search-placeholder="Search address" icon-name="standard:address"
-                                        is-value-selected={FromAddressSelected} selected-value={fromAddress.Id}
-                                        selected-name={fromAddress.Name} selected-name-url={fromAddressUrl}
-                                        hide-remove="true">
-                                    </c-custom-input-lookup-l-w-c>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <div class="slds-grid">
-                                        <label>Company</label>&nbsp;
-                                        <div class="required">*</div>
-                                    </div>
-                                    <template lwc:if={fromContact.Company__c}>
-                                        <lightning-input type="text" label={label.CompanyLabel}
-                                            value={fromContact.Company__r.Name}
-                                            variant="label-hidden"></lightning-input>
-                                    </template>
-                                    <template lwc:elseif={fromAddress.Customer__r.Company_txt__c}>
-                                        <lightning-input type="text" label={label.CompanyLabel}
-                                            value={fromAddress.Customer__r.Company_txt__c}
-                                            variant="label-hidden"></lightning-input>
-                                    </template>
-                                    <template lwc:else>
-                                        <lightning-input type="text" label={label.CompanyLabel}
-                                            value={fromContact.Account.Name} variant="label-hidden"></lightning-input>
-                                    </template>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <div class="slds-grid">
-                                        <label>Email</label>&nbsp;
-                                        <div class="required">*</div>
-                                    </div>
-                                    <div lwc:if={fromContact.Email}>
-                                        <lightning-input type="text" variant="label-hidden"
-                                            value={fromContact.Email}></lightning-input>
-                                    </div>
-                                    <div lwc:else>
-                                        <lightning-input type="text" variant="label-hidden"
-                                            value={fromContact.Account.Email__c}></lightning-input>
-                                    </div>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="Address Line 1"
-                                        value={fromAddress.Address_Line1__c}></lightning-input>
-                                </div>
-
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="Address Line 2"
-                                        value={fromAddress.Address_Line2__c}></lightning-input>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <div class="slds-grid">
-                                        <label>Phone</label>&nbsp;
-                                        <div class="required">*</div>
-                                    </div>
-                                    <div lwc:if={fromContact.Phone}>
-                                        <lightning-input type="text" variant="label-hidden"
-                                            value={fromContact.Phone}></lightning-input>
-                                    </div>
-                                    <div lwc:else>
-                                        <lightning-input type="text"
-                                            value={fromContact.Account.Phone}></lightning-input>
-                                    </div>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="City/Town" value={fromAddress.City__c}></lightning-input>
-                                </div>
-
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <div class="slds-grid">
-                                        <label>Contact</label>
-                                        <div class="required">*</div>
-                                    </div>
-                                    <div>
-                                        <lightning-input type="text" variant="label-hidden"
-                                            value={fromContact.Name}></lightning-input>
-                                    </div>
-                                </div>
-
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="State/Province"
-                                        value={fromAddress.State__c}></lightning-input>
-                                </div>
-
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3 slds-align-bottom">
-                                    <lightning-input type="checkbox" label="Is Residential"
-                                        onclick={setFromShipmentType}></lightning-input>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="Zip/Postal Code"
-                                        value={fromAddress.Postal_Code__c}></lightning-input>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="Country" value={fromAddress.Country__c}></lightning-input>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="Opens at" value={formattedOpensAt}></lightning-input>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input label="Closes at" value={formattedClosesAt}></lightning-input>
-                                </div>
-
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <label class="slds-form-element__label" for="unique-input-id">
+                                    From Address
+                                </label>
+                                <c-custom-input-lookup-l-w-c obj-name="Address__c" search-placeholder="Search address"
+                                    icon-name="standard:address" is-value-selected={FromAddressSelected}
+                                    selected-value={fromAddress.Id} selected-name={fromAddress.Name}
+                                    selected-name-url={fromAddressUrl} hide-remove="true">
+                                </c-custom-input-lookup-l-w-c>
                             </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <div class="slds-grid">
+                                    <label>Company</label>&nbsp;
+                                    <div class="required">*</div>
+                                </div>
+                                <template lwc:if={fromContact.Company__c}>
+                                    <lightning-input type="text" label={label.CompanyLabel}
+                                        value={fromContact.Company__r.Name} variant="label-hidden"></lightning-input>
+                                </template>
+                                <template lwc:elseif={fromAddress.Customer__r.Company_txt__c}>
+                                    <lightning-input type="text" label={label.CompanyLabel}
+                                        value={fromAddress.Customer__r.Company_txt__c}
+                                        variant="label-hidden"></lightning-input>
+                                </template>
+                                <template lwc:else>
+                                    <lightning-input type="text" label={label.CompanyLabel}
+                                        value={fromContact.Account.Name} variant="label-hidden"></lightning-input>
+                                </template>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <div class="slds-grid">
+                                    <label>Email</label>&nbsp;
+                                    <div class="required">*</div>
+                                </div>
+                                <div lwc:if={fromContact.Email}>
+                                    <lightning-input type="text" variant="label-hidden" value={fromContact.Email}
+                                        ></lightning-input>
+                                </div>
+                                <div lwc:else>
+                                    <lightning-input type="text" variant="label-hidden" value={fromContact.Account.Email__c}
+                                        ></lightning-input>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="Address Line 1" value={fromAddress.Address_Line1__c}
+                                    ></lightning-input>
+                            </div>
+
+                             <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="Address Line 2" value={fromAddress.Address_Line2__c}
+                                                 ></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <div class="slds-grid">
+                                    <label>Phone</label>&nbsp;
+                                    <div class="required">*</div>
+                                </div>
+                                <div lwc:if={fromContact.Phone}>
+                                    <lightning-input type="text" variant="label-hidden" value={fromContact.Phone}
+                                        ></lightning-input>
+                                </div>
+                                <div lwc:else>
+                                    <lightning-input type="text" value={fromContact.Account.Phone}></lightning-input>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="City/Town"   value={fromAddress.City__c}
+                                                ></lightning-input>
+                            </div>
+
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <div class="slds-grid">
+                                    <label>Contact</label>
+                                    <div class="required">*</div>
+                                </div>
+                                <div>
+                                    <lightning-input type="text"  variant="label-hidden" value={fromContact.Name}
+                                        ></lightning-input>
+                                </div>
+                            </div>
+                           
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="State/County"  value={fromAddress.State__c}
+                                               ></lightning-input>
+                            </div>
+
+                            <!-- <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3 slds-align-bottom">
+                                <lightning-input type="checkbox" label="Is Residential"  onclick={setFromShipmentType} ></lightning-input>
+                            </div> -->
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="Zip/Postal Code"  value={fromAddress.Postal_Code__c}
+                                               ></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="Country" value={fromAddress.Country__c}
+                                                ></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="Opens at" value={formattedOpensAt}
+                                                ></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input label="Closes at" value={formattedClosesAt} ></lightning-input>
+                            </div>
+
                         </div>
                     </div>
+                </div>
 
-                    <div class="slds-m-bottom_medium slds-border_bottom slds-border_left slds-border_right slds-border_top"
-                        style="border-radius: 4px; background: white;border:1px solid #ede8e8;">
-                        <div class="slds-p-around_x-small slds-text-heading_small"
-                            style="border-bottom: 1px solid #ede8e8;">
-                            <lightning-icon icon-name="action:web_link" size="x-small"
-                                class="slds-m-right_x-small"></lightning-icon>
-                            <span class="slds-text-heading_small">What are you shipping?</span>
-                        </div>
+                <div class="slds-m-bottom_medium slds-border_bottom slds-border_left slds-border_right slds-border_top"
+                    style="border-radius: 4px; background: white;border:1px solid #ede8e8;">
+                    <div class="slds-p-around_x-small slds-text-heading_small"
+                        style="border-bottom: 1px solid #ede8e8;">
+                        <lightning-icon icon-name="action:web_link" size="x-small"
+                            class="slds-m-right_x-small"></lightning-icon>
+                        <span class="slds-text-heading_small">What are you shipping?</span>
+                    </div>
 
-                        <div class="slds-p-horizontal_small slds-p-vertical_small">
-                            <table class="slds-table slds-table_cell-buffer slds-table_bordered">
-                                <thead>
-                                    <tr class="slds-line-height_reset">
-                                        <th class="" scope="col">
-                                            <div class="slds-truncate" title="Package">Package</div>
-                                        </th>
-                                        <th class="" scope="col">
-                                            <div class="slds-truncate" title="Order">Order</div>
-                                        </th>
-                                        <th class="" scope="col">
-                                            <div class="slds-truncate" title="Weight">Weight</div>
-                                        </th>
-                                        <th class="" scope="col">
-                                            <div class="slds-truncate" title="Length">Length</div>
-                                        </th>
-                                        <th class="" scope="col">
-                                            <div class="slds-truncate" title="Width">Width</div>
-                                        </th>
-                                        <th class="" scope="col">
-                                            <div class="slds-truncate" title="Height">Height</div>
-                                        </th>
-                                        <th class="" scope="col">
-                                            <div class="slds-truncate" title="Declared Value">Declared Value</div>
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <template if:true={packageList} for:each={packageList} for:item="pck"
+                    <div class="slds-p-horizontal_small slds-p-vertical_small">
+                        <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                            <thead>
+                                <tr class="slds-line-height_reset">
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="Package">Package</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="Order">Order</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="Weight">Weight</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="Length">Length</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="Width">Width</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="Height">Height</div>
+                                    </th>
+                                    <th class="" scope="col">
+                                        <div class="slds-truncate" title="Declared Value">Declared Value</div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                 <template if:true={packageList} for:each={packageList} for:item="pck"
                                         for:index="index">
                                         <tr key={pck.Id}>
                                             <td class="greyheadlabel">
@@ -356,60 +352,70 @@
                                             </td>
                                         </tr>
                                     </template>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-
-                    <div class="slds-m-bottom_medium slds-border_bottom slds-border_left slds-border_right slds-border_top"
-                        style="border-radius: 4px; background: white;border:1px solid #ede8e8;">
-                        <div class="slds-p-around_x-small slds-text-heading_small"
-                            style="border-bottom: 1px solid #e0e5ee;">
-                            <lightning-icon icon-name="action:quote" size="x-small"
-                                class="slds-m-right_x-small"></lightning-icon>
-                            <span class="slds-text-heading_small">Additional Details</span>
-                        </div>
-                        <div class="slds-p-horizontal_small slds-p-vertical_small">
-                            <div class="slds-grid slds-wrap slds-gutters_small">
-
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <!-- <lightning-input label="Emergency Contact"
-                                    placeholder="Emergency Contact" value={shipment.emergency_contact__c}></lightning-input> -->
-                                    <label class="slds-form-element__label" for="unique-input-id">
-                                        Emergency Contact
-                                    </label>
-                                    <c-input-lookup data-id="currContact" obj-name="Contact" lable="contact"
-                                        placeholder="Search contact..." icon-name="standard:contact" required
-                                        onrecordselect={handleContactSelect}></c-input-lookup>
-                                </div>
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
-                                    <lightning-input type="checkbox" label="schedule Pickup" value=""></lightning-input>
-                                </div>
-
-                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3"></div>
-                            </div>
-                        </div>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 
+                <div class="slds-m-bottom_medium slds-border_bottom slds-border_left slds-border_right slds-border_top"
+                    style="border-radius: 4px; background: white;border:1px solid #ede8e8;">
+                    <div class="slds-p-around_x-small slds-text-heading_small"
+                        style="border-bottom: 1px solid #e0e5ee;">
+                        <lightning-icon icon-name="action:quote" size="x-small"
+                            class="slds-m-right_x-small"></lightning-icon>
+                        <span class="slds-text-heading_small">Additional Details</span>
+                    </div>
+                    <div class="slds-p-horizontal_small slds-p-vertical_small">
+                        <div class="slds-grid slds-wrap slds-gutters_small">
 
-                <div class="slds-col slds-size_1-of-1 slds-large-size_5-of-12">
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                    <label class="slds-form-element__label" for="unique-input-id">
+                                    Emergency Contact
+                                </label>
+                                    <c-custom-input-lookup-l-w-c 
+                                        obj-name="Contact" 
+                                        lable="contact" 
+                                        icon-name="standard:contact" 
+                                        required={isEmergencyContactRequired}
+                                        selected-value={emergencyContactId}
+                                        selected-name={emergencyContactName}
+                                        onlookupselected={handleEmergencyContactSelected}
+                                        is-value-selected={isEmergencyContactSelected}
+                                        selected-name-url={emergencyContactUrl}
+                                        hide-remove="true">
+                                    </c-custom-input-lookup-l-w-c>
 
-                    <div class="slds-m-bottom_medium slds-border_bottom slds-border_left slds-border_right slds-border_top"
-                        style="border-radius: 4px; background: white;border:1px solid #ede8e8;">
-                        <div class="slds-p-around_x-small slds-text-heading_small"
-                            style="border-bottom: 1px solid #e0e5ee;">
-                            <lightning-icon icon-name="action:new_custom98" size="x-small"
-                                class="slds-m-right_x-small"></lightning-icon>
-                            <span class="slds-text-heading_small">Shipping Services</span>
+                                    
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3">
+                                <lightning-input type="checkbox"  label="schedule Pickup" checked={shipment.schedulePickup__c} onchange={handleSchedulePickupChange}
+                                   ></lightning-input>
+                            </div>
+                            
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-3"></div>
                         </div>
+                    </div>
+                </div>
+            </div>
 
-                        <lightning-tabset variant="scoped">
-                            <lightning-tab label="Cost">
-                                <div class="slds-p-horizontal_small slds-p-vertical_small">
-                                    <div class="slds-grid slds-wrap slds-gutters_small">
 
-                                        <div class="slds-col slds-size_1-of-1">
+            <div class="slds-col slds-size_1-of-1 slds-large-size_5-of-12">
+
+                <div class="slds-m-bottom_medium slds-border_bottom slds-border_left slds-border_right slds-border_top"
+                    style="border-radius: 4px; background: white;border:1px solid #ede8e8;">
+                    <div class="slds-p-around_x-small slds-text-heading_small"
+                        style="border-bottom: 1px solid #e0e5ee;">
+                        <lightning-icon icon-name="action:new_custom98" size="x-small"
+                            class="slds-m-right_x-small"></lightning-icon>
+                        <span class="slds-text-heading_small">Shipping Services</span>
+                    </div>
+
+                    <lightning-tabset variant="scoped">
+                        <lightning-tab label="Cost">
+                            <div class="slds-p-horizontal_small slds-p-vertical_small">
+                                <div class="slds-grid slds-wrap slds-gutters_small">
+
+                                     <div class="slds-col slds-size_1-of-1">
                                             <!--div class="required">*</div-->
                                             <!-- <label>Pickup Date</label>&nbsp;
                                         <div class="required">*</div> -->
@@ -469,135 +475,109 @@
 
 
                                         </div>
-                                        <template if:true={showCreateShipment}>
-                                            <div class="slds-col slds-size_1-of-1 slds-m-top_small">
-                                                <button class="slds-button slds-button_brand" style="width: 100%;"
-                                                    onclick={createShipment}>Create Shipment</button>
-                                            </div>
-                                        </template>
+                                    <template if:true={showCreateShipment}>   
+                                    <div class="slds-col slds-size_1-of-1 slds-m-top_small">
+                                        <button class="slds-button slds-button_brand" style="width: 100%;"
+                                            onclick={createShipment}>Create Shipment</button>
+                                    </div>
+                                    </template>
+                                   <template if:true={isPending}>
                                         <div class="slds-col slds-size_1-of-1 slds-m-top_small">
-                                            <button class="slds-button slds-button_brand" style="width: 100%;"
-                                                onclick={getQuotes}>Get Quotes</button>
+                                            <button class="slds-button slds-button_brand" style="width: 100%;" onclick={getQuotes}>
+                                                Get Quotes
+                                            </button>
                                         </div>
-                                        <template lwc:if={docIds.bol}>
-                                            <div class="slds-col slds-size_6-of-12 slds-m-top_small">
-                                                <button class="slds-button slds-button_brand slds-m-horizontal_x-small"
-                                                    data-type="bol" onclick={openPreview}>
-                                                    BOL
-                                                </button>
-                                            </div>
-                                        </template>
-
-                                        <template lwc:if={docIds.label}>
-                                            <div
-                                                class="slds-col slds-size_6-of-12 slds-m-top_small slds-text-align_right">
-                                                <button class="slds-button slds-button_brand slds-m-horizontal_x-small"
-                                                    data-type="label" onclick={openPreview}>
-                                                    Label
-                                                </button>
-                                            </div>
-                                        </template>
+                                    </template>
+                                   <template lwc:if={docIds.bol}>
+                                    <div class="slds-col slds-size_6-of-12 slds-m-top_small">
+                                        <button class="slds-button slds-button_brand slds-m-horizontal_x-small"
+                                                data-type="bol"
+                                                onclick={openPreview}>
+                                        BOL
+                                        </button>
                                     </div>
-                                </div>
-                            </lightning-tab>
+                                    </template>
 
-                            <!--lightning-tab label="Process">
-                            <div class="slds-p-horizontal_small slds-p-vertical_small">
-                                <div class="slds-grid slds-wrap slds-gutters_small">
-                                    <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-2">
-                                        <lightning-input label="Shipment Name" value="Shipment Name"></lightning-input>
-                                    </div>
-                                    <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-2">
-                                        <lightning-combobox label="Shipment Status" placeholder="Status"
-                                            options={shipmentStatusOptions}></lightning-combobox>
-                                    </div>
-
-                                    <div class="slds-col slds-size_1-of-1 slds-m-top_medium">
-                                        <h3 class="slds-text-heading_small slds-m-bottom_small">UPS Pickup Details</h3>
-                                        <div class="slds-box slds-box_border slds-p-around_medium">
-                                            <div class="slds-grid slds-wrap slds-gutters_small">
-                                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-2">
-                                                    <lightning-input type="datetime"
-                                                        label="Pickup Ready Time"></lightning-input>
-                                                </div>
-                                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-2">
-                                                    <lightning-input type="datetime"
-                                                        label="Pickup Close Time"></lightning-input>
-                                                </div>
-                                                <div class="slds-col slds-size_1-of-1 slds-large-size_1-of-2">
-                                                    <lightning-input label="UPS Pickup Reference No"></lightning-input>
-                                                </div>
-                                                <div
-                                                    class="slds-col slds-size_1-of-1 slds-large-size_1-of-2 slds-grid slds-grid_vertical slds-m-top_medium">
-                                                    <lightning-button label="UPS Pickup Rate" variant="brand"
-                                                        class="slds-m-bottom_x-small"></lightning-button>
-                                                    <lightning-button label="Create Pick Up" variant="brand"
-                                                        class="slds-m-bottom_x-small"></lightning-button>
-                                                    <lightning-button label="Cancel Pick Up"
-                                                        variant="neutral"></lightning-button>
-                                                </div>
-                                            </div>
+                                    <template lwc:if={docIds.label}>
+                                        <div class="slds-col slds-size_6-of-12 slds-m-top_small slds-text-align_right">
+                                        <button class="slds-button slds-button_brand slds-m-horizontal_x-small"
+                                                data-type="label"
+                                                onclick={openPreview}>
+                                        Label
+                                        </button>
                                         </div>
-                                    </div>
+                                    </template>
                                 </div>
                             </div>
-                        </lightning-tab> -->
+                        </lightning-tab>
 
-                            <lightning-tab label="Track">
-                                <div class="slds-p-horizontal_small slds-p-vertical_small">
-                                    <div class="slds-grid slds-wrap slds-gutters_small">
-                                        <div class="slds-col slds-size_1-of-1">
-                                            <lightning-input label="Tracking no."
-                                                placeholder="Tracking Number"></lightning-input>
-                                        </div>
+                        <lightning-tab label="Track">
+    <div class="slds-p-horizontal_small slds-p-vertical_small">
+        <div class="slds-grid slds-wrap slds-gutters_small">
+            <div class="slds-col slds-size_1-of-1">
+                <lightning-input 
+                    label="Tracking no."
+                    value={FVshipmentID} readonly>
+                </lightning-input>
+            </div>
 
-                                        <div class="slds-col slds-size_1-of-1 slds-m-top_small">
-                                            <lightning-button label="Cancel Shipment" variant="neutral"
-                                                class="slds-m-right_small"></lightning-button>
-                                            <lightning-button label="Track Shipment" variant="brand"></lightning-button>
-                                        </div>
+            <div class="slds-col slds-size_1-of-1 slds-m-top_small">
+                <lightning-button 
+                    label="Cancel Shipment" 
+                    variant="neutral"
+                    class="slds-m-right_small">
+                </lightning-button>
+                
+                <lightning-button 
+                    label="Track Shipment" 
+                    variant="brand"
+                    onclick={handleTrackShipment}
+                    >
+                </lightning-button>
+            </div>
 
-                                        <div class="slds-col slds-size_1-of-1 slds-m-top_large">
-                                            <h3
-                                                class="slds-text-heading_medium slds-text-align_center slds-m-bottom_medium">
-                                                Tracking Details of the Shipment</h3>
-                                            <table class="slds-table slds-table_cell-buffer slds-table_bordered">
-                                                <thead>
-                                                    <tr class="slds-line-height_reset">
-                                                        <th scope="col">
-                                                            <div class="slds-truncate">Location</div>
-                                                        </th>
-                                                        <th scope="col">
-                                                            <div class="slds-truncate">Date/Time</div>
-                                                        </th>
-                                                        <th scope="col">
-                                                            <div class="slds-truncate">Description</div>
-                                                        </th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td data-label="Location">Location 1</td>
-                                                        <td data-label="Date/Time">2025-10-08 10:00</td>
-                                                        <td data-label="Description">Shipment picked up</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td data-label="Location">Location 2</td>
-                                                        <td data-label="Date/Time">2025-10-09 15:00</td>
-                                                        <td data-label="Description">Shipment in transit</td>
-                                                    </tr>
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            </lightning-tab>
+            <div class="slds-col slds-size_1-of-1 slds-m-top_large">
+                <h3 class="slds-text-heading_medium slds-text-align_center slds-m-bottom_medium">
+                    Tracking Details of the Shipment
+                </h3>
 
-                        </lightning-tabset>
+                <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                    <thead>
+                        <tr>
+                            <th>Date / Time</th>
+                            <th>Event Type</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template if:true={trackingList}>
+                            <template for:each={trackingList} for:item="event">
+                                <tr key={event.createdDate}>
+                                    <td>{event.eventDate} {event.eventTime}</td>
+                                    <td>{event.eventType}</td>
+                                    <td>{event.summary}</td>
+                                </tr>
+                            </template>
+                        </template>
+                        <template if:false={trackingList}>
+                            <tr>
+                                <td colspan="3" class="slds-text-align_center">
+                                    No tracking events available.
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+                        </lightning-tab>
 
-                    </div>
+                    </lightning-tabset>
 
-                    <!-- <div class="slds-m-bottom_medium slds-border_bottom slds-border_left slds-border_right slds-border_top"
+                </div>
+
+                <!-- <div class="slds-m-bottom_medium slds-border_bottom slds-border_left slds-border_right slds-border_top"
                     style="border-radius: 4px; background: white;border:0px solid #ede8e8;">
                     <div class="slds-p-around_x-small slds-text-heading_small"
                         style="border-bottom: 1px solid #e0e5ee;">
@@ -617,20 +597,28 @@
                     </div>
                 </div> -->
 
-                </div>
-
             </div>
-        </template>
-        <template if:true={isShipmentRatesOpen}>
-            <template if:true={shipment}>
-                <c-shippment-rates class="full-page" from-address={fromAddress} to-address={toAddress}
-                    from-contact={fromContact} to-contact={toContact} package-list={packageList} quotes={quotes}
-                    shipment={shipment} credentials={credentials} onbacktoparent={handleBackFromShipmentRates}>
-                </c-shippment-rates>
-            </template>
 
-        </template>
+        </div>
+</template>
+ <template if:true={isShipmentRatesOpen}>
+       <template if:true={shipment}>
+        <c-shippment-rates
+            class="full-page"
+            from-address={fromAddress}
+            to-address={toAddress}
+            from-contact={fromContact}
+            to-contact={toContact}
+            package-list={packageList}
+            quotes={quotes}
+            shipment={shipment}
+            credentials={credentials}
+            onbacktoparent={handleBackFromShipmentRates}>
+        </c-shippment-rates>
+    </template>
+
+    </template>
 
     </div>
-
+     
 </template>

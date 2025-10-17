@@ -1,0 +1,463 @@
+<template>
+<template if:true={isLoading}>
+        <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
+    </template>
+    <div class="slds-grid slds-wrap slds-p-around_medium ui-container">
+        <header class="slds-col slds-size_1-of-1 slds-m-bottom_medium slds-border_bottom header-section">
+            <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center slds-p-vertical_small">
+                <div class="slds-col slds-grid slds-grid_vertical-align-center">
+                  <a href="javascript:void(0);" 
+                    class="slds-button slds-button_icon slds-button_icon-small slds-m-right_small"
+                    title="Back" 
+                    onclick={handleBackToForm}>
+                        <lightning-icon icon-name="utility:chevronleft" alternative-text="Back" size="x-small"></lightning-icon>
+                    </a>
+                    <div class="slds-media__body slds-grid slds-grid_vertical-align-center">
+                        <lightning-icon icon-name='standard:shipment' alternative-text='shipment' size='large'
+                            title='shipment' class='slds-m-right_small'></lightning-icon>
+                        <div>
+                            <h1 class="slds-text-heading_medium">Select Shipping Service</h1>
+                            <p class="slds-text-body_small slds-text-color_weak">Compare quotes and choose the best
+                                option</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-col slds-grid slds-grid_align-end">
+                    <!--div class="weight-badge">
+                <lightning-icon icon-name="utility:package" alternative-text="Weight" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+                <span class="slds-text-body_small slds-text-color_weak slds-m-right_x-small">Weight:</span>
+                <span class="slds-text-heading_x-small slds-line-height_reset">5 lbs</span>
+            </div-->
+                </div>
+            </div>
+        </header>
+        <template if:false={isSuccessPageOpen}>
+
+            <div class="slds-col slds-size_1-of-1 slds-grid slds-wrap main-content-grid">
+
+                <div
+                    class="slds-col slds-size_1-of-1 slds-large-size_7-of-12 slds-p-right_large slds-max-medium-size_1-of-1">
+                    <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-end slds-m-bottom_medium">
+
+                        <div class="slds-col">
+                            <h2 class="slds-text-heading_small"><strong>Available Shipping Options</strong></h2>
+                            <p class="slds-text-body_small slds-text-color_weak">11 services available for your shipment
+                            </p>
+                        </div>
+
+                        <div class="slds-col slds-text-align_right">
+                            <div class="sort-control-wrapper">
+
+                                <span>Sort by Price</span>
+
+                                <lightning-icon icon-name="utility:chevrondown" size="x-small"
+                                    class="slds-m-left_x-small"></lightning-icon>
+
+                                <select class="styled-select" id="sort-by-price" name="sort-by-price">
+                                    <option value="" disabled selected>Sort by Price</option>
+                                    <option value="low-high">Price: Low to High</option>
+                                    <option value="high-low">Price: High to Low</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div
+                        class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center slds-m-bottom_large filter-row">
+                        <div class="slds-col slds-size_12-of-12 filter-carrier-container">
+                            <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+
+                                <div class="slds-col slds-m-right_medium">
+                                    <span
+                                        class="slds-text-body_small slds-font-weight_semibold slds-text-color_weak"><strong>Filter
+                                            by carrier</strong></span>
+                                </div>
+
+                                <div class="slds-col slds-grid slds-grid_align-end">
+                                    <div class="carrier-chips">
+                                        <span
+                                            class="carrier-chip fedex-active slds-grid slds-grid_align-center slds-p-horizontal_x-small">
+                                            <span class="carrier-label">All</span>
+                                            <lightning-icon icon-name="utility:check" variant="bare" size="xx-small"
+                                                class="slds-m-left_x-small"></lightning-icon>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="slds-col slds-size_6-of-12 slds-grid slds-grid_align-end sort-filter-container">
+
+
+                        </div>
+                    </div>
+
+ <div class="service-list">
+        <template if:true={groupedQuotes}>
+            <template for:each={groupedQuotes} for:item="grp" for:index="index">
+                <div class="service-card slds-m-bottom_medium" key={grp.key}>
+                    <div class="slds-grid slds-grid_vertical-align-center slds-p-around_small slds-p-left_medium"
+                         style="cursor: pointer;"
+                         data-index={index}
+                         onclick={toggleChildServices}>
+                        <div class="dot-selector"></div>
+
+                        <div class="slds-col slds-p-left_medium">
+                            <div class="slds-text-heading_small service-name slds-m-bottom_small">
+                                {grp.displayName} ({grp.optionsCount} Options)
+                            </div>
+                            <div class="slds-grid slds-text-body_small slds-text-color_weak">
+                                <div class="slds-m-right_medium">
+                                    <lightning-icon icon-name="utility:clock" size="xx-small"
+                                                    class="slds-m-right_x-small"></lightning-icon>
+                                    {grp.transitDisplay}
+                                </div>
+                                <template if:true={grp.showMostAffordableTag}>
+                                    <div class="tag-label most-affordable">Most affordable</div>
+                                </template>
+                                <template if:true={grp.showReliableTag}>
+                                    <div class="tag-label reliable-delivery">Reliable delivery</div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="slds-col_bump-left slds-text-align_right slds-p-right_medium">
+                            <div class="slds-text-heading_medium total-cost">{grp.minAmountFormatted}+</div>
+                            <div class="slds-text-body_small slds-text-color_weak">Starting cost</div>
+                        </div>
+
+                        <lightning-icon icon-name="utility:chevrondown" size="small"
+                                        class="accordion-icon slds-p-left_small"></lightning-icon>
+                    </div>
+
+                    <div class={grp.childContainerClass} data-id="child-services-list">
+                        <hr class="slds-m-top_x-small slds-m-bottom_none" />
+                        <template for:each={grp.quotes} for:item="q" for:index="ci">
+                            <div key={q.quoteId}
+                                 class={q.childCardClass}
+                                 data-id={q.quoteId}
+                                 onclick={handleQuoteSelect}>
+                                <div class="slds-grid slds-grid_vertical-align-center">
+                                    <div class="dot-selector"></div>
+                                    <div class="slds-col slds-p-left_medium">
+                                        <div class="slds-text-heading_small service-name">
+                                            {q.serviceDescription}
+                                        </div>
+                                        <div class="slds-text-body_small slds-text-color_weak">
+                                            {q.helperLine}
+                                        </div>
+                                    </div>
+                                    <div class="slds-col_bump-left slds-text-align_right">
+                                        <div class="slds-text-heading_medium total-cost">{q.amountFormatted}</div>
+                                        <div class="slds-text-body_small slds-text-color_weak">Total cost</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+            </template>
+        </template>
+
+        <template if:false={groupedQuotes}>
+            <div class="slds-text-body_regular slds-p-around_small slds-text-color_weak">
+                No quotes to display.
+            </div>
+        </template>
+    </div>
+                </div>
+
+                <div
+                    class="slds-col slds-size_1-of-1 slds-large-size_5-of-12 slds-max-medium-size_1-of-1 summary-column">
+                    <div class="summary-card">
+                        <h3 class="slds-text-heading_small slds-m-bottom_medium">Shipment Summary</h3>
+
+
+
+                        <div class="slds-m-vertical_medium separator"></div>
+
+                        <div class="address-detail slds-m-bottom_large">
+                            <div class="slds-grid slds-grid_vertical-align-center slds-m-bottom_xx-small">
+                                <lightning-icon icon-name="action:map" alternative-text="To Location" size="x-small"
+                                    class="slds-m-right_x-small"></lightning-icon>
+                                <p class="slds-text-body_small slds-text-color_weak slds-no-flex">To</p>
+                            </div>
+                            <template lwc:if={toContact.Company__c}>
+                                <p class="slds-text-body_medium slds-font-weight_semibold">
+                                    {toContact.Company__r.Name}
+                                </p>
+                            </template>
+
+                            <template lwc:elseif={toAddress.Customer__r.Company_txt__c}>
+                                <p class="slds-text-body_medium slds-font-weight_semibold">
+                                    {toAddress.Customer__r.Company_txt__c}
+                                </p>
+                            </template>
+
+                            <template lwc:else>
+                                <p class="slds-text-body_medium slds-font-weight_semibold">
+                                    {toContact.Account.Name}
+                                </p>
+                            </template>
+                            <p class="slds-text-body_small slds-text-color_weak">{toAddress.Name}</p>
+                        </div>
+
+                        <div class="address-detail slds-m-bottom_small">
+                            <div class="slds-grid slds-grid_vertical-align-center slds-m-bottom_xx-small">
+                                <lightning-icon icon-name="action:map" alternative-text="From Location" size="x-small"
+                                    class="slds-m-right_x-small"></lightning-icon>
+                                <p class="slds-text-body_small slds-text-color_weak slds-no-flex">From</p>
+                            </div>
+                            <template lwc:if={fromContact.Company__c}>
+                                <p class="slds-text-body_medium slds-font-weight_semibold">
+                                    {fromContact.Company__r.Name}
+                                </p>
+                            </template>
+
+                            <template lwc:elseif={fromAddress.Customer__r.Company_txt__c}>
+                                <p class="slds-text-body_medium slds-font-weight_semibold">
+                                    {fromAddress.Customer__r.Company_txt__c}
+                                </p>
+                            </template>
+
+                            <template lwc:else>
+                                <p class="slds-text-body_medium slds-font-weight_semibold">
+                                    {fromContact.Account.Name}
+                                </p>
+                            </template>
+                            <p class="slds-text-body_small slds-text-color_weak">{fromAddress.Name}</p>
+                        </div>
+
+                        <div class="slds-m-vertical_medium separator"></div>
+
+<template if:true={packageList} for:each={packageList} for:item="pck">
+    <div key={pck.Id} class="package-block slds-m-bottom_large">
+        <div class="detail-row slds-m-bottom_small">
+            <span class="label slds-text-color_weak">Package : </span>
+            <span class="value slds-font-weight_semibold">{pck.Name}</span>
+        </div>
+        <div class="detail-row slds-m-bottom_small">
+            <span class="label slds-text-color_weak">Weight:</span>
+            <span class="value slds-font-weight_semibold">{pck.Weight__c}</span>
+        </div>
+        <div class="detail-row slds-m-bottom_small">
+            <span class="label slds-text-color_weak">Dimensions:</span>
+            <span class="value slds-font-weight_semibold">{pck.Length__c}" x {pck.Width__c}" x {pck.Height__c}"</span>
+        </div>
+        <div class="detail-row slds-m-bottom_small">
+            <span class="label slds-text-color_weak">Declared Value:</span>
+            <span class="value slds-font-weight_semibold">{pck.Declared_Value__c}</span>
+        </div>
+        <hr class="slds-m-vertical_small"/>
+    </div>
+</template>
+
+
+
+                        <div class="selected-service-summary slds-p-around_medium slds-m-bottom_large">
+                            <h4 class="slds-text-body_medium slds-font-weight_semibold slds-m-bottom_small">
+                                <lightning-icon icon-name="action:approval" size="xx-small"
+                                    class="slds-m-right_x-small"></lightning-icon>
+                                Selected Service
+                            </h4>
+                            <p class="slds-text-heading_small slds-m-bottom_x-small"> {selectedService.carrier}</p>
+                            <p class="slds-text-body_medium slds-text-color_weak slds-m-bottom_small"> {selectedService.service}</p>
+                            <div class="slds-grid slds-grid_align-spread slds-border_top slds-p-top_x-small">
+                                <span class="slds-text-body_small slds-text-color_weak">Total Cost</span>
+                                <span class="slds-text-heading_medium slds-font-weight_bold">{selectedService.amountFormatted}</span>
+                            </div>
+                        </div>
+
+                        <div
+                            class="slds-grid slds-grid_align-spread slds-p-top_medium slds-m-bottom_small action-buttons-container">
+
+                            <div class="slds-col slds-size_1-of-2 slds-p-right_x-small">
+                                <button type="button" title="Ready to Ship" onclick={handleReadyToShip}
+                                    class="slds-button slds-button_brand ready-to-ship-btn" style="width: 100%;">
+                                    Ready to Ship
+                                </button>
+                            </div>
+
+                            <div class="slds-col slds-size_1-of-2 slds-p-left_x-small">
+                                <button type="button" title="Back to Form" onclick={handleBackToForm}
+                                    class="slds-button slds-button_neutral back-to-form-btn" style="width: 100%;">
+                                    Back to Form
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </template>
+
+       <template if:true={isSuccessPageOpen}>
+ 
+            <!--Success Page -->
+            <div
+                style="display: flex; justify-content: center; align-items: center; min-height: 100vh; background-color: #f7f9fb; width: 100%;">
+                <div class="slds-scope slds-container_medium slds-container_center slds-p-around_large slds-text-align_center"
+                    style="width: 48rem;">
+ 
+                    <div class="slds-m-vertical_x-large slds-m-bottom_large">
+                        <lightning-icon icon-name="action:check" size="large"></lightning-icon>
+ 
+                        <p class="slds-text-body_regular slds-m-top_medium">
+                            Your shipment has been processed and is ready for pickup
+                        </p>
+                    </div>
+ 
+                    <div class="slds-box slds-p-around_none slds-card"
+                        style="box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); border: 0px solid #ddd;border-radius: 10px;">
+ 
+                        <h2 class="slds-text-heading_small slds-p-around_medium">Shipment Details</h2>
+ 
+ 
+                        <template if:true={shipment}>
+    <!-- <template for:each={ShipDetails} for:item="ship"> -->
+        <div key={ship.Id} class="slds-grid slds-wrap"
+            style="border-top: 1px solid #f3f3f3; border-bottom: 1px solid #f3f3f3;">
+           
+            <!-- Tracking Number -->
+            <div class="slds-col slds-size_1-of-2 slds-p-around_medium slds-text-align_left"
+                style="border-right: 1px solid #f3f3f3;">
+                <p class="slds-text-title_caps slds-m-bottom_xx-small">Tracking Number</p>
+                <p class="slds-text-heading_medium slds-text-color_default">
+                    {shipment.TrackingNumber__c}
+                </p>
+            </div>
+ 
+            <!-- Shipment ID -->
+            <div class="slds-col slds-size_1-of-2 slds-p-around_medium slds-text-align_left">
+                <p class="slds-text-title_caps slds-m-bottom_xx-small">Shipment ID</p>
+                <p class="slds-text-heading_medium slds-text-color_default">
+                    <a href={shipment.shipmentUrl} target="_blank"
+                       class="slds-text-link"
+                       data-id={shipment.Id}
+                       onclick={handleShipmentClick}>
+                       {shipment.Id}
+                    </a>
+                </p>
+            </div>
+ 
+        </div>
+  
+<!-- </template> -->
+ 
+ 
+                        <div class="slds-grid slds-wrap" style="border-bottom: 1px solid #f3f3f3;">
+                            <div class="slds-col slds-size_1-of-2 slds-p-around_medium slds-text-align_left"
+                                style="border-right: 1px solid #f3f3f3;">
+                                <p class="slds-text-title_caps slds-m-bottom_xx-small">Carrier</p>
+                                <div
+                                    class="slds-grid slds-grid_align-start slds-text-heading_medium slds-text-color_default">
+                                    <span class="slds-icon_container slds-icon-standard-shipping slds-m-right_x-small"
+                                        style="background-color: #551A8B; border-radius: 4px;">
+                                        <svg class="slds-icon slds-icon_small slds-icon-text-inverse"
+                                            aria-hidden="true">
+                                            <use xlink:href="/assets/icons/standard-sprite/svg/symbols.svg#log_a_call">
+                                            </use>
+                                        </svg>
+                                    </span>
+                                    <span>{shipment.Carrier__c}</span>
+                                </div>
+                            </div>
+                            <div class="slds-col slds-size_1-of-2 slds-p-around_medium slds-text-align_left">
+                                <p class="slds-text-title_caps slds-m-bottom_xx-small">Service</p>
+                                <p class="slds-text-heading_medium slds-text-color_default">{shipment.service_Description__c}</p>
+                            </div>
+                        </div>
+ 
+                        <div class="slds-grid slds-wrap" style="border-bottom: 1px solid #f3f3f3;">
+                            <!-- <div class="slds-col slds-size_1-of-2 slds-p-around_medium slds-text-align_left"
+                                style="border-right: 1px solid #f3f3f3;">
+                                <p class="slds-text-title_caps slds-m-bottom_xx-small">Estimated Delivery</p>
+                                <p class="slds-text-heading_medium slds-text-color_default">1 Business Day</p>
+                            </div> -->
+                            <div class="slds-col slds-size_1-of-2 slds-p-around_medium slds-text-align_left">
+                                <p class="slds-text-title_caps slds-m-bottom_xx-small">Total Cost</p>
+                                <p class="slds-text-heading_medium slds-text-color_default">{shipment.Shipping_Amount__c}</p>
+                            </div>
+                        </div>
+   </template>
+                        <div class="slds-p-around_large slds-text-align_center" style="border-top: 1px solid #f3f3f3;">
+                            <p class="slds-text-title_caps slds-m-bottom_x-small">From</p>
+                            </div>
+                            <template lwc:if={fromContact.Company__c}>
+                                <p class="slds-text-body_medium slds-font-weight_semibold">
+                                    {fromContact.Company__r.Name}
+                                </p>
+                            </template>
+ 
+                            <template lwc:elseif={fromAddress.Customer__r.Company_txt__c}>
+                                <p class="slds-text-body_medium slds-font-weight_semibold">
+                                    {fromAddress.Customer__r.Company_txt__c}
+                                </p>
+                            </template>
+ 
+                            <template lwc:else>
+                                <p class="slds-text-body_medium slds-font-weight_semibold">
+                                    {fromContact.Account.Name}
+                                </p>
+                            </template>
+                            <p class="slds-text-body_small slds-text-color_weak"></p>
+                            <p class="slds-text-body_regular slds-m-bottom_large">{fromAddress.Name}</p>
+ 
+                            <p class="slds-text-title_caps slds-m-bottom_x-small">To</p>
+                            <!-- <p class="slds-text-heading_medium slds-m-bottom_xx-small">Quantum Tech Solution</p> -->
+                             <template lwc:if={toContact.Company__c}>
+                                <p class="slds-text-heading_medium slds-m-bottom_xx-small">
+                                    {toContact.Company__r.Name}
+                                </p>
+                            </template>
+ 
+                            <template lwc:elseif={toAddress.Customer__r.Company_txt__c}>
+                                <p class="slds-text-heading_medium slds-m-bottom_xx-small">
+                                    {toAddress.Customer__r.Company_txt__c}
+                                </p>
+                            </template>
+ 
+                            <template lwc:else>
+                                <p class="slds-text-heading_medium slds-m-bottom_xx-small">
+                                    {toContact.Account.Name}
+                                </p>
+                            </template>
+                            <p class="slds-text-body_regular">{toAddress.Name}</p>
+                        </div>
+ 
+                    <div class="slds-m-top_large slds-grid slds-grid_align-center">
+                        <!-- <button class="slds-button slds-button_brand slds-m-horizontal_x-small">Label</button>
+                        <button class="slds-button slds-button_brand slds-m-horizontal_x-small">BOL</button> -->
+                        <template lwc:if={docIds.bol}>
+    <button class="slds-button slds-button_brand slds-m-horizontal_x-small"
+            data-type="bol"
+            onclick={openPreview}>
+      BOL
+    </button>
+  </template>
+
+  <template lwc:if={docIds.label}>
+    <button class="slds-button slds-button_brand slds-m-horizontal_x-small"
+            data-type="label"
+            onclick={openPreview}>
+      Label
+    </button>
+  </template>
+                        <!-- <button class="slds-button slds-button_destructive slds-m-horizontal_x-small">Cancel
+                            shipment</button> -->
+                        <!-- <button class="slds-button slds-button_neutral slds-m-horizontal_x-small"></button> -->
+                        <template if:true={isSuccessPageOpen}>
+                            <div class="slds-m-top_large slds-text-align_center">
+ 
+                                <button class="slds-button slds-button_neutral" onclick={handleGoBack}>Go back</button>
+                            </div>
+ 
+                        </template>
+                    </div>
+ 
+                </div>
+            </div>
+            <!--success pages ends here-->
+        </template>
+ 
+
+    </div>
+</template>

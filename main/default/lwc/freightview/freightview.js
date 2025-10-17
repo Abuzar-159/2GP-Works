@@ -7,7 +7,9 @@ import freightviewLogo from '@salesforce/resourceUrl/freightviewLogo';
 import getInitialData from '@salesforce/apex/freightView.getDefaultData';
 import shippingRequestResponse from '@salesforce/apex/freightView.shippingRequestResponse';
 import getQuoteRates from '@salesforce/apex/freightView.getQuoteRates';
- import getShipmentDocs from '@salesforce/apex/freightView.getShipmentDocs';    
+import getShipmentDocs from '@salesforce/apex/freightView.getShipmentDocs';
+import getTrackingHistory from '@salesforce/apex/freightView.getTrackingHistory';
+import getContactPhone from '@salesforce/apex/freightView.getContactPhone';
  
  
 
@@ -32,7 +34,7 @@ export default class freightview extends NavigationMixin(LightningElement)
         @track isLoading = false;
         @track toContact = { Id: '', Name: '', Company__c: '', Email: '', Phone: '', AccountId: '', Account: { Id: '', Name: '', Phone: '', Email__c: '' },Company__r:{Id:'',Name: ''} }; 
     @track fromAddress = { 'Id': '', Name: '', Address_Line1__c: '', Address_Line2__c: '', City__c: '', State__c: '', Postal_Code__c: '', Country__c: '', Contact__c: '', Contact__r: { Id: '', Name: '', Company__c: '' }, Customer__c: '', Customer__r: { Id: '', Name: '', Company_txt__c: '' }, opens_at__c : '', closes_at__c : ''};
-@track shipment = { Id: null, Name: '', emergency_contact__c: '', schedulePickup__c: '', Status__c: '', TrackingNumber__c: '', Label_options__c: 'LABEL', Invoice_Number__c: '', Purchase_Order_Number__c: '', Terms_Of_Shipment__c: '', Reason_For_Export__c: 'SAMPLE', Declaration_Statement__c: '', Shipment_Date__c: '', Description__c: '', Signature_Services__c: '', Shipment_Billing_options__c: 'SENDER', Fedex_Special_Services__c: '', Billing_Account_Number__c: '', Billing_Contact__c: '', Billing_Contact__r: { Id: '', Name: '' }, Billing_Address__c: '', Billing_Address__r: { Id: '', Name: '' }, ShipmentID__c : '' };
+@track shipment = { Id: null, Name: '', emergency_contact__c: '', emergency_contact__r: {Id:'',Name:'',Phone:''}, schedulePickup__c: true, Status__c: '', TrackingNumber__c: '', Label_options__c: 'LABEL', Invoice_Number__c: '', Purchase_Order_Number__c: '', Terms_Of_Shipment__c: '', Reason_For_Export__c: 'SAMPLE', Declaration_Statement__c: '', Shipment_Date__c: '', Description__c: '', Signature_Services__c: '', Shipment_Billing_options__c: 'SENDER', Fedex_Special_Services__c: '', Billing_Account_Number__c: '', Billing_Contact__c: '', Billing_Contact__r: { Id: '', Name: '' }, Billing_Address__c: '', Billing_Address__r: { Id: '', Name: '' }, ShipmentID__c : '' };
         @track fromContact = { Id: '', Name: '', Company__c: '', Email: '', Phone: '', AccountId: '', Account: { Id: '', Name: '', Phone: '', Email__c: '' },Company__r:{Id:'',Name: ''} };
 
     @track toAddress = { 'Id': '', Name: '', Address_Line1__c: '', Address_Line2__c: '', City__c: '', State__c: '', Postal_Code__c: '', Country__c: '', Customer__c: '', Customer__r: { Id: '', Name: '', Company_txt__c: '' }, opens_at__c : '', closes_at__c : '' };
@@ -50,21 +52,6 @@ export default class freightview extends NavigationMixin(LightningElement)
     @track billContactSelected = false;
     @track isShipmentRatesOpen = false;
     @track showRates = false;
-    // @track billingContact = { Id: null, Name: '' };
-    // @track billingAddress = { Id: null, Name: '' };
-    // @track billingContactSelected = true;
-    @track isBillingAddressSelected = false;
-    @track isBillingContactSelected = false;
-    @track BillingAddressUrl = '';
-    @track BillingContactUrl = '';
-    @track BillingAddressName = '';
-    @track BillingContactName = '';
-
-
-
-
-
-   
 
     @api returnmaid;
     @api refundamt;
@@ -75,365 +62,51 @@ export default class freightview extends NavigationMixin(LightningElement)
     @api shipmentIds = '';
     @api packageList;
     @track quotes;
-    @track showCreateShipment = true;
-     @track defaultDate;
-    @track minDate;
+    @track showCreateShipment=true;
+    @track FVshipmentID='';
+    @track trackingList = [];
+    @track emergencyContactUrl='';
+
+    @track selectedBillingAddress = null;
+    @track isBillingAddressSelected = false;
+    @track isBillingContactSelected = false;
+
+    @track BillingAddressUrl = '';
+    @track BillingContactUrl = '';
+    @track BillingAddressName = '';
+    @track BillingContactName = '';
+
     errorList = [];
     minShipDate;
     docIds = {};
-    shipmentDateValue;
-    billingContactUrl;
-    billingAddressUrl;
-    
-
     
     
-
-
-    // connectedCallback() {
-    //     try {
-    //         this.isLoading = true;
-    //         console.log('ReturnMAID:', this.returnmaid);
-    //     console.log('Refund Amount:', this.refundamt);
-    //     console.log('isSOAccess:', this.issaccess);
-    //     console.log('isOrderAcc:', this.isorderacc);
-    //     console.log('package ids',this.packageIds);
-    //         console.log('this.shipmentIds : ', this.shipmentIds);
-    //         var boolValue =false;
-    //         getInitialData({ ShipId: this.shipmentIds, packIds: JSON.stringify(this.packageIds), ReturnShip: boolValue})
-    //             .then(result => {
-    //                 console.log('from address ==>',result.fromAddress);
-                    
-    //                 console.log('getInitialData res : ', JSON.stringify(result));
-    //                 if (result) {
-    //                     if (result.alertlist && result.alertlist.length > 0) {
-    //                         this.errorList = Object.assign([], this.errorList);
-    //                         this.errorList = result.alertlist;
-    //                         this.ShowGetRate = false;
-    //                         this.isLoading = false;
-    //                     }
-    //                     else {
-    //                         this.defaulWrap = result;
-    //                         //console.log('1');
-    //                         this.credentials = result.credsWrap;
-    //                         console.log('this.credentials : ', JSON.stringify(this.credentials));
-    //                         if (this.shipmentIds) {
-    //                             this.showCreateShipment = false;
-    //                             if (!result.ship.Billing_Contact__c) {
-    //                                 result.ship.Billing_Contact__c = '';
-    //                                 result.ship.Billing_Contact__r = { Id: '', Name: '' };
-    //                             }
-    //                             if (!result.ship.Billing_Address__c) {
-    //                                 result.ship.Billing_Address__c = '';
-    //                                 result.ship.Billing_Address__r = { Id: '', Name: '' };
-    //                             }
-    //                             this.shipment = result.ship;
-    //                             console.log('Name : ', this.shipment.Name);
-    //                         }
-
-    //                         if (result.toAddress && Object.keys(result.toAddress).length !== 0) {
-    //                             this.toAddress = result.toAddress;
-    //                             console.log('result.toAddress : ', JSON.stringify(result.toAddress));
-    //                         }
-                                                            
-    //                         else this.errorList.push('To Address is missing on your logistics.');
-
-    //                         if (result.fromAddress && Object.keys(result.fromAddress).length !== 0) this.fromAddress = result.fromAddress;
-    //                         else this.errorList.push('From Address is missing on your logistics.');
-
-    //                         if (this.fromAddress.Id) {
-    //                             this.FromAddressSelected = true;
-    //                             this.fromAddressUrl = '/' + this.fromAddress.Id;
-    //                         }
-
-    //                         if (this.toAddress.Id) {
-    //                             this.toAddressSelected = true;
-    //                             this.toAddressUrl = '/' + this.toAddress.Id;
-    //                         }
-    //                         console.log('result.fromContact : ', JSON.stringify(result.fromContact));
-    //                         if (result.fromContact && Object.keys(result.fromContact).length !== 0) this.fromContact = result.fromContact;
-    //                         else this.errorList.push('From contact is missing on your logistics.');
-    //                         if (result.toContact && Object.keys(result.toContact).length !== 0) this.toContact = result.toContact;
-    //                         else this.errorList.push('To contact is missing on your logistics.');
-    //                         for (var x in result.packList) {
-    //                             result.packList[x].packUrl = '/' + result.packList[x].Id;
-    //                         }
-                           
-                       
-    //                         if(result.packList && result.packList.length > 0){
-    //                             console.log("entered result packlist:",JSON.stringify(result.packList));
-    //                             if (result.packList[0].Logistic__r != null) {if (result.packList[0].Logistic__r.Billing_options__c) this.shipment.Shipment_Billing_options__c = result.packList[0].Logistic__r.Billing_options__c;}
-    //                             else this.shipment.Shipment_Billing_options__c = 'SENDER';
-    //                             this.shipment.Billing_Contact__c =  result.packList[0].Logistic__r != null ? result.packList[0].Logistic__r.Billing_Contact__c : '';
-    //                             if (result.packList[0].Logistic__r != null && result.packList[0].Logistic__r.Billing_Contact__c) {
-    //                                 this.billContactSelected = true;
-    //                                 this.shipment.Billing_Contact__r.Id = result.packList[0].Logistic__r.Billing_Contact__c;
-    //                                 this.shipment.Billing_Contact__r.Name = result.packList[0].Logistic__r.Billing_Contact__r.Name;
-
-    //                             }
-    //                             else {
-    //                                 this.billContactSelected = false;
-    //                                 this.shipment.Billing_Contact__r = { Id: '', Name: '' };
-    //                             }
-    //                             if (result.packList[0].Logistic__r != null){
-    //                                 if (result.packList[0].Logistic__r.Billing_Address__c) { this.shipment.Billing_Address__c = result.packList[0].Logistic__r.Billing_Address__c;}
-    //                             }
-    //                             if(result.packList[0].Logistic__r != null){
-    //                             if (result.packList[0].Logistic__r.Billing_Address__c) {
-    //                                 this.billingAddressSelected = true;
-    //                                 this.shipment.Billing_Address__r.Id = result.packList[0].Logistic__r.Billing_Address__c;
-    //                                 this.shipment.Billing_Address__r.Name = result.packList[0].Logistic__r.Billing_Address__r.Name;
-    //                             }
-    //                         }
-    //                             else {
-    //                                 this.billContactSelected = false;
-    //                                 this.shipment.Billing_Address__r = { Id: '', Name: '' };
-    //                             }
-                                
-    //                 }
-                        
-                            
-                           
-    //                           console.log('this.showUPSReturn : ', this.showUPSReturnType);
-    //                         // console.log('10');
-    //                         this.packageList = result.packList;
-    //                         console.log('packageList==>'+JSON.stringify(this.packageList));
-    //                         this.packageItems = result.packItems;
-    //                         //console.log('11');
-    //                         var today = new Date();
-    //                         if (!this.shipmentIds) this.shipment.Shipment_Date__c = today.getFullYear() + '-' + ('0' + (today.getMonth() + 1)).slice(-2) + '-' + ('0' + today.getDate()).slice(-2);
-    //                         if (this.shipmentIds) {
-    //                             this.ShowLabels = true;
-    //                             this.ShowGetRate = false;
-    //                             this.ShowCancelShipment = true;
-    //                         }
-                            
-    //                         //console.log('12');
-    //                         this.disableBillingOption = result.disableBillingDetails;
-
-    //                         this.isLoading = false;
-    //                     }
-                        
-                        
-    //                 }
-    //             }).
-    //             catch(error => {
-    //                 this.isLoading = false;
-    //                 console.log('Error:', error);
-    //                 this.errorList = Object.assign([], this.errorList);
-    //                 if (!this.errorList.includes(error.body.message)) this.errorList.push(error.body.message);
-    //                 if (!this.errorList.includes(error.body.stackTrace) && error.body.stackTrace) this.errorList.push(error.body.stackTrace);
-    //             });
-    //     } catch (error) {
-    //         console.log('Error: getInitialData==>', error);
-    //     }
-
-    // }
-connectedCallback() {
-  try {
-    this.isLoading = true;
-    this.setDefaultDate();
-
-
-    console.log('ReturnMAID:', this.returnmaid);
-    console.log('Refund Amount:', this.refundamt);
-    console.log('isSOAccess:', this.issaccess);
-    console.log('isOrderAcc:', this.isorderacc);
-    console.log('package ids:', this.packageIds);
-    console.log('this.shipmentIds:', this.shipmentIds);
-
-    const boolValue = false;
-
-    getInitialData({
-      ShipId: this.shipmentIds,
-      packIds: JSON.stringify(this.packageIds),
-      ReturnShip: boolValue
-    })
-      .then(result => {
-        console.log('getInitialData res:', JSON.stringify(result));
-
-        if (!result) {
-          throw new Error('No data returned from getInitialData.');
-        }
-
-        if (result.alertlist && result.alertlist.length > 0) {
-          this.errorList = [...result.alertlist];
-          this.ShowGetRate = false;
-          return; // stop further execution if alertlist exists
-        }
-
-        // ✅ Assign core data
-        this.defaulWrap = result;
-        this.credentials = result.credsWrap;
-        console.log('this.credentials:', JSON.stringify(this.credentials));
-
-        // ✅ Shipment initialization
-        if (this.shipmentIds) {
-          this.showCreateShipment = false;
-
-          // Ensure billing fields are always initialized
-          if (!result.ship.Billing_Contact__c) {
-            result.ship.Billing_Contact__c = '';
-            result.ship.Billing_Contact__r = { Id: '', Name: '' };
-          }
-          if (!result.ship.Billing_Address__c) {
-            result.ship.Billing_Address__c = '';
-            result.ship.Billing_Address__r = { Id: '', Name: '' };
-          }
-
-            this.shipment = result.ship;
-            console.log('AZ Return Ship', result.ship);
-            console.log('AZ billing contact',result.ship.Billing_Contact__c);
-            console.log('AZ billing address', result.ship.Billing_Address__c);
-            // Ensure the billing fields are always populated with string values
-            this.shipment.Billing_Contact__c = result.ship.Billing_Contact__c || '';
-            this.shipment.Billing_Address__c = result.ship.Billing_Address__c || '';
-            console.log('AZ billing contact', this.shipment.Billing_Contact__c);
-            console.log('AZ billing address', this.shipment.Billing_Address__c);
-            this.isBillingAddressSelected = true;
-            this.isBillingContactSelected = true;
-            this.BillingAddressUrl = '/' + this.shipment.Billing_Address__c;
-            this.BillingAddressName = this.shipment.Billing_Address__r.Name;
-            console.log('AZ billing address ', this.BillingAddressName);
-
-            this.BillingContactUrl = '/' + this.shipment.Billing_Contact__c;
-            this.BillingContactName = this.shipment.Billing_Contact__r.Name;
-            
-          console.log('Shipment Name:', this.shipment.Name);
-        }
-
-        // ✅ Validate addresses
-        if (result.toAddress && Object.keys(result.toAddress).length) {
-          this.toAddress = result.toAddress;
-        } else {
-          this.errorList.push('To Address is missing on your logistics.');
-        }
-
-        if (result.fromAddress && Object.keys(result.fromAddress).length) {
-          this.fromAddress = result.fromAddress;
-        } else {
-          this.errorList.push('From Address is missing on your logistics.');
-        }
-
-        // ✅ Setup address URLs
-        if (this.fromAddress?.Id) {
-          this.FromAddressSelected = true;
-          this.fromAddressUrl = '/' + this.fromAddress.Id;
-        }
-
-        if (this.toAddress?.Id) {
-          this.toAddressSelected = true;
-          this.toAddressUrl = '/' + this.toAddress.Id;
-        }
-
-        // ✅ Contacts validation
-        if (result.fromContact && Object.keys(result.fromContact).length) {
-          this.fromContact = result.fromContact;
-        } else {
-          this.errorList.push('From contact is missing on your logistics.');
-        }
-
-        if (result.toContact && Object.keys(result.toContact).length) {
-          this.toContact = result.toContact;
-        } else {
-          this.errorList.push('To contact is missing on your logistics.');
-        }
-
-        // ✅ Package list handling
-        if (result.packList?.length > 0) {
-          result.packList.forEach(p => (p.packUrl = '/' + p.Id));
-
-          const firstPack = result.packList[0];
-          const logistic = firstPack.Logistic__r;
-
-          this.shipment.Shipment_Billing_options__c = logistic?.Billing_options__c || 'SENDER';
-          this.shipment.Billing_Contact__c = logistic?.Billing_Contact__c || '';
-          this.shipment.Billing_Address__c = logistic?.Billing_Address__c || '';
-
-          // Set related names
-          if (logistic?.Billing_Contact__r) {
-            this.billContactSelected = true;
-            this.shipment.Billing_Contact__r = {
-              Id: logistic.Billing_Contact__c,
-              Name: logistic.Billing_Contact__r.Name
-            };
-          } else {
-            this.billContactSelected = false;
-            this.shipment.Billing_Contact__r = { Id: '', Name: '' };
-          }
-
-          if (logistic?.Billing_Address__r) {
-            this.billingAddressSelected = true;
-            this.shipment.Billing_Address__r = {
-              Id: logistic.Billing_Address__c,
-              Name: logistic.Billing_Address__r.Name
-            };
-          } else {
-            this.billingAddressSelected = false;
-            this.shipment.Billing_Address__r = { Id: '', Name: '' };
-          }
-        }
-
-        // ✅ Other UI setup
-        this.packageList = result.packList;
-        this.packageItems = result.packItems;
-        this.disableBillingOption = result.disableBillingDetails;
-
-        const today = new Date();
-          if (!this.shipmentIds) {
-            
-          this.shipment.Shipment_Date__c = `${today.getFullYear()}-${('0' + (today.getMonth() + 1)).slice(-2)}-${('0' + today.getDate()).slice(-2)}`;
-        } else {
-          this.ShowLabels = true;
-          this.ShowGetRate = false;
-              this.ShowCancelShipment = true;
-               try {
-                 this.fetchDocsForShipment();
-            } catch (docError) {
-                console.warn('Could not fetch shipment docs:', docError);
-                this.docIds = {}; // fallback to empty
-            }
-        }
-      })
-      .catch(error => {
-        console.error('Error in getInitialData:', error);
-
-        let errorMsg =
-          error?.body?.message ||
-          error?.message ||
-          'An unexpected error occurred while fetching shipment details.';
-
-        this.errorList = [...this.errorList];
-        if (!this.errorList.includes(errorMsg)) this.errorList.push(errorMsg);
-
-        // ✅ Optional toast display for better UX
-        this.dispatchEvent(
-          new ShowToastEvent({
-            title: 'Error Loading Shipment Data',
-            message: errorMsg,
-            variant: 'error'
-          })
-        );
-      })
-      .finally(() => {
-        // ✅ Always stop spinner
-        this.isLoading = false;
-      });
-  } catch (error) {
-    console.error('Outer Error in connectedCallback:', error);
-    this.isLoading = false;
-
-    this.dispatchEvent(
-      new ShowToastEvent({
-        title: 'Initialization Error',
-        message: error.message || 'An unexpected error occurred during initialization.',
-        variant: 'error'
-      })
-    );
-  }
+connectedCallback() { 
+ this.setDefaultDate();
+ this.loadShipmentData();
 }
 
-    
+ 
+get emergencyContactId() {
+    // ensure it's a string or ''
+    return this.shipment?.emergency_contact__c || '';
+}
+
+get emergencyContactName() {
+    // defensive: if relation not populated return empty string
+    return (this.shipment && this.shipment.emergency_contact__r && this.shipment.emergency_contact__r.Name) 
+        ? this.shipment.emergency_contact__r.Name 
+        : '';
+}
+
+get emergencyContactUrl() {
+    return this.emergencyContactId ? '/' + this.emergencyContactId : '';
+}
+
+get isEmergencyContactSelected() {
+    // boolean: true only if we have a non-blank Id
+    return !!(this.shipment && this.shipment.emergency_contact__c);
+}   
 get formattedOpensAt() {
     return this.convertTimeToHHMM(this.toAddress?.opens_at__c);
 }
@@ -464,86 +137,8 @@ convertTimeToHHMM(timeVal) {
     return '';
 }
     
-    // ✅ Set default date (tomorrow, skipping Sat/Sun)
-    // setDefaultDate() {
-    //     let today = new Date();
-    //     let tomorrow = new Date(today);
-    //     tomorrow.setDate(today.getDate() );
+ 
 
-    //     // Skip weekends
-    //     let day = tomorrow.getDay(); // 0 = Sunday, 6 = Saturday
-    //     if (day === 6) {
-    //         // Saturday → +2 days (Monday)
-    //         tomorrow.setDate(tomorrow.getDate() + 2);
-    //     } else if (day === 0) {
-    //         // Sunday → +1 day (Monday)
-    //         tomorrow.setDate(tomorrow.getDate() + 1);
-    //     }
-
-    //     this.defaultDate = this.formatDate(tomorrow);
-    //     this.minDate = this.defaultDate; // disable past dates
-    // }
-
-    setDefaultDate() {
-    let today = new Date();
-    let defaultDate = new Date(today);
-    defaultDate.setDate(today.getDate()); // keep current logic (today)
-
-    // Skip weekends
-    let day = defaultDate.getDay(); // 0 = Sunday, 6 = Saturday
-    if (day === 6) {
-        // Saturday → +2 days (Monday)
-        defaultDate.setDate(defaultDate.getDate() + 2);
-    } else if (day === 0) {
-        // Sunday → +1 day (Monday)
-        defaultDate.setDate(defaultDate.getDate() + 1);
-    }
-
-    this.defaultDate = this.formatDate(defaultDate);
-    this.minDate = this.defaultDate; // disable past dates
-
-    // ✅ Only set Shipment_Date__c if it’s empty
-    if (!this.shipment.Shipment_Date__c) {
-        this.shipment.Shipment_Date__c = this.defaultDate;
-    }
-}
-
-    // Helper to format date as yyyy-MM-dd
-    formatDate(dateObj) {
-        const yyyy = dateObj.getFullYear();
-        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-        const dd = String(dateObj.getDate()).padStart(2, '0');
-        return `${yyyy}-${mm}-${dd}`;
-    }
-
-   
-    
-     handleShipmentDate(event) {
-        this.shipmentDateValue = event.target.value;
-        this.validateShipmentDate(event.target);
-     }
-
-
-
-     validateShipmentDate(inputElement) {
-        const selectedDate = new Date(inputElement.value);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const day = selectedDate.getDay();
-
-        let errorMsg = '';
-
-        if (day === 6 || day === 0) {
-            errorMsg = 'Saturday and Sunday are not allowed for shipment.';
-        } else if (selectedDate < today) {
-            errorMsg = 'Shipment date cannot be in the past.';
-        }
-
-        inputElement.setCustomValidity(errorMsg);
-        inputElement.reportValidity();
-
-        return errorMsg === ''; // returns true if valid
-    }
 
     setToShipmentType(event) {
         this.toShipmentType = event.currentTarget.checked;
@@ -554,15 +149,139 @@ convertTimeToHHMM(timeVal) {
 
  handleBackFromShipmentRates() {
         this.isShipmentRatesOpen = false;
+         this.loadShipmentData();
  }
+ handleShipmentDate(event) {
+  const val = event.target.value; // already "YYYY-MM-DD"
+  this.shipment = { ...this.shipment, Shipment_Date__c: val };
+ }
+    
+//     toAddressSelected() {
+//          this.toAddress = event.detail.selectedRecord; // assuming this is how you're storing the address
+//     const selectedName = this.toAddress?.Name || '';
+
+//     if (selectedName.length > 30) {
+//         this.showToast('Validation Error', 'To Address name cannot exceed 30 characters.', 'error');
+//         this.toAddress = null; // Clear invalid selection
+//     }
+//     }
+//     showToast(title, message, variant) {
+//     this.dispatchEvent(
+//         new ShowToastEvent({
+//             title,
+//             message,
+//             variant
+//         })
+//     );
+// }
+
+
+
     // getQuotes1() {
     //     this.isShipmentRatesOpen = true; // show the shipmentRates component
     // }
    
-       createShipment() {
+//        createShipment() {
+//     console.log('In createShipment method');
+//            try {
+        
+//                 const addressName = this.toAddress?.Name || '';
+//                  const selectedDate = new Date(this.shipmentDate);
+
+//         // Validation logic
+//                if (addressName.length > 30) {
+//             console.log('in validation of charecters');
+            
+//             this.showToast(
+//                 'Validation Error',
+//                 'To Address name cannot exceed 30 characters.',
+//                 'error'
+//             );
+//             return; // Stop further execution
+//                } 
+
+//         // If validation passes → proceed with shipment creation
+//         console.log('Creating shipment...');
+//         // Your existing shipment logic here
+//         this.isLoading = true;
+ 
+//         const fromAddressJSON = JSON.stringify(this.fromAddress);
+//         const toAddressJSON = JSON.stringify(this.toAddress);
+//         const fromContactJSON = JSON.stringify(this.fromContact);
+//         const toContactJSON = JSON.stringify(this.toContact);
+//         const shipmentJSON = JSON.stringify(this.shipment);
+//         const credentialsJSON = JSON.stringify(this.credentials);
+//         const packageItemsJSON = this.packageItems;
+//         const packListJSON = this.packageList;
+//         console.log('this.shipment.Shipment_Date__c: ',this.shipment.Shipment_Date__c);
+//         const shipDateStamp = this.shipment.Shipment_Date__c ? this.shipment.Shipment_Date__c : new Date().toISOString().split('T')[0];
+//         console.log('shipDateStamp : ',shipDateStamp);
+//         const masterShipmentId = this.shipment.Id ? this.shipment.Id : '';
+ 
+//         console.log('Payload prepared for FreightView call');
+//         console.log('fromAddress:', fromAddressJSON);
+//         console.log('toAddress:', toAddressJSON);
+//         console.log('fromContact:', fromContactJSON);
+//         console.log('toContact:', toContactJSON);
+//         console.log('shipment:', shipmentJSON);
+//         console.log('credentials:', credentialsJSON);
+
+//         // Call Apex method
+//         shippingRequestResponse({
+//             packList: packListJSON,
+//             fromAddress: fromAddressJSON,
+//             toAddress: toAddressJSON,
+//             fromContact: fromContactJSON,
+//             toContact: toContactJSON,
+//             ShipDateStamp: shipDateStamp,
+//             myConsVar: credentialsJSON,
+//             Shipment: shipmentJSON,
+//             packageItems: packageItemsJSON,
+//             masterShipmentId: masterShipmentId
+//         })
+//         .then(result => {
+//             this.isLoading = false;
+//             console.log('FreightView Shipment Response:', JSON.stringify(result));
+//             // You can handle success UI feedback here
+//             if (result) {
+//                 if (result.ShipDetails) {
+//                     this.shipment = result.ShipDetails;
+//                     this.showCreateShipment = false;
+//                     console.log('Updated shipment:', JSON.stringify(this.shipment));
+//                 }
+//                 console.log('myConsVar:', JSON.stringify(this.myConsVar));
+//                 console.log('Shipment:', JSON.stringify(this.shipment));
+//                 // Example: show success message
+//                 this.dispatchEvent(
+//                     new ShowToastEvent({
+//                         title: 'Shipment Created',
+//                         message: 'FreightView LTL shipment created successfully!',
+//                         variant: 'success'
+//                     })
+//                 );
+//             }
+//         })
+//         .catch(error => {
+//             this.isLoading = false;
+//             console.error('Error in FreightView shipment creation:', error);
+//             this.dispatchEvent(
+//                 new ShowToastEvent({
+//                     title: 'Error Creating Shipment',
+//                     message: error.body ? error.body.message : error.message,
+//                     variant: 'error'
+//                 })
+//             );
+//         });
+ 
+//     } catch (e) {
+//         this.isLoading = false;
+//         console.error('Exception in createShipment:', e);
+//     }
+// }
+createShipment() {
     console.log('In createShipment method');
-           try {       
-               // validations for the date 
+    try {
+        // validations for the date 
                
                  const dateInput = this.template.querySelector('lightning-input[data-id="shipmentDate"]');
 
@@ -713,9 +432,35 @@ convertTimeToHHMM(timeVal) {
     console.log('✅ All validations passed. Proceeding with shipment creation...');
                
 //------ validation ends here ---------
+        const addressName = this.toAddress?.Name || '';
+
+        // Validation logic
+        if (addressName.length > 30) {
+            console.log('in validation of characters');
+            this.showToast(
+                'Validation Error',
+                'To Address name cannot exceed 30 characters.',
+                'error'
+            );
+            return; // Stop further execution
+        } 
+
         console.log('Creating shipment...');
         this.isLoading = true;
- 
+              // Determine if any item is hazmat
+        const hasHazmat = this.packageItems?.some(item => item.Order_Product__r?.Product2?.is_hazmat__c);
+        console.log('packageitems : ',JSON.stringify(this.packageItems));
+        console.log('hasHazmat ',hasHazmat);
+        // Validate emergency contact if any hazmat
+        if (hasHazmat && !this.shipment.emergency_contact__r?.Id) {
+            this.showToast(
+                'Validation Error',
+                'Emergency Contact is required for hazardous items.',
+                'error'
+            );
+            return;
+        }
+        // Build payloads
         const fromAddressJSON = JSON.stringify(this.fromAddress);
         const toAddressJSON = JSON.stringify(this.toAddress);
         const fromContactJSON = JSON.stringify(this.fromContact);
@@ -723,21 +468,21 @@ convertTimeToHHMM(timeVal) {
         const shipmentJSON = JSON.stringify(this.shipment);
         const credentialsJSON = JSON.stringify(this.credentials);
         const packageItemsJSON = this.packageItems;
+        console.log('packageitemsJSON : ',JSON.stringify(packageItemsJSON));
         const packListJSON = this.packageList;
-        console.log('this.shipment.Shipment_Date__c: ',this.shipment.Shipment_Date__c);
-        const shipDateStamp = this.shipment.Shipment_Date__c ? this.shipment.Shipment_Date__c : new Date().toISOString().split('T')[0];
-        console.log('shipDateStamp : ',shipDateStamp);
-        const masterShipmentId = this.shipment.Id ? this.shipment.Id : '';
- 
-        console.log('Payload prepared for FreightView call');
-        console.log('fromAddress:', fromAddressJSON);
-        console.log('toAddress:', toAddressJSON);
-        console.log('fromContact:', fromContactJSON);
-        console.log('toContact:', toContactJSON);
-        console.log('shipment:', shipmentJSON);
-        console.log('credentials:', credentialsJSON);
- 
-        // Call Apex method
+        const shipDateStamp = this.shipment.Shipment_Date__c 
+            ? this.shipment.Shipment_Date__c 
+            : new Date().toISOString().split('T')[0];
+        const masterShipmentId = this.shipment.Id || '';
+         let emergencyContactPayload = {};
+        if (this.shipment.emergency_contact__r?.Id) {
+            emergencyContactPayload = {
+                name: this.shipment.emergency_contact__r.Name,
+                phone: this.shipment.emergency_contact__r.Phone || ''
+            };
+        }
+
+        // Call Apex
         shippingRequestResponse({
             packList: packListJSON,
             fromAddress: fromAddressJSON,
@@ -751,18 +496,22 @@ convertTimeToHHMM(timeVal) {
             masterShipmentId: masterShipmentId
         })
         .then(result => {
-            this.isLoading = false;
             console.log('FreightView Shipment Response:', JSON.stringify(result));
-            // You can handle success UI feedback here
-            if (result) {
-                if (result.ShipDetails) {
-                    this.shipment = result.ShipDetails;
-                    this.showCreateShipment = false;
-                    console.log('Updated shipment:', JSON.stringify(this.shipment));
-                }
-                console.log('myConsVar:', JSON.stringify(this.myConsVar));
-                console.log('Shipment:', JSON.stringify(this.shipment));
-                // Example: show success message
+
+            // If there are errors, show them
+          if (result?.errMsgs?.length > 0) {
+                // Join all messages, remove the 'Property:' part if needed
+                const userMsg = result.errMsgs.map(m => m.split('| Message: ')[1] || m).join(' | ');
+                this.showToast('Error Creating Shipment', userMsg, 'error');
+                return;
+            }
+
+            // If ShipDetails is returned, consider it success
+            if (result?.ShipDetails) {
+                this.shipment = result.ShipDetails;
+                this.showCreateShipment = false;
+                console.log('Updated shipment:', JSON.stringify(this.shipment));
+
                 this.dispatchEvent(
                     new ShowToastEvent({
                         title: 'Shipment Created',
@@ -773,111 +522,24 @@ convertTimeToHHMM(timeVal) {
             }
         })
         .catch(error => {
-            this.isLoading = false;
             console.error('Error in FreightView shipment creation:', error);
+            const message = error?.body?.message || error?.message || 'Unknown error';
             this.dispatchEvent(
                 new ShowToastEvent({
                     title: 'Error Creating Shipment',
-                    message: error.body ? error.body.message : error.message,
+                    message: message,
                     variant: 'error'
                 })
             );
         });
- 
+
     } catch (e) {
-        this.isLoading = false;
         console.error('Exception in createShipment:', e);
+    } finally {
+        // Always turn off loading spinner
+        this.isLoading = false;
     }
-       }
-
-    handleInputChange(event) {
-    const field = event.target.dataset.id;
-    const value = event.target.value;
-
-    switch (field) {
-        case 'description':
-            this.shipment.Description__c = value;
-            break;
-        case 'billingAccountNumber':
-            this.shipment.Billing_Account_Number__c = value;
-            break;
-        case 'billingContact':
-            // assuming this field is a text input for contact name only
-            if (!this.shipment.Billing_Contact__r) {
-                this.shipment.Billing_Contact__r = {};
-            }
-            this.shipment.Billing_Contact__r.Name = value;
-            break;
-        case 'billingOptions':
-            this.shipment.Billing_Options__c = value;
-            break;
-        case 'billingAddress':
-            if (!this.shipment.Billing_Address__r) {
-                this.shipment.Billing_Address__r = {};
-            }
-            this.shipment.Billing_Address__r.Name = value;
-            break;
-        default:
-            console.warn('Unhandled field:', field);
-    }
-
-    console.log('Updated shipment:', JSON.parse(JSON.stringify(this.shipment)));
 }
-
-    
-    // validateFields() {
-    //     let isValid = true;
-    //     let errorMessage = '';
-
-    //     const addressName = this.toAddress?.Name || '';
-    //     const phone = this.toContact?.Phone || this.toContact?.Account?.Phone || '';
-
-    //     // 🛑 Address name character limit
-    //     if (addressName && addressName.length > 30) {
-    //         this.showToast('Validation Error', 'To Address name cannot exceed 30 characters.', 'error');
-    //         isValid = false;
-    //     }
-
-    //     // 🛑 Required fields check
-    //     const requiredFields = [
-    //         { field: this.toAddress?.Name, label: 'To Address' },
-    //         { field: this.toContact?.Name, label: 'Contact Name' },
-    //         { field: this.toContact?.Company__r?.Name || this.toAddress?.Customer__r?.Company_txt__c, label: 'Company' },
-    //         { field: this.toContact?.Email || this.toContact?.Account?.Email__c, label: 'Email' },
-    //         { field: this.toAddress?.City__c, label: 'City/Town' },
-    //         { field: this.toAddress?.State__c, label: 'State/County' },
-    //         { field: this.toAddress?.Postal_Code__c, label: 'Zip/Postal Code' },
-    //         { field: this.toAddress?.Country__c, label: 'Country' },
-    //         { field: phone, label: 'Phone' }
-    //     ];
-
-    //     for (let field of requiredFields) {
-    //         if (!field.field || field.field.trim() === '') {
-    //             this.showToast('Missing Information', `${field.label} is required.`, 'error');
-    //             isValid = false;
-    //             break;
-    //         }
-    //     }
-
-    //     // 🛑 Phone number validation (should be 10 digits)
-    //     if (phone && !/^\d{10}$/.test(phone)) {
-    //         this.showToast('Validation Error', 'Phone number must be exactly 10 digits.', 'error');
-    //         isValid = false;
-    //     }
-
-    //     return isValid;
-
-    // }
-
-     showToast(title, message, variant) {
-        this.dispatchEvent(
-            new ShowToastEvent({
-                title,
-                message,
-                variant
-            })
-        );
-    }
 
 getQuotes() {
     console.log('in getQuotes');
@@ -955,6 +617,383 @@ getQuotes() {
         this.isLoading = false;
     }
 }
- 
+ handleTrackShipment() {
+        if(!this.FVshipmentID) {
+            this.dispatchEvent(new ShowToastEvent({
+                title: 'Error',
+                message: 'Shipment ID is missing. Cannot track shipment.',
+                variant: 'error'
+            }));
+            return;
+        }
+        const credentialsJSON = JSON.stringify(this.credentials);
+        this.isLoading = true;
 
+        getTrackingHistory({ shipmentId: this.FVshipmentID , myConsVar: credentialsJSON})
+            .then(result => {
+                if(result?.length > 0) {
+                    this.trackingList = result;
+                } else {
+                    this.trackingList = [];
+                    this.dispatchEvent(new ShowToastEvent({
+                        title: 'Info',
+                        message: 'No tracking events available yet.',
+                        variant: 'info'
+                    }));
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching tracking:', error);
+                this.trackingList = [];
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Error',
+                    message: 'Failed to fetch tracking details. Please try again.',
+                    variant: 'error'
+                }));
+            })
+            .finally(() => {
+                this.isLoading = false;
+            });
+    }
+handleSchedulePickupChange(event) {
+    this.shipment.schedulePickup__c = event.target.checked;
+    console.log('Schedule Pickup changed:', this.shipment.schedulePickup__c);
+}
+get isPending() {
+    console.log('Shipment Status:', this.shipment?.Status__c);
+    return this.shipment?.Status__c?.toLowerCase() === 'pending';
+}
+ loadShipmentData(){
+  try {
+    this.isLoading = true;
+
+    console.log('ReturnMAID:', this.returnmaid);
+    console.log('Refund Amount:', this.refundamt);
+    console.log('isSOAccess:', this.issaccess);
+    console.log('isOrderAcc:', this.isorderacc);
+    console.log('package ids:', this.packageIds);
+    console.log('this.shipmentIds:', this.shipmentIds);
+
+    const boolValue = false;
+
+    getInitialData({
+      ShipId: this.shipmentIds,
+      packIds: JSON.stringify(this.packageIds),
+      ReturnShip: boolValue
+    })
+      .then(result => {
+        console.log('getInitialData res:', JSON.stringify(result));
+
+        if (!result) {
+          throw new Error('No data returned from getInitialData.');
+        }
+
+        if (result.alertlist && result.alertlist.length > 0) {
+          this.errorList = [...result.alertlist];
+          this.ShowGetRate = false;
+          return; // stop further execution if alertlist exists
+        }
+
+        // ✅ Assign core data
+        this.defaulWrap = result;
+        this.credentials = result.credsWrap;
+        console.log('this.credentials:', JSON.stringify(this.credentials));
+
+        // ✅ Shipment initialization
+        if (this.shipmentIds) {
+          this.showCreateShipment = false;
+
+          // Ensure billing fields are always initialized
+          if (!result.ship.Billing_Contact__c) {
+            result.ship.Billing_Contact__c = '';
+            result.ship.Billing_Contact__r = { Id: '', Name: '' };
+          }
+          if (!result.ship.Billing_Address__c) {
+            result.ship.Billing_Address__c = '';
+            result.ship.Billing_Address__r = { Id: '', Name: '' };
+          }
+
+          this.shipment = result.ship;
+          console.log('Shipment Name:', this.shipment.Name);
+           //a
+            this.shipment.Billing_Contact__c = result.ship.Billing_Contact__c || '';
+            this.shipment.Billing_Address__c = result.ship.Billing_Address__c || '';
+            this.isBillingAddressSelected = true;
+            this.isBillingContactSelected = true;
+            this.BillingAddressUrl = '/' + this.shipment.Billing_Address__c;
+            this.BillingAddressName = this.shipment.Billing_Address__r.Name;
+            console.log('AZ billing address ', this.BillingAddressName);
+
+            this.BillingContactUrl = '/' + this.shipment.Billing_Contact__c;
+            this.BillingContactName = this.shipment.Billing_Contact__r.Name;
+        }
+
+        // ✅ Validate addresses
+        if (result.toAddress && Object.keys(result.toAddress).length) {
+          this.toAddress = result.toAddress;
+        } else {
+          this.errorList.push('To Address is missing on your logistics.');
+        }
+
+        if (result.fromAddress && Object.keys(result.fromAddress).length) {
+          this.fromAddress = result.fromAddress;
+        } else {
+          this.errorList.push('From Address is missing on your logistics.');
+        }
+
+        // ✅ Setup address URLs
+        if (this.fromAddress?.Id) {
+          this.FromAddressSelected = true;
+          this.fromAddressUrl = '/' + this.fromAddress.Id;
+        }
+
+        if (this.toAddress?.Id) {
+          this.toAddressSelected = true;
+          this.toAddressUrl = '/' + this.toAddress.Id;
+        }
+        if (this.shipment.emergency_contact__c) {
+          this.emergencyContactUrl = '/' + this.shipment.emergency_contact__c;
+        }
+
+        // ✅ Contacts validation
+        if (result.fromContact && Object.keys(result.fromContact).length) {
+          this.fromContact = result.fromContact;
+        } else {
+          this.errorList.push('From contact is missing on your logistics.');
+        }
+
+        if (result.toContact && Object.keys(result.toContact).length) {
+          this.toContact = result.toContact;
+        } else {
+          this.errorList.push('To contact is missing on your logistics.');
+        }
+
+        // ✅ Package list handling
+        if (result.packList?.length > 0) {
+          result.packList.forEach(p => (p.packUrl = '/' + p.Id));
+
+          const firstPack = result.packList[0];
+          const logistic = firstPack.Logistic__r;
+
+          this.shipment.Shipment_Billing_options__c = logistic?.Billing_options__c || 'SENDER';
+          this.shipment.Billing_Contact__c = logistic?.Billing_Contact__c || '';
+          this.shipment.Billing_Address__c = logistic?.Billing_Address__c || '';
+
+          // Set related names
+          if (logistic?.Billing_Contact__r) {
+            this.billContactSelected = true;
+            this.shipment.Billing_Contact__r = {
+              Id: logistic.Billing_Contact__c,
+              Name: logistic.Billing_Contact__r.Name
+            };
+          } else {
+            this.billContactSelected = false;
+            this.shipment.Billing_Contact__r = { Id: '', Name: '' };
+          }
+
+          if (logistic?.Billing_Address__r) {
+            this.billingAddressSelected = true;
+            this.shipment.Billing_Address__r = {
+              Id: logistic.Billing_Address__c,
+              Name: logistic.Billing_Address__r.Name
+            };
+          } else {
+            this.billingAddressSelected = false;
+            this.shipment.Billing_Address__r = { Id: '', Name: '' };
+          }
+        }
+
+        // ✅ Other UI setup
+        this.packageList = result.packList;
+        this.packageItems = result.packItems;
+        this.disableBillingOption = result.disableBillingDetails;
+
+        const today = new Date();
+          if (!this.shipmentIds) {
+            
+          this.shipment.Shipment_Date__c = `${today.getFullYear()}-${('0' + (today.getMonth() + 1)).slice(-2)}-${('0' + today.getDate()).slice(-2)}`;
+        } else {
+          this.ShowLabels = true;
+          this.ShowGetRate = false;
+          this.ShowCancelShipment = true;
+          if(this.shipment.shipmentID__c){
+            this.FVshipmentID = this.shipment.shipmentID__c;
+            console.log('FVshipmentID ',this.FVshipmentID);
+          }
+          try {
+             this.fetchDocsForShipment();
+            } catch (docError) {
+                console.warn('Could not fetch shipment docs:', docError);
+                this.docIds = {}; // fallback to empty
+            }
+        }
+      })
+      .catch(error => {
+        console.error('Error in getInitialData:', error);
+
+        let errorMsg =
+          error?.body?.message ||
+          error?.message ||
+          'An unexpected error occurred while fetching shipment details.';
+
+        this.errorList = [...this.errorList];
+        if (!this.errorList.includes(errorMsg)) this.errorList.push(errorMsg);
+
+        // ✅ Optional toast display for better UX
+        this.dispatchEvent(
+          new ShowToastEvent({
+            title: 'Error Loading Shipment Data',
+            message: errorMsg,
+            variant: 'error'
+          })
+        );
+      })
+      .finally(() => {
+        // ✅ Always stop spinner
+        this.isLoading = false;
+      });
+  } catch (error) {
+    console.error('Outer Error in connectedCallback:', error);
+    this.isLoading = false;
+
+    this.dispatchEvent(
+      new ShowToastEvent({
+        title: 'Initialization Error',
+        message: error.message || 'An unexpected error occurred during initialization.',
+        variant: 'error'
+      })
+    );
+  }
+ }
+handleEmergencyContactSelected(event) {
+  console.log('inside handleEmergencyContactSelected');
+    const selected = event.detail;
+
+    if (selected) {
+        // Set Id and Name immediately
+        this.shipment = {
+            ...this.shipment,
+            emergency_contact__c: selected.Id,
+            emergency_contact__r: {
+                Id: selected.Id,
+                Name: selected.Name,
+                Phone: '' // temporarily blank
+            }
+        };
+            getContactPhone({ contactId: selected.Id })
+                .then(phone => {
+                    this.shipment.emergency_contact__r.Phone = phone || '';
+                    console.log('Updated shipment with phone:', JSON.stringify(this.shipment));
+                })
+                .catch(error => {
+                    console.error('Error fetching contact phone:', error);
+                });
+        
+    }
+
+    console.log('emergency contact after selection:', JSON.stringify(this.shipment));
+}
+get isEmergencyContactRequired() {
+    console.log('in is emergencycontactrequired');
+    console.log('packageItems : ', JSON.stringify(this.packageItems));
+    console.log('its h ',this.packageItems?.some(item => item.Order_Product__r?.Product2?.is_hazmat__c));
+    const hasHazmat = this.packageItems?.some(item => item.Order_Product__r?.Product2?.is_hazmat__c) || false;
+    console.log('hasHazmat:', hasHazmat);
+    return hasHazmat;
+}
+
+// set default date 
+setDefaultDate() {
+    let today = new Date();
+    let defaultDate = new Date(today);
+    defaultDate.setDate(today.getDate()); // keep current logic (today)
+
+    // Skip weekends
+    let day = defaultDate.getDay(); // 0 = Sunday, 6 = Saturday
+    if (day === 6) {
+        // Saturday → +2 days (Monday)
+        defaultDate.setDate(defaultDate.getDate() + 2);
+    } else if (day === 0) {
+        // Sunday → +1 day (Monday)
+        defaultDate.setDate(defaultDate.getDate() + 1);
+    }
+
+    this.defaultDate = this.formatDate(defaultDate);
+    this.minDate = this.defaultDate; // disable past dates
+
+    // ✅ Only set Shipment_Date__c if it’s empty
+    if (!this.shipment.Shipment_Date__c) {
+        this.shipment.Shipment_Date__c = this.defaultDate;
+    }
+}
+
+    // Helper to format date as yyyy-MM-dd
+    formatDate(dateObj) {
+        const yyyy = dateObj.getFullYear();
+        const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const dd = String(dateObj.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+
+   
+    
+     handleShipmentDate(event) {
+        this.shipmentDateValue = event.target.value;
+        this.validateShipmentDate(event.target);
+     }
+
+
+
+     validateShipmentDate(inputElement) {
+        const selectedDate = new Date(inputElement.value);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const day = selectedDate.getDay();
+
+        let errorMsg = '';
+
+        if (day === 6 || day === 0) {
+            errorMsg = 'Saturday and Sunday are not allowed for shipment.';
+        } else if (selectedDate < today) {
+            errorMsg = 'Shipment date cannot be in the past.';
+        }
+
+        inputElement.setCustomValidity(errorMsg);
+        inputElement.reportValidity();
+
+        return errorMsg === ''; // returns true if valid
+    }
+    handleInputChange(event) {
+    const field = event.target.dataset.id;
+    const value = event.target.value;
+
+    switch (field) {
+        case 'description':
+            this.shipment.Description__c = value;
+            break;
+        case 'billingAccountNumber':
+            this.shipment.Billing_Account_Number__c = value;
+            break;
+        case 'billingContact':
+            // assuming this field is a text input for contact name only
+            if (!this.shipment.Billing_Contact__r) {
+                this.shipment.Billing_Contact__r = {};
+            }
+            this.shipment.Billing_Contact__r.Name = value;
+            break;
+        case 'billingOptions':
+            this.shipment.Billing_Options__c = value;
+            break;
+        case 'billingAddress':
+            if (!this.shipment.Billing_Address__r) {
+                this.shipment.Billing_Address__r = {};
+            }
+            this.shipment.Billing_Address__r.Name = value;
+            break;
+        default:
+            console.warn('Unhandled field:', field);
+    }
+
+    console.log('Updated shipment:', JSON.parse(JSON.stringify(this.shipment)));
+}
 }

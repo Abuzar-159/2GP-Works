@@ -1,7 +1,12 @@
 public with sharing class freightView {
     private static final Set<String> FV_DOC_TYPES = new Set<String>{ 'bol', 'label', 'label-pdf' };
-
-    @AuraEnabled
+  @AuraEnabled(cacheable=true)
+    public static String getContactPhone(Id contactId) {
+        if(contactId == null) return null;
+        Contact c = [SELECT Phone FROM Contact WHERE Id = :contactId LIMIT 1];
+        return c.Phone;
+    }	
+       @AuraEnabled
 public static shipmentResponse shippingRequestResponse(
     List<Package__c> packList,
     String fromAddress,
@@ -18,6 +23,7 @@ public static shipmentResponse shippingRequestResponse(
 
     // Deserialize shipment & contacts
     Shipment__c ship = (Shipment__c) JSON.deserialize(Shipment, Shipment__c.class);
+    System.debug('ship=>'+ship);
     contact shipFromContact = (Contact) JSON.deserialize(fromContact, Contact.class);
     contact shipToContact  = (Contact) JSON.deserialize(toContact, Contact.class);
     String toCountryCode = '';String toProvinceCode = '';String FromCountryCode = '';String FromProvinceCode = '';
@@ -114,59 +120,91 @@ public static shipmentResponse shippingRequestResponse(
     payload.put('destination', destination);
 
     // Items
-    List<Map<String, Object>> itemsList = new List<Map<String, Object>>();
-        for (Package_List__c pl : packageItems) {
-        Map<String, Object> item = new Map<String, Object>();
+   List<Map<String, Object>> itemsList = new List<Map<String, Object>>();
+Boolean hasHazmat = false; // Track if any item is hazardous
+List<String> missingFields = new List<String>(); // Collect missing field errors
 
-        // quantity
-        item.put('quantity', Integer.valueOf(pl.Quantity__c));
+for (Package_List__c pl : packageItems) {
+    Map<String, Object> item = new Map<String, Object>();
 
-        // weight
-        Decimal weight = pl.Logistic_Line_Item__r.Product__r.Weight__c;
-        if (weight == null || weight <= 0) {
-            weight = pl.Package__r.Weight__c;
-        }
-        item.put('weight', weight != null && weight > 0 ? weight : 1);
+    Product2 prod = pl.Order_Product__r.Product2;
 
-        // weight unit
-        item.put('weightUOM', pl.Package__r.Weight_Unit__c == 'KGS' ? 'kg' : 'lbs');
+    // --- General item fields ---
+    item.put('quantity', Integer.valueOf(pl.Quantity__c));
+    Decimal weight = prod.Weight__c != null ? prod.Weight__c : pl.Package__r.Weight__c;
+    item.put('weight', (weight != null && weight > 0) ? weight : 1);
+    item.put('weightUOM', pl.Package__r.Weight_Unit__c == 'KGS' ? 'kg' : 'lbs');
+    item.put('freightClass', prod.freight_class__c != null ? (Object)prod.freight_class__c : (Object)65);
+    item.put('description', prod.Name);
+    item.put('type', pl.Package__r.Package_Type__c != null ? pl.Package__r.Package_Type__c.toLowerCase() : 'pallet');
+    Decimal length = prod.Length__c != null ? prod.Length__c : pl.Package__r.Length__c;
+    Decimal width  = prod.Width__c  != null ? prod.Width__c  : pl.Package__r.Width__c;
+    Decimal height = prod.Height__c != null ? prod.Height__c : pl.Package__r.Height__c;
+    item.put('length', (length != null && length >= 1) ? length : 1);
+    item.put('width',  (width != null && width >= 1) ? width : 1);
+    item.put('height', (height != null && height >= 1) ? height : 1);
+    item.put('dimensionsUOM', 'in');
 
-        // freight class
-        item.put('freightClass', pl.Order_Product__r.Product2.Freight_Class__c != null 
-                        ? (Object)pl.Order_Product__r.Product2.Freight_Class__c 
-                        : (Object)65);
-
-        // description
-        item.put('description', pl.Order_Product__r.Product2.Name);
-
-        // type
-        item.put('type', pl.Package__r.Package_Type__c != null ? pl.Package__r.Package_Type__c.toLowerCase() : 'pallet');
-
-        // dimensions: check product first, then package
-        Decimal length = pl.Order_Product__r.Product2.Length__c != null ? pl.Order_Product__r.Product2.Length__c : pl.Package__r.Length__c;
-        Decimal width  = pl.Order_Product__r.Product2.Width__c  != null ? pl.Order_Product__r.Product2.Width__c  : pl.Package__r.Width__c;
-        Decimal height = pl.Order_Product__r.Product2.Height__c != null ? pl.Order_Product__r.Product2.Height__c : pl.Package__r.Height__c;
-
-        // FreightView requires all to be >= 1
-        item.put('length', (length != null && length >= 1) ? length : 1);
-        item.put('width',  (width != null && width >= 1) ? width : 1);
-        item.put('height', (height != null && height >= 1) ? height : 1);
-
-        item.put('dimensionsUOM', 'in');
-
-        itemsList.add(item);
+    // --- Optional NMFC ---
+   if (prod.NMFC_code__c != null) {
+        item.put('nmfcNumber', prod.NMFC_code__c);
     }
 
-    payload.put('items', itemsList);
 
-    // Optional: add emergencyContact if any hazardous items
-    // Boolean hasHazardous = itemsList.any(i => (Boolean)i.get('isHazardous'));
-    // if(hasHazardous){
-    //     Map<String, Object> emergencyContact = new Map<String, Object>();
-    //     emergencyContact.put('name', shipFromContact.Name);
-    //     emergencyContact.put('phone', shipFromContact.Phone);
-    //     payload.put('emergencyContact', emergencyContact);
-    // }
+    // --- HAZMAT CHECKS ---
+    if (prod.is_hazmat__c == true) {
+        hasHazmat = true;
+		System.debug('Hazmat_ID__c =>'+prod.Hazmat_ID__c +'Primary_hazard_class__c =>'+prod.Primary_Hazard_Class__c +'Packaging_Group__c =>'+prod.Packaging_Group__c);
+        // Validate required hazmat fields
+        if (String.isBlank(prod.Hazmat_ID__c)) missingFields.add(prod.Name + ': Hazmat ID missing');
+        if (String.isBlank(prod.Primary_Hazard_Class__c)) missingFields.add(prod.Name + ': Primary Hazard Class missing');
+        if (String.isBlank(prod.Packaging_Group__c)) missingFields.add(prod.Name + ': Packaging Group missing');
+
+        // Add hazmat info if all present
+        if (String.isNotBlank(prod.Hazmat_ID__c) && 
+            String.isNotBlank(prod.Primary_Hazard_Class__c) &&
+            String.isNotBlank(prod.Packaging_Group__c)) {
+
+            Map<String, Object> hazmat = new Map<String, Object>();
+           	hazmat.put('hazmatId', prod.Hazmat_ID__c);
+            hazmat.put('primaryClass', prod.Primary_Hazard_Class__c);
+            hazmat.put('packingGroup', prod.Packaging_Group__c);
+
+            item.put('hazardous', hazmat);
+        }
+    }
+
+    itemsList.add(item);
+}
+
+// --- Handle missing hazmat fields ---
+if (!missingFields.isEmpty()) {
+    res.errMsgs = missingFields;
+    return res;
+}
+
+// --- Add items to payload ---
+payload.put('items', itemsList);
+
+// --- Emergency Contact ---
+if (hasHazmat) {
+    if (ship.Emergency_Contact__c == null || String.isBlank(ship.Emergency_Contact__r.Name) || String.isBlank(ship.Emergency_Contact__r.Phone)) {
+        res.errMsgs = new List<String>{'Emergency contact details are missing and its required for hazardous shipments.'};
+        return res;
+    } else {
+        Map<String, Object> emergencyContact = new Map<String, Object>();
+        emergencyContact.put('name', ship.Emergency_Contact__r.Name);
+        emergencyContact.put('phone', ship.Emergency_Contact__r.Phone);
+        payload.put('emergencyContact', emergencyContact);
+    }
+} else if (String.isNotBlank(ship.Emergency_Contact__c)) {
+    // Optional: include emergency contact if present for non-hazmat
+    Map<String, Object> emergencyContact = new Map<String, Object>();
+    emergencyContact.put('name', ship.Emergency_Contact__r.Name);
+    emergencyContact.put('phone', ship.Emergency_Contact__r.Phone);
+    payload.put('emergencyContact', emergencyContact);
+}
+
 
     // Serialize payload
     String jsonBody = JSON.serialize(payload);
@@ -229,13 +267,11 @@ public static shipmentResponse shippingRequestResponse(
         } else if (tAddress.Id != null) {
             ship.Billing_Address__c = tAddress.Id;
         }
-
         if (fAddress.Id != null && ship.Shipment_Billing_options__c == 'SENDER') {
             ship.Billing_Contact__c = shipFromContact.Id;
         } else if (tAddress.Id != null) {
             ship.Billing_Contact__c = shipToContact.Id;
         }
-
         if (tAddress.Customer__c != null)
             ship.Customer__c = tAddress.Customer__c;
 
@@ -315,6 +351,7 @@ public static shipmentResponse shippingRequestResponse(
     return res;
 
 }
+
 
     @AuraEnabled
     public static String getAccessToken(String client_id, String client_secret, String endPoint) {
@@ -409,7 +446,7 @@ public static shipmentResponse shippingRequestResponse(
 
         myConstructorWrapper MCW = new myConstructorWrapper();
         string credName = system.Label.AxoltFreightViewERP;
-        		System.debug('credName = ' + credName);
+        System.debug('credName = ' + credName);
         String credentialFields = UtilClass.selectStarFromSObject('Credentials__c');
         MCW.FreightViewCredentials = Database.query('select ' + credentialFields + ' from Credentials__c where (Name = :credName And Active__c = true) Limit 1');
         System.debug('MCW.FreightViewCredentials = ' + MCW.FreightViewCredentials);
@@ -447,13 +484,13 @@ public static shipmentResponse shippingRequestResponse(
                 system.debug('wrp.packlist----'+wrap.packList);
                 for(Package__c pck : wrap.packList ) packageIds.add(pck.Id);
                 //wrap.packItems = Database.query('SELECT ' + String.escapeSingleQuotes(packageListFields) + ', Package__r.Name, Logistic_Line_Item__r.Product__c,Logistic_Line_Item__r.Product__r.Weight__c,Package__r.Description__c, Package__r.Weight_Unit__c, Package__r.Weight__c, Package__r.Order__c, Package__r.Sales_Order__c, Order_Product__r.Base_Price__c, Sales_Order_Line_Item__r.Base_Price__c, Order_Product__r.Product2.SKU__c, Order_Product__r.Product2.Name, Sales_Order_Line_Item__r.Product__r.SKU__c, Sales_Order_Line_Item__r.Product__r.Name,Sales_Order_Line_Item__r.Product__r.Declared_Shipment_Value__c,Order_Product__r.Product2.Declared_Shipment_Value__ Work_Order_Line_Items__r.Product__r.Name, Purchase_Line_Items__r.Product__r.Name, Transfer_Order_Line_Item__r.Products__r.Name, RMA_Line_Item__r.Ord_Item__r.Product2.Name, RMA_Line_Item__r.SOLI__r.Product__r.Name, Work_Order_Line_Items__r.Total_Cost__c, Work_Order_Line_Items__r.Unit_Price__c, Purchase_Line_Items__r.Total_Price__c, Purchase_Line_Items__r.Unit_Price__c, RMA_Line_Item__r.Total_Deduction__c, Order_Product__r.Total_Price__c, Sales_Order_Line_Item__r.Total_Price__c, Order_Product__r.ReturnedQuantity__c, Sales_Order_Line_Item__r.ReturnedQuantity__c, Order_Product__r.Order.Name, Sales_Order_Line_Item__r.Sales_Order__r.Name, Order_Product__r.UnitPrice, Sales_Order_Line_Item__r.Price_Product__c, Order_Product__r.Product2.Goods_Description__c, Order_Product__r.Product2.Commodity_Code__c, Sales_Order_Line_Item__r.Product__r.Goods_Description__c, Sales_Order_Line_Item__r.Product__r.Commodity_Code__c FROM Package_List__c WHERE Package__c IN :packageIds');
-                wrap.packItems = Database.query('SELECT ' + String.escapeSingleQuotes(packageListFields) + ', ' +'Package__r.Name, ' +'Logistic_Line_Item__r.Product__c, ' +'Logistic_Line_Item__r.Product__r.Weight__c, ' +'Package__r.Description__c, ' +'Package__r.Weight_Unit__c, ' +'Package__r.Weight__c, ' +'Package__r.Order__c, ' +'Order_Product__r.Base_Price__c, ' +'Order_Product__r.Product2.SKU__c, ' +'Order_Product__r.Product2.Name, ' +'Order_Product__r.Product2.Declared_Shipment_Value__c, ' +'Work_Order_Line_Items__r.Product__r.Name, ' +'Purchase_Line_Items__r.Product__r.Name, ' +'Transfer_Order_Line_Item__r.Products__r.Name, ' +'RMA_Line_Item__r.Ord_Item__r.Product2.Name, ' +'Work_Order_Line_Items__r.Total_Cost__c, ' +'Work_Order_Line_Items__r.Unit_Price__c, ' +'Purchase_Line_Items__r.Total_Price__c, ' +'Purchase_Line_Items__r.Unit_Price__c, ' +'RMA_Line_Item__r.Total_Deduction__c, ' +'Order_Product__r.Total_Price__c, ' +'Order_Product__r.ReturnedQuantity__c, ' +'Order_Product__r.Order.Name, ' +'Order_Product__r.UnitPrice, ' +'Order_Product__r.Product2.Goods_Description__c, ' +'Order_Product__r.Product2.Commodity_Code__c ' +'FROM Package_List__c ' +'WHERE Package__c IN :packageIds' );
+                wrap.packItems = Database.query('SELECT ' + String.escapeSingleQuotes(packageListFields) + ', ' +'Package__r.Name, ' +'Logistic_Line_Item__r.Product__c, ' +'Logistic_Line_Item__r.Product__r.Weight__c, ' +'Package__r.Description__c, ' +'Package__r.Weight_Unit__c, ' +'Package__r.Weight__c, ' +'Package__r.Order__c, ' +'Order_Product__r.Base_Price__c, ' +'Order_Product__r.Product2.SKU__c, ' +'Order_Product__r.Product2.Name, ' +'Order_Product__r.Product2.Declared_Shipment_Value__c, '+'Order_Product__r.Product2.is_hazmat__c,' +'Order_Product__r.Product2.freight_class__c,'+'Order_Product__r.Product2.NMFC_code__c,'+'Order_Product__r.Product2.Primary_Hazard_Class__c,'+'Order_Product__r.Product2.Packaging_Group__c,'+'Order_Product__r.Product2.Hazmat_ID__c,' +'Work_Order_Line_Items__r.Product__r.Name, ' +'Purchase_Line_Items__r.Product__r.Name, ' +'Transfer_Order_Line_Item__r.Products__r.Name, ' +'RMA_Line_Item__r.Ord_Item__r.Product2.Name, ' +'Work_Order_Line_Items__r.Total_Cost__c, ' +'Work_Order_Line_Items__r.Unit_Price__c, ' +'Purchase_Line_Items__r.Total_Price__c, ' +'Purchase_Line_Items__r.Unit_Price__c, ' +'RMA_Line_Item__r.Total_Deduction__c, ' +'Order_Product__r.Total_Price__c, ' +'Order_Product__r.ReturnedQuantity__c, ' +'Order_Product__r.Order.Name, ' +'Order_Product__r.UnitPrice, ' +'Order_Product__r.Product2.Goods_Description__c, ' +'Order_Product__r.Product2.Commodity_Code__c ' +'FROM Package_List__c ' +'WHERE Package__c IN :packageIds' );
 
 
-                List<Shipment__c> Shipslist = Database.query('select ' + String.escapeSingleQuotes(shipfields) + ' ,Return_Merchandise_Authorisation__r.Address__c,Billing_Address__r.Id,Billing_Address__r.Name,Billing_Contact__r.Name from Shipment__c where (Return_Shipment__c = false AND Active__c = true And Id=\'' + String.escapeSingleQuotes(shipId) + '\' And Status__c != \'Cancelled\' And RecordTypeId =\'' + String.escapeSingleQuotes(ShipmentRecTypeId) + '\') Limit 1');
+                List<Shipment__c> Shipslist = Database.query('select ' + String.escapeSingleQuotes(shipfields) + ' ,emergency_contact__r.Id,emergency_contact__r.Name,emergency_contact__r.phone,Return_Merchandise_Authorisation__r.Address__c,Billing_Address__r.Id,Billing_Address__r.Name,Billing_Contact__r.Name from Shipment__c where (Return_Shipment__c = false AND Active__c = true And Id=\'' + String.escapeSingleQuotes(shipId) + '\' And Status__c != \'Cancelled\' And RecordTypeId =\'' + String.escapeSingleQuotes(ShipmentRecTypeId) + '\') Limit 1');
                 if(Shipslist.size() > 0) wrap.ship  = Shipslist[0];
                 else wrap.alertlist.add('Shipment is Either Cancelled or not availbale in the system');
-                List<Shipment__c> returnShips = Database.query('select ' + String.escapeSingleQuotes(shipfields) + ' ,Return_Merchandise_Authorisation__r.Address__c,Billing_Address__r.Id,Billing_Address__r.Name,Billing_Contact__r.Name from Shipment__c where (Return_Shipment__c = true AND Active__c = true And Master_Shipment__c =\'' + String.escapeSingleQuotes(shipId) + '\' And Status__c != \'Cancelled\') Limit 1');
+                List<Shipment__c> returnShips = Database.query('select ' + String.escapeSingleQuotes(shipfields) + ' ,emergency_contact__r.Id,emergency_contact__r.Name,emergency_contact__r.phone,Return_Merchandise_Authorisation__r.Address__c,Billing_Address__r.Id,Billing_Address__r.Name,Billing_Contact__r.Name from Shipment__c where (Return_Shipment__c = true AND Active__c = true And Master_Shipment__c =\'' + String.escapeSingleQuotes(shipId) + '\' And Status__c != \'Cancelled\') Limit 1');
                 if(returnShips.size() > 0) wrap.returnShip =returnShips[0];
             }
             else if(packIds != null && packIds != ''){
@@ -465,7 +502,7 @@ public static shipmentResponse shippingRequestResponse(
                                                +' Logistic__r.Bill_To_Return__c, Logistic__r.Billing_Account_Number_Return__c, Logistic__r.Billing_Address_Return__c, Logistic__r.Billing_Address_Return__r.Postal_Code__c, Logistic__r.Billing_Address_Return__r.Country__c, Logistic__r.Billing_Contact_Return__c, Logistic__r.Shipment_type_Return__c, Logistic__r.Shipping_Preferences_Return__c, '+
                                                +' Work_Order__r.Contact__r.Email, Purchase_Order__r.Vendor_Contact__r.Email, Transfer_Order__r.Contact__r.Email, Return_Merchandise_Authorisation__r.Order__r.Contact__r.Email ,Return_Merchandise_Authorisation__r.Order__r.Ship_To_Address__r.Contact__c from Package__c where Id In  :packId  And Active__c = true');
                 wrap.packItems = Database.query(
-                    'SELECT ' + String.escapeSingleQuotes(packageListFields) + ', ' +'Package__r.Name, ' +'Logistic_Line_Item__r.Product__c, ' +'Logistic_Line_Item__r.Product__r.Weight__c, ' +'Package__r.Description__c, ' +'Package__r.Weight_Unit__c, ' +'Package__r.Weight__c, ' +'Package__r.Order__c, ' +'Order_Product__r.Base_Price__c, ' +'Order_Product__r.Product2.SKU__c, ' +'Order_Product__r.Product2.Name, ' +'Order_Product__r.Product2.Declared_Shipment_Value__c, ' +'Work_Order_Line_Items__r.Product__r.Name, ' +'Purchase_Line_Items__r.Product__r.Name, ' +'Transfer_Order_Line_Item__r.Products__r.Name, ' +'RMA_Line_Item__r.Ord_Item__r.Product2.Name, ' +'Work_Order_Line_Items__r.Total_Cost__c, ' +'Work_Order_Line_Items__r.Unit_Price__c, ' +'Purchase_Line_Items__r.Total_Price__c, ' +'Purchase_Line_Items__r.Unit_Price__c, ' +'RMA_Line_Item__r.Total_Deduction__c, ' +'Order_Product__r.Total_Price__c, ' +'Order_Product__r.ReturnedQuantity__c, ' +'Order_Product__r.Order.Name, ' +'Order_Product__r.UnitPrice, ' +'Order_Product__r.Product2.Goods_Description__c, ' +'Order_Product__r.Product2.Commodity_Code__c ' +'FROM Package_List__c ' +'WHERE Package__c IN :packId');
+                    'SELECT ' + String.escapeSingleQuotes(packageListFields) + ', ' +'Package__r.Name, ' +'Logistic_Line_Item__r.Product__c, ' +'Logistic_Line_Item__r.Product__r.Weight__c, ' +'Package__r.Description__c, ' +'Package__r.Weight_Unit__c, ' +'Package__r.Weight__c, ' +'Package__r.Order__c, ' +'Order_Product__r.Base_Price__c, ' +'Order_Product__r.Product2.SKU__c, ' +'Order_Product__r.Product2.Name, ' +'Order_Product__r.Product2.Declared_Shipment_Value__c, ' +'Order_Product__r.Product2.is_hazmat__c,'+'Order_Product__r.Product2.freight_class__c,'+'Order_Product__r.Product2.NMFC_code__c,'+'Order_Product__r.Product2.Primary_Hazard_Class__c,'+'Order_Product__r.Product2.Packaging_Group__c,'+'Order_Product__r.Product2.Hazmat_ID__c,' +'Work_Order_Line_Items__r.Product__r.Name, ' +'Purchase_Line_Items__r.Product__r.Name, ' +'Transfer_Order_Line_Item__r.Products__r.Name, ' +'RMA_Line_Item__r.Ord_Item__r.Product2.Name, ' +'Work_Order_Line_Items__r.Total_Cost__c, ' +'Work_Order_Line_Items__r.Unit_Price__c, ' +'Purchase_Line_Items__r.Total_Price__c, ' +'Purchase_Line_Items__r.Unit_Price__c, ' +'RMA_Line_Item__r.Total_Deduction__c, ' +'Order_Product__r.Total_Price__c, ' +'Order_Product__r.ReturnedQuantity__c, ' +'Order_Product__r.Order.Name, ' +'Order_Product__r.UnitPrice, ' +'Order_Product__r.Product2.Goods_Description__c, ' +'Order_Product__r.Product2.Commodity_Code__c ' +'FROM Package_List__c ' +'WHERE Package__c IN :packId');
                /* wrap.packItems = Database.query('select ' + String.escapeSingleQuotes(packageListFields) + ' ,Logistic_Line_Item__r.Product__c,Logistic_Line_Item__r.Product__r.Weight__c,Package__r.Name, Package__r.Description__c, Package__r.Weight_Unit__c, Package__r.Weight__c, Package__r.Order__c ,Order_Product__r.Base_Price__c, '+
                                                 +' Order_Product__r.Product2.SKU__c, Order_Product__r.Product2.Name, Work_Order_Line_Items__r.Product__r.Name, Purchase_Line_Items__r.Product__r.Name, Transfer_Order_Line_Item__r.Products__r.Name,RMA_Line_Item__r.Ord_Item__r.Product2.Name, '+
                                                 +' Work_Order_Line_Items__r.Total_Cost__c, Work_Order_Line_Items__r.Unit_Price__c, Purchase_Line_Items__r.Total_Price__c, Purchase_Line_Items__r.Unit_Price__c, RMA_Line_Item__r.Total_Deduction__c, Order_Product__r.Total_Price__c, '+
@@ -629,6 +666,7 @@ public static BookingResult bookFreightview(
     String myConsVar
 ) {
     System.debug('1');
+    System.debug('schedule pickup is '+schedulePickup);
     BookingResult br = new BookingResult();
    // br.documentTitles = new List<String>();
 
@@ -664,9 +702,27 @@ public static BookingResult bookFreightview(
 		System.debug('br.responseRaw =>'+br.responseRaw);
         if (res.getStatusCode() != 200 && res.getStatusCode() != 201) {
             br.success = false;
-            br.message = 'Booking failed: ' + res.getStatusCode() + ' - ' + res.getBody();
+            // Parse responseRaw to extract errors
+            try {
+                Map<String, Object> respMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+                String mainMsg = (String) respMap.get('message');
+                List<Object> errorsList = (List<Object>) respMap.get('errors');
+                List<String> detailedErrors = new List<String>();
+                if (errorsList != null) {
+                    for (Object eObj : errorsList) {
+                        Map<String, Object> eMap = (Map<String, Object>) eObj;
+                        if (eMap.containsKey('message')) detailedErrors.add((String) eMap.get('message'));
+                    }
+                }
+                br.message = mainMsg + (detailedErrors.size() > 0 ? ': ' + String.join(detailedErrors, ', ') : '');
+            } catch (Exception ex) {
+                // fallback
+                br.message = 'Booking failed: ' + res.getStatusCode() + ' - ' + res.getBody();
+            }
+            br.responseRaw = res.getBody();
             return br;
         }
+
 
         //️⃣ Parse response
         Map<String, Object> resp = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
@@ -717,15 +773,26 @@ try {
         br.contentDocumentIds = docIds;
         br.contentTitles = titles;
 		Map<String, Id> byType = new Map<String, Id>();
-        for (Integer i = 0; i < titles.size(); i++) {
-            String t = (titles[i] ?? '').toLowerCase();  // e.g. "fv-<id>-bol"
-            if (t.endsWith('-bol'))   byType.put('bol',   docIds[i]);
-            if (t.endsWith('-label')) byType.put('label', docIds[i]);
-            if (t.endsWith('-customer-quote')) byType.put('customer-quote', docIds[i]);
-            if (t.endsWith('-rate-detail'))    byType.put('rate-detail',    docIds[i]);
-        }
-        br.docByType = byType;
+System.debug('>>> TITLES: ' + JSON.serialize(titles));
 
+for (Integer i = 0; i < titles.size(); i++) {
+    String t = (titles[i] ?? '').toLowerCase();
+    Id docId = docIds.size() > i ? docIds[i] : null;
+
+    if (t.endsWith('-bol') || t.endsWith('-bol.pdf') || t.contains('-bol'))
+        byType.put('bol', docId);
+    else if (t.endsWith('-label') || t.endsWith('-label.pdf') || t.contains('-label'))
+        byType.put('label', docId);
+    else if (t.endsWith('-customer-quote') || t.endsWith('-customer-quote.pdf') || t.contains('-customer-quote'))
+        byType.put('customer-quote', docId);
+    else if (t.endsWith('-rate-detail') || t.endsWith('-rate-detail.pdf') || t.contains('-rate-detail'))
+        byType.put('rate-detail', docId);
+}
+
+br.docByType = byType;
+System.debug('>>> FIXED DOC BY TYPE: ' + JSON.serialize(br.docByType));
+
+        
 		System.debug('everything looks fine');
         //️⃣ Return response
         br.success = true;
@@ -838,6 +905,7 @@ private static List<Id> saveFreightviewDocs(
         // Collect ids & titles (handy for UI)
         Set<Id> cdIds = new Set<Id>();
         for (ContentVersion cv : cvs) if (cv.ContentDocumentId != null) cdIds.add(cv.ContentDocumentId);
+        System.debug('');
         if (!cdIds.isEmpty()) {
             for (ContentDocument cd : [SELECT Id, Title FROM ContentDocument WHERE Id IN :cdIds]) {
                 contentDocIds.add(cd.Id);
@@ -846,6 +914,77 @@ private static List<Id> saveFreightviewDocs(
         }
     }
     return contentDocIds;
+}
+    @AuraEnabled(cacheable=true)
+public static Map<String, Id> getShipmentDocs(Id shipmentId) {
+    Map<String, Id> docByType = new Map<String, Id>();
+
+    List<ContentDocumentLink> links = [
+        SELECT ContentDocumentId, ContentDocument.Title
+        FROM ContentDocumentLink
+        WHERE LinkedEntityId = :shipmentId
+    ];
+
+    for (ContentDocumentLink link : links) {
+        String t = (link.ContentDocument.Title ?? '').toLowerCase();
+        if (t.contains('-bol')) docByType.put('bol', link.ContentDocumentId);
+        else if (t.contains('-label')) docByType.put('label', link.ContentDocumentId);
+        else if (t.contains('-customer-quote')) docByType.put('customer-quote', link.ContentDocumentId);
+        else if (t.contains('-rate-detail')) docByType.put('rate-detail', link.ContentDocumentId);
+    }
+
+    return docByType;
+}
+@AuraEnabled
+public static List<TrackingEventWrapper> getTrackingHistory(String shipmentId, String myConsVar) {
+    List<TrackingEventWrapper> trackingList = new List<TrackingEventWrapper>();
+	System.debug('shipmentId=>'+shipmentId);
+    try {
+        if (String.isBlank(shipmentId)) {
+            throw new AuraHandledException('Shipment ID is required for tracking.');
+        }
+
+        // Deserialize credentials
+        myConstructorWrapper MCW = (myConstructorWrapper) JSON.deserialize(myConsVar, myConstructorWrapper.class);
+
+        // Get token
+        String token = getAccessToken(MCW.Username, MCW.childpassword, MCW.endPoint);
+
+        // Prepare endpoint
+        String endpoint = MCW.endPoint + '/v2.0/shipments/' + shipmentId + '/tracking';
+
+        // HTTP Request
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(endpoint);
+        req.setMethod('GET');
+        req.setHeader('Authorization', 'Bearer ' + token);
+        req.setHeader('Content-Type', 'application/json');
+
+        Http http = new Http();
+        System.debug('request =>'+req);
+        HttpResponse res = http.send(req);
+		System.debug('response =>'+res);
+        if (res.getStatusCode() == 200 || res.getStatusCode() == 201) {
+            List<Object> events = (List<Object>) JSON.deserializeUntyped(res.getBody());
+            for (Object eObj : events) {
+                Map<String, Object> e = (Map<String, Object>) eObj;
+                TrackingEventWrapper evt = new TrackingEventWrapper();
+                evt.createdDate = (String) e.get('createdDate');
+                evt.eventDate   = (String) e.get('eventDate');
+                evt.eventTime   = (String) e.get('eventTime');
+                evt.eventType   = (String) e.get('eventType');
+                evt.summary     = (String) e.get('summary');
+                trackingList.add(evt);
+            }
+        } else {
+            throw new AuraHandledException('Failed to fetch tracking: ' + res.getStatusCode());
+        }
+
+    } catch (Exception ex) {
+        throw new AuraHandledException('Error fetching FreightView tracking: ' + ex.getMessage());
+    }
+
+    return trackingList;
 }
 
     public class myConstructorWrapper{
@@ -861,28 +1000,6 @@ private static List<Id> saveFreightviewDocs(
 
         @AuraEnabled public String shipperCountryCode                          { get; set; }@AuraEnabled public String wrapError                                   { get; set; }
     }
-
-       @AuraEnabled(cacheable=true)
-public static Map<String, Id> getShipmentDocs(Id shipmentId) {
-    Map<String, Id> docByType = new Map<String, Id>();
- 
-    List<ContentDocumentLink> links = [
-        SELECT ContentDocumentId, ContentDocument.Title
-        FROM ContentDocumentLink
-        WHERE LinkedEntityId = :shipmentId
-    ];
- 
-    for (ContentDocumentLink link : links) {
-        String t = (link.ContentDocument.Title ?? '').toLowerCase();
-        if (t.contains('-bol')) docByType.put('bol', link.ContentDocumentId);
-        else if (t.contains('-label')) docByType.put('label', link.ContentDocumentId);
-        else if (t.contains('-customer-quote')) docByType.put('customer-quote', link.ContentDocumentId);
-        else if (t.contains('-rate-detail')) docByType.put('rate-detail', link.ContentDocumentId);
-    }
- 
-    return docByType;
-}
- 
 
     public class Wrapper {
     @AuraEnabled public List<selectOptions> StatusConfirmation { get; set; }
@@ -985,4 +1102,11 @@ public class quoteWrapper {
       @AuraEnabled public Map<String, Id> docByType; 
       
     }
+public class TrackingEventWrapper {
+    @AuraEnabled public String createdDate;
+    @AuraEnabled public String eventDate;
+    @AuraEnabled public String eventTime;
+    @AuraEnabled public String eventType;
+    @AuraEnabled public String summary;
+}
 }
