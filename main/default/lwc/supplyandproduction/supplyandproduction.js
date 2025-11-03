@@ -833,7 +833,7 @@ generateCustomYearLabels(year) {
             
     const salesData = await getMonthlySalesPriceStats({
       productId: this.inventoryProduct.Id,
-      orgId: this.selectedOrgId || null,
+      orgId: this.organisationId || null,
       startDate: this.fromDate,
       endDate: this.toDate
     });
@@ -875,7 +875,7 @@ console.log('🧾 Apex getMonthlySalesPriceStats() JSON string:', JSON.stringify
 
     const purchaseData = await getMonthlyPurchasePriceStats({
       productId: this.inventoryProduct.Id,
-      orgId: null, // or this.selectedOrgId || null
+      orgId: this.organisationId, // or this.selectedOrgId || null
       startDate: this.fromDate,
       endDate: this.toDate
     });

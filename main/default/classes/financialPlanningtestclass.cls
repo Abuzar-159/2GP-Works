@@ -8,7 +8,7 @@ public with sharing class financialPlanningtestclass {
         insert ap;
         Product2 prod = New Product2(Name='test Prod',IsActive=true);
         insert prod;
-        Account acc = new Account(Name='Test',Account_type__c = 'Organisation',Default__c = true); 
+        Account acc = new Account(Name='Test',Account_type__c = 'Company',Default__c = true); 
         insert acc;
         AccountsPayable.DefaultOrganisation();
          Account vendor = new Account(Name='Test Supplier',Account_type__c = 'Vendor');
@@ -19,7 +19,7 @@ public with sharing class financialPlanningtestclass {
         insert contact;
         Address__c sAddress = new Address__c(Customer__c=customer.id,Contact__c=contact.id,Active__c=true,Address_Line1__c='Test Recipient Line 1', Address_Line2__c='Line 2', Address_Line3__c='test', City__c='Long Beach',State__c='California', Postal_Code__c='90805', Country__c = 'United States', Is_Shipping_Address__c=true);
         insert sAddress;
-        Channel__c salepoint = new Channel__c(Name = 'Sale Point',  Active__c=true, Street__c = 'Test Sndr Address Line 1',City__c = 'COLORADO SPRINGS',State_Province__c = 'Colorado',Country__c = 'United States',Zip_Postal_Code__c = '80915', Shipper_Name__c = 'Apex', Company__c = 'ApexCloud', Phone__c = '1234567890',
+        Channel__c salepoint = new Channel__c(Name = 'Sale Point',  Active__c=true, Street__c = 'Test Sndr Address Line 1',City__c = 'COLORADO SPRINGS',State_Province__c = 'Colorado',Country__c = 'United States',Zip_Postal_Code__c = '80915', Shipper_Name__c = 'Apex', Phone__c = '1234567890',
                                               Ship_From_Address__c=sAddress.Id);
         insert salepoint;
         PO__c po = new PO__c(Vendor__c = vendor.Id);
@@ -82,9 +82,9 @@ public with sharing class financialPlanningtestclass {
          Project__c proj = new Project__c(Name = 'Test project',Active__c = true);
         insert proj;
 
-        Budget_Plan__c bp1 = new Budget_Plan__c(UnPosted_Actual_Expenditures__c=false, Name = 'test BP',Organisation__c = acc.Id);
+        Budget_Plan__c bp1 = new Budget_Plan__c(UnPosted_Actual_Expenditures__c=false, Name = 'test BP');
         insert bp1;
-        Budget_Account__c bc1 = new Budget_Account__c(Name = 'test BC',Budget_Plan__c = bp1.Id,Project__c = proj.Id,Organisation__c = acc.Id,Amount__c =100,Committed_Amount__c = 50,Consumed_Amount__c=20,First_Quarter_Amount__c = 25);
+        Budget_Account__c bc1 = new Budget_Account__c(Name = 'test BC',Budget_Plan__c = bp1.Id,Project__c = proj.Id,Company__c = acc.Id,Amount__c =100,Committed_Amount__c = 50,Consumed_Amount__c=20,First_Quarter_Amount__c = 25);
         insert bc1;
         
         

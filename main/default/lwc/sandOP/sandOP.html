@@ -101,6 +101,16 @@
                         </div>
                     </div>
                 </div>
+                <div class={subscriptionTabClass} data-tab="subscription" onclick={handleMainTabClick}>
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size_3-of-12">
+                            <lightning-icon icon-name='standard:digital_verification_config_group' alternative-text='digital_verification_config_group' size='medium' title='digital_verification_config_group'></lightning-icon>
+                        </div>
+                        <div class="slds-col slds-p-top_x-small hide-on-mobile">
+                            Subscription Management & Analytics
+                        </div>
+                    </div>
+                </div>
                 <div class={riskAndReturnTabClass} data-tab="riskAndReturn" onclick={handleMainTabClick}>
                     <div class="slds-grid">
                         <div class="slds-col slds-size_3-of-12">
@@ -176,8 +186,7 @@
 
                     </template>
                     <template if:true={isSupplyTabOpen}>
-                        <c-supplyandproduction   key={DefaultOrganisation.Id}
-                                    organisation-id={DefaultOrganisation.Id}></c-supplyandproduction>
+                        <c-supplyandproduction organisation-id={DefaultOrganisation.Id}></c-supplyandproduction>
                     </template>
                     <template if:true={isInventoryTabOpen}>
                         <c-demand-planning organisation-id={DefaultOrganisation.Id}
@@ -189,9 +198,13 @@
                     <template if:true={isFinanceTabOpen}>
                         <c-financial-planning organisation-id={DefaultOrganisation.Id}></c-financial-planning>
                     </template>
+                    <template if:true={isSubscriptionTabOpen}>
+                        <c-subscription-planning organisation-id={DefaultOrganisation.Id}></c-subscription-planning>
+                    </template>
                     <template if:true={isRiskAndReturnTabOpen}>
                         <c-demand-planning organisation-id={DefaultOrganisation.Id} is-risk-and-return-tab-open={isRiskAndReturnTabOpen}></c-demand-planning>
                     </template>
+                    
                     <!-- <template if:true={isExecutiveTabOpen}>
                         <c-financial-planning organisation-id={DefaultOrganisation.Id}></c-financial-planning>
                     </template> -->
@@ -199,6 +212,4 @@
             </div>
         </div>
     </div>
-
-    
 </template>

@@ -304,37 +304,23 @@ public static Map<String, List<Decimal>> getMonthlyIncomeExpenseForFiscalYear(Da
         System.debug('✅ Income → Month ' + m + ' (Index ' + idx + '): ' + total);
     }
 
-    for (AggregateResult ar : billResults) {
-        Integer m = (Integer) ar.get('month');
-        Decimal total = (Decimal) ar.get('total');
-Integer idx = Math.mod((m - 1 - fiscalStartMonthIndex + 12), 12);
-        expense[idx] = total;
+    for (AggregateResult ar : billResults) {			        Integer m = (Integer) ar.get('month');		Decimal total = (Decimal) ar.get('total');			Integer idx = Math.mod((m - 1 - fiscalStartMonthIndex + 12), 12);				expense[idx] = total;
         System.debug('✅ Bill Expense → Month ' + m + ' (Index ' + idx + '): ' + total);
     }
 
-    for (AggregateResult ar : expenseResults) {
-        Integer m = (Integer) ar.get('month');
-        Decimal total = (Decimal) ar.get('total');
-Integer idx = Math.mod((m - 1 - fiscalStartMonthIndex + 12), 12);
-        additionalExpense[idx] = total;
+    for (AggregateResult ar : expenseResults) {			Integer m = (Integer) ar.get('month');			Decimal total = (Decimal) ar.get('total');			Integer idx = Math.mod((m - 1 - fiscalStartMonthIndex + 12), 12);			additionalExpense[idx] = total;
         System.debug('🆕 Extra Expense → Month ' + m + ' (Index ' + idx + '): ' + total);
     }
 
     // Fill nulls and combine expenses
-    for (Integer i = 0; i < 12; i++) {
-        if (income[i] == null) income[i] = 0;
-        if (expense[i] == null) expense[i] = 0;
-        if (additionalExpense[i] == null) additionalExpense[i] = 0;
-        expense[i] += additionalExpense[i];
+    for (Integer i = 0; i < 12; i++) {				if (income[i] == null) income[i] = 0;			if (expense[i] == null) expense[i] = 0;				if (additionalExpense[i] == null) additionalExpense[i] = 0;				expense[i] += additionalExpense[i];
     }
 
     System.debug('📈 Final Income (Fiscal Year): ' + JSON.serialize(income));
     System.debug('📉 Final Expense (Fiscal Year, combined): ' + JSON.serialize(expense));
     System.debug('----------------------------------------');
 
-    return new Map<String, List<Decimal>>{
-        'income' => income,
-        'expense' => expense
+    return new Map<String, List<Decimal>>{			'income' => income,			'expense' => expense
     };
 }
 

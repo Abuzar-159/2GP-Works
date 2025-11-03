@@ -74,7 +74,7 @@ private class SandOPTest {
                              Order_Profile__c=profile.Id, Stage__c='Entered', Channel__c=channel.Id, Contact__c=contact.Id); 
         insert ord;
         // Set CreatedDate for the Order
-        Test.setCreatedDate(ord.Id, DateTime.newInstance(2025, 1, 1));
+        //Test.setCreatedDate(ord.Id, DateTime.newInstance(2025, 1, 1));
         OrderItem orditem = new OrderItem(OrderId = ord.Id, Quantity = 1, UnitPrice = 100, Product2Id = pro.Id, PricebookEntryId=pbe.Id, Active__c=true);        
         insert orditem;
         
@@ -150,6 +150,7 @@ private class SandOPTest {
         //Test.setCreatedDate(ord2.Id, DateTime.newInstance(2025, 1, 1));
         OrderItem orditem3 = new OrderItem(OrderId = ord3.Id, Quantity = 1, UnitPrice = 100, Product2Id = pro.Id, PricebookEntryId=pbe.Id, Active__c=true);        
         insert orditem3;
+        
         ord3.Is_Closed__c=true;
         update ord3;
  		 Warranty__c wrr1 = new Warranty__c(Product__c =pro.id,Valid_From__c=System.Today(),Valid_Till__c=System.Today()+30,Order_Product__c=orditem3.id);
@@ -159,6 +160,28 @@ private class SandOPTest {
         
         RMA_Line_Item__c rmalineitem = new RMA_Line_Item__c(Name='Test', Ord_Item__c=orditem3.Id, Active__c=true, Return_Merchandise_Authorisation__c=rmarecord1.Id, Return_Status__c='Quality Check',Company__c=orgn.Id);
         insert rmalineitem;
+        // Make one order clearly "countable" for shipment/delivery
+Order deliveredOrder = [SELECT Id, Status FROM Order WHERE Company__c != null LIMIT 1];
+deliveredOrder.Status = 'Delivered'; // or 'Shipped' depending on your org’s semantics
+update deliveredOrder;
+
+// Close the RMA line item so it’s considered 'returned'
+RMA_Line_Item__c rmaLi = [SELECT Id, Return_Status__c FROM RMA_Line_Item__c LIMIT 1];
+rmaLi.Return_Status__c = 'Discard';
+update rmaLi;
+
+// (Optional but recommended) pin record dates to current month to guarantee inclusion
+// Current year/month
+Integer y = System.today().year();
+Integer m = System.today().month();
+Date d = Date.newInstance(y, m, Math.min(15, Date.daysInMonth(y, m)));
+
+// Make sure created dates fall into the same period as the trend calculation
+Return_Merchandise_Authorisation__c rma =
+    [SELECT Id FROM Return_Merchandise_Authorisation__c LIMIT 1];
+Test.setCreatedDate(deliveredOrder.Id, DateTime.newInstance(y, m, 10, 9, 0, 0));
+Test.setCreatedDate(rma.Id,           DateTime.newInstance(y, m, 12, 9, 0, 0));
+
     }
     
     @isTest
@@ -330,6 +353,7 @@ private class SandOPTest {
         System.debug('ordList ->'+ordList);
         //System.assertEquals(1, ordList.size(), 'Order should exist from testSetup');
         Order ord = ordList[1];
+		Test.setCreatedDate(ord.Id, System.now().addMinutes(-5));
         ord.status='Activated';
         update ord;
         Id prd=null;
@@ -352,6 +376,8 @@ private class SandOPTest {
         System.debug('ordList ->'+ordList);
         //System.assertEquals(1, ordList.size(), 'Order should exist from testSetup');
         Order ord = ordList[1];
+Test.setCreatedDate(ord.Id, System.now().addMinutes(-5));
+
         ord.status='Activated';
         update ord;
         Test.startTest();
@@ -377,17 +403,26 @@ private class SandOPTest {
     }
   @isTest
      static void testgetTopReturningCustomers() {
-        Account org = [SELECT Id FROM Account WHERE Name = 'Organisation' LIMIT 1];
+        Account org = [SELECT Id, Name FROM Account WHERE Name = 'Organisation' LIMIT 1];
         Test.startTest();
        
         List<sandOP.CustomerReturnSummary> results = sandOP.getTopReturningCustomers(org.Id,1);
         Test.stopTest();
+         
    
     }
       @isTest
      static void testgetReturnRateTrend() {
         Account org = [SELECT Id FROM Account WHERE Name = 'Organisation' LIMIT 1];
         Test.startTest();
+         Order anyOrder = [SELECT Id, Status FROM Order LIMIT 1];
+anyOrder.Status = 'Delivered';
+update anyOrder;
+
+RMA_Line_Item__c anyRmaLi = [SELECT Id, Return_Status__c FROM RMA_Line_Item__c LIMIT 1];
+anyRmaLi.Return_Status__c = 'Discard';
+update anyRmaLi;
+
         List<sandOP.MonthlyReturnStat> results = sandOP.getReturnRateTrend(org.Id);
         Test.stopTest();
    

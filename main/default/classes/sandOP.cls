@@ -1734,7 +1734,6 @@ public static List<ReturnProductSummary> getTopReturnedProducts(Id organisationI
 
     //     returnMap.get(productId).totalReturnedQty += qty;
 
-    //commented this above method by Abuzar and added the below lines for the null exception error on 30-10-2025
     for (AggregateResult ar : returnAgg) {
     Id productId = (Id) ar.get('productId');
     if (productId == null) continue; // defensive
@@ -1917,7 +1916,7 @@ public static List<MonthlyReturnStat> getReturnRateTrend(String organisationId) 
                   AND Company__c = :organisationId
             GROUP BY CALENDAR_MONTH(CreatedDate)
         ];
-
+/*
         for (AggregateResult ar : returned) {
             Integer month = (Integer)ar.get('month');
             Integer qty = ((Decimal)ar.get('qty')).intValue();
@@ -1926,7 +1925,32 @@ public static List<MonthlyReturnStat> getReturnRateTrend(String organisationId) 
             stat.monthLabel = DateTime.newInstance(year, month, 1, 0, 0, 0).format('MMM yyyy');
             stat.totalReturnedQty = qty;
             dataMap.put(String.valueOf(month), stat);
-        }
+        }*/
+        for (AggregateResult ar : returned) {
+    // Defensive null checks
+    if (ar == null) continue;
+
+    Integer month = (Integer) ar.get('month');
+    Decimal qtyDecimal = (Decimal) ar.get('qty');
+
+    // Skip if either is null
+    if (month == null || qtyDecimal == null) continue;
+
+    Integer qty = qtyDecimal.intValue();
+
+    // Create and store safely
+    MonthlyReturnStat stat = new MonthlyReturnStat();
+    try {
+        stat.monthLabel = DateTime.newInstance(year, month, 1, 0, 0, 0)
+                                  .format('MMM yyyy');
+    } catch (Exception e) {
+        // Fallback label if month invalid
+        stat.monthLabel = 'Unknown';
+    }
+    stat.totalReturnedQty = qty;
+    dataMap.put(String.valueOf(month), stat);
+}
+
 
         List<AggregateResult> sold = [
             SELECT CALENDAR_MONTH(CreatedDate) month,
@@ -1972,6 +1996,105 @@ public static List<MonthlyReturnStat> getReturnRateTrend(String organisationId) 
         throw new AuraHandledException('Error while processing return trend: ' + e.getMessage());
     }
 }
+
+/*
+@AuraEnabled(cacheable=true)
+public static List<MonthlyReturnStat> getReturnRateTrend(String organisationId) {
+    List<MonthlyReturnStat> result = new List<MonthlyReturnStat>();
+    try {
+        Integer year = Date.today().year();
+        Date startDate = Date.newInstance(year, 1, 1);
+        Date endDate = Date.newInstance(year, 12, 31);
+
+        Map<String, MonthlyReturnStat> dataMap = new Map<String, MonthlyReturnStat>();
+
+        System.debug('🧪 getReturnRateTrend() INPUTS -> organisationId=' + organisationId);
+        System.debug('📅 Year=' + year + ' | startDate=' + startDate + ' | endDate (inclusive)=' + endDate);
+
+        // ---------- Returned ----------
+        System.debug('🔎 Running aggregate on RMA_Line_Item__c (returns)...');
+        List<AggregateResult> returned = [
+            SELECT CALENDAR_MONTH(CreatedDate) month,
+                   SUM(Quantity_Return__c) qty
+            FROM RMA_Line_Item__c
+            WHERE CreatedDate >= :startDate AND CreatedDate <= :endDate
+                  AND Company__c = :organisationId
+            GROUP BY CALENDAR_MONTH(CreatedDate)
+        ];
+        System.debug('📊 Returned agg size = ' + returned.size());
+
+        for (AggregateResult ar : returned) {
+            Integer month = (Integer)ar.get('month');
+            Object qtyObj = ar.get('qty'); // may be null
+          System.debug('↩️ Returned row -> month=' + month + ' | qty(raw)=' + String.valueOf(qtyObj));
+
+            // (no logic change) original casting
+            Integer qty = ((Decimal)ar.get('qty')).intValue();
+
+            MonthlyReturnStat stat = new MonthlyReturnStat();
+            stat.monthLabel = DateTime.newInstance(year, month, 1, 0, 0, 0).format('MMM yyyy');
+            stat.totalReturnedQty = qty;
+            dataMap.put(String.valueOf(month), stat);
+        }
+        System.debug('🗺️ dataMap after returns -> keys=' + dataMap.keySet());
+
+        // ---------- Sold ----------
+        System.debug('🔎 Running aggregate on OrderItem (sold)...');
+        List<AggregateResult> sold = [
+            SELECT CALENDAR_MONTH(CreatedDate) month,
+                   SUM(Quantity) qty
+            FROM OrderItem
+            WHERE CreatedDate >= :startDate AND CreatedDate <= :endDate
+            GROUP BY CALENDAR_MONTH(CreatedDate)
+        ];
+        System.debug('📊 Sold agg size = ' + sold.size());
+
+        for (AggregateResult ar : sold) {
+            Integer month = (Integer)ar.get('month');
+            Object qtyObj = ar.get('qty'); // may be null
+          System.debug('↩️ Returned row -> month=' + month + ' | qty(raw)=' + String.valueOf(qtyObj));
+
+            // (no logic change) original casting
+            Integer qty = ((Decimal)ar.get('qty')).intValue();
+
+            String key = String.valueOf(month);
+            if (!dataMap.containsKey(key)) {
+                MonthlyReturnStat stat = new MonthlyReturnStat();
+                stat.monthLabel = DateTime.newInstance(year, month, 1, 0, 0, 0).format('MMM yyyy');
+                stat.totalReturnedQty = 0;
+                dataMap.put(key, stat);
+                System.debug('➕ Created placeholder stat for month=' + month);
+            }
+
+            MonthlyReturnStat stat = dataMap.get(key);
+            stat.totalSoldQty = qty;
+            stat.returnRate = qty > 0 ? ((Decimal)stat.totalReturnedQty / qty) * 100 : 0;
+            System.debug('📐 Computed -> month=' + month + ' | returned=' + stat.totalReturnedQty
+                         + ' | sold=' + stat.totalSoldQty + ' | rate=' + stat.returnRate);
+        }
+
+        // ---------- Finalize ----------
+        List<Integer> monthKeys = new List<Integer>();
+        for (String m : dataMap.keySet()) monthKeys.add(Integer.valueOf(m));
+        monthKeys.sort();
+        System.debug('🔑 Sorted month keys=' + monthKeys);
+
+        for (Integer m : monthKeys) {
+            result.add(dataMap.get(String.valueOf(m)));
+        }
+
+        System.debug('✅ Final Return Rate Result size=' + result.size() + ' | values=' + result);
+        return result;
+
+    } catch (Exception e) {
+        System.debug('❌ ERROR in getReturnRateTrend: ' + e.getMessage());
+        System.debug('❌ Type=' + e.getTypeName());
+        System.debug('🧵 Stacktrace:\n' + e.getStackTraceString());
+        throw new AuraHandledException('Error while processing return trend: ' + e.getMessage());
+    }
+}
+    */
+
 //customer return insights
 // public class CustomerReturnSummary {
 //     @AuraEnabled public Id customerId;
@@ -2028,41 +2151,62 @@ public static List<CustomerReturnSummary> getTopReturningCustomers(String organi
     ];
 // System.debug('return AGG '+returnAgg);
     for (AggregateResult ar : returnAgg) {
-        Id customerId = (Id)ar.get('customerId');
-        if (customerId == null) continue;
+    if (ar == null) continue;
 
-        String customerName = (String)ar.get('customerName') != null ? (String)ar.get('customerName') : 'Manual';
-        String reason = (String)ar.get('reason');
-        Integer qty = ((Decimal)ar.get('totalReturnedQty')).intValue();
-        Integer caseCount = ((Decimal)ar.get('returnCases')).intValue();
-        Date lastReturnDate = ((Datetime)ar.get('lastReturnDate')).date();
+    Id customerId = (Id) ar.get('customerId');
+    if (customerId == null) continue; // nothing to aggregate
 
-        if (!returnMap.containsKey(customerId)) {
-            CustomerReturnSummary summary = new CustomerReturnSummary();
-            summary.customerId = customerId;
-            summary.customerName = customerName;
-            summary.totalReturnedQty = 0;
-            returnMap.put(customerId, summary);
-        }
+    // Safe reads with defaults
+    String customerName = (String) ar.get('customerName');
+    if (String.isBlank(customerName)) customerName = 'Manual';
 
-        returnMap.get(customerId).totalReturnedQty += qty;
+    String reason = (String) ar.get('reason');
+    if (String.isBlank(reason)) reason = 'Unspecified';
 
-        // Track reason counts
-        if (!reasonCountMap.containsKey(customerId)) {
-            reasonCountMap.put(customerId, new Map<String, Integer>());
-        }
-        Map<String, Integer> reasonMap = reasonCountMap.get(customerId);
-        reasonMap.put(reason, reasonMap.containsKey(reason) ? reasonMap.get(reason) + qty : qty);
+    Decimal qtyDec = (Decimal) ar.get('totalReturnedQty');
+    Integer qty = (qtyDec != null) ? qtyDec.intValue() : 0;
 
-        // Track return cases
-        returnCaseCountMap.put(customerId, returnCaseCountMap.containsKey(customerId)
-            ? returnCaseCountMap.get(customerId) + caseCount : caseCount);
+    // COUNT() is returned as Decimal in AggregateResult
+    Decimal casesDec = (Decimal) ar.get('returnCases');
+    Integer caseCount = (casesDec != null) ? casesDec.intValue() : 0;
 
-        // Track latest return date
-        if (!lastReturnDateMap.containsKey(customerId) || lastReturnDateMap.get(customerId) < lastReturnDate) {
+    Datetime lastDt = (Datetime) ar.get('lastReturnDate');
+    Date lastReturnDate = (lastDt != null) ? lastDt.date() : null;
+
+    // Initialize summary bucket
+    if (!returnMap.containsKey(customerId)) {
+        CustomerReturnSummary summary = new CustomerReturnSummary();
+        summary.customerId = customerId;
+        summary.customerName = customerName;
+        summary.totalReturnedQty = 0;
+        returnMap.put(customerId, summary);
+    }
+
+    // Accumulate totals
+    returnMap.get(customerId).totalReturnedQty += qty;
+
+    // Reason counts (ensure map + key present)
+    if (!reasonCountMap.containsKey(customerId)) {
+        reasonCountMap.put(customerId, new Map<String, Integer>());
+    }
+    Map<String, Integer> reasonMap = reasonCountMap.get(customerId);
+    reasonMap.put(reason, (reasonMap.containsKey(reason) ? reasonMap.get(reason) : 0) + qty);
+
+    // Cases per customer
+    returnCaseCountMap.put(
+        customerId,
+        (returnCaseCountMap.containsKey(customerId) ? returnCaseCountMap.get(customerId) : 0) + caseCount
+    );
+
+    // Latest return date
+    if (lastReturnDate != null) {
+        if (!lastReturnDateMap.containsKey(customerId) || 
+            lastReturnDateMap.get(customerId) == null || 
+            lastReturnDateMap.get(customerId) < lastReturnDate) {
             lastReturnDateMap.put(customerId, lastReturnDate);
         }
     }
+}
 
     // 2. Order Aggregates
     List<AggregateResult> orderAgg = [
