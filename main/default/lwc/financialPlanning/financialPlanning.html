@@ -1,0 +1,1482 @@
+<template>
+    <div class="vertical-tab-layout">
+        <!-- Horizontal Tab Layout -->
+        <div class="horizontal-tab-layout">
+            <div class="horizontal-tabs">
+                <div class={budgetTabClass} onclick={selectBudget}><lightning-icon icon-name='standard:code_set'
+                        alternative-text='code_set' size='small' title='code_set'></lightning-icon> Finance Flow
+                    <!--Finance Overview & Credit/Debit Flow-->
+                </div>
+                <div class={costingTabClass} onclick={selectCosting}><lightning-icon
+                        icon-name='standard:code_set_bundle' alternative-text='code_set_bundle' size='small'
+                        title='code_set_bundle'></lightning-icon> Account Movements
+                    <!--Detailed Financial Movements Across Accounts-->
+                </div>
+                <div class={newBudgetTabClass} onclick={selectNewBudget}> <lightning-icon
+                        icon-name='standard:customer_lifecycle_analytics'
+                        alternative-text='customer_lifecycle_analytics' size='small'
+                        title='customer_lifecycle_analytics'></lightning-icon> Projections
+                    <!--Revenue vs. cost projections-->
+                </div>
+                <div class={newPlanningTabClass} onclick={selectNewPlanning}><lightning-icon
+                        icon-name='standard:digital_verification_config_group'
+                        alternative-text='digital_verification_config_group' size='small'
+                        title='digital_verification_config_group'></lightning-icon> Budget Alignment & Ops
+                    <!--Budget alignment with operational plans-->
+                </div>
+                <!-- <div class={newSubscriptionTabClass} onclick={selectNewSubscription}><lightning-icon
+                        icon-name='standard:digital_verification_config_group'
+                        alternative-text='digital_verification_config_group' size='small'
+                        title='digital_verification_config_group'></lightning-icon> Subscription Management & Analytics
+                </div> -->
+            </div>
+
+            <!-- Content Panel -->
+            <div class="vertical-tab-content">
+                <template if:true={isBudget}>
+                    <div if:true={showsimulation}>
+                        <!-- <h2 class="section-heading">📌 Budget & Accounts Overview</h2> -->
+                        <lightning-card class="maq">
+                            <div slot="title" class="slds-m-right_medium">
+                                <lightning-icon icon-name="standard:date_input" alternative-text="date_input"
+                                    size="small" title=""></lightning-icon>
+
+                                <a href="#" class="slds-card__header-link slds-truncate slds-m-left_small"
+                                    title="Monthly Income and Expenses Overview">
+                                    Monthly Income and Expenses Overview
+                                </a>
+
+
+
+                            </div>
+                            <!-- <div class="slds-grid slds-wrap">
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12 slds-large-size_2-of-12">
+                                    <span class="slds-p-left_small">
+                                        Select From year:&nbsp;
+                                        <select id="yearSelectforincome" onchange={handleYearChangeforIncome}
+                                            aria-label="Select Year">
+                                            <template for:each={availableYearsforIncome} for:item="yearforincome">
+                                                <option key={yearforincome} value={yearforincome}>{yearforincome}
+                                                </option>
+                                            </template>
+                                        </select>
+                                    </span>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12">
+                                    <span class="slds-p-left_small">
+                                        Select From Fiscal year:&nbsp;
+                                        <select id="fiscalyearselect" onchange={handleFiscalYearChange}
+                                            aria-label="Select Year">
+                                            <template for:each={fiscalyear} for:item="yearforincome">
+                                                <option key={fiscalyearforincome} value={fiscalyearforincome}>{fiscalyearforincome}
+                                                </option>
+                                            </template>
+                                        </select>
+                                    </span>
+                                </div>
+                                <div class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_4-of-12">
+                                    <template if:true={optionsForSimulation}>
+                                        <div
+                                            class="slds-grid slds-grid_align-end slds-m-bottom_small slds-m-right_medium slds-gutters">
+                                            <lightning-button variant="neutral" label="Simulate This Year's Finances"
+                                                onclick={toggleChartsforSimulation}>
+                                            </lightning-button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+
+
+
+
+                            <div class="slds-card__body slds-card__body_inner">
+
+
+
+                                <div class="chart-container">
+                                    <canvas lwc:dom="manual" class="income-expense-line"></canvas>
+                                </div>
+
+
+
+                            </div> -->
+
+                   <div class="slds-grid slds-grid_vertical-align-center slds-wrap slds-m-bottom_medium">
+    <!-- Radio Group -->
+    <div class="slds-col slds-p-right_small">
+        <lightning-radio-group
+            name="yearMode"
+            label="Mode"
+            options={yearModeOptions}
+            value={selectedYearMode}
+            type="button"
+            onchange={handleYearModeChange}>
+        </lightning-radio-group>
+    </div>
+
+    <!-- Year Selection -->
+    <div class="slds-col slds-p-right_small">
+        <template if:true={isNormalYearMode}>
+             <div class="" style="max-width: 150px;">
+                Year:&nbsp;
+                <select 
+                    id="yearSelectforincome" 
+                    onchange={handleYearChangeforIncome}
+                    aria-label="Select Year"
+                    class="slds-select">
+                    <template for:each={availableYearsforIncome} for:item="yearforincome">
+                        <option key={yearforincome} value={yearforincome}>{yearforincome}</option>
+                    </template>
+                </select>
+             </div>
+           
+        </template>
+
+<template if:true={isFiscalYearMode}>
+    <label class="slds-form-element__label" for="fiscalYearSelectForIncome">Fiscal Year</label>
+    <div class="" style="max-width: 150px;">
+        <select 
+            id="fiscalYearSelectForIncome" 
+            onchange={handleFiscalYearChange}
+            class="slds-select">
+            <option value="currentFiscal">Current Fiscal</option>
+            <option value="previousFiscal">Previous Fiscal</option>
+        </select>
+    </div>
+</template>
+
+       
+    </div>
+
+    <!-- Simulate Button -->
+    <div class="slds-col slds-grid slds-grid_align-end slds-p-right_small">
+        <template if:true={optionsForSimulation}>
+            <lightning-button 
+                variant="neutral" 
+                label="Simulate This Year's Finances"
+                onclick={toggleChartsforSimulation}>
+            </lightning-button>
+        </template>
+    </div>
+</div>
+
+<!-- Chart Section -->
+<div class="slds-card__body slds-card__body_inner">
+    <div class="chart-container">
+        <canvas lwc:dom="manual" class="income-expense-line"></canvas>
+    </div>
+</div>
+
+                        </lightning-card>
+
+                        <div class="slds-m-top_medium"></div>
+                        <lightning-card class="maq">
+                            <div slot="title" class="slds-m-right_medium ">
+
+                                <lightning-icon icon-name='standard:code_set_bundle' alternative-text='date_input'
+                                    size='small' title='code_set_bundle'></lightning-icon>
+                                <a href="#" class="slds-card__header-link slds-truncate"
+                                    title="Monthly Credit vs Debit Amounts"> Monthly Credit/Debit Note Rollup </a>
+                            </div>
+                            <div class="slds-card__body slds-card__body_inner">
+                                <div class="chart-container">
+                                    <canvas class="bar-monthly-notes" lwc:dom="manual"></canvas>
+                                </div>
+                            </div>
+                        </lightning-card>
+                    </div>
+
+                    <div if:false={showsimulation}>
+
+                        <lightning-card class="maq">
+                            <div slot="title" class="slds-m-right_medium">
+                                <lightning-icon icon-name='standard:date_input' alternative-text='date_input'
+                                    size='small' title=' '></lightning-icon>
+                                <a href="#" class="slds-card__header-link slds-truncate slds-m-left_small"
+                                    title="Monthly Income and Expenses Overview">Current Year Income and Expenses
+                                    Prediction &
+                                    Simulation </a>
+
+
+                            </div>
+
+                            <div
+                                class="slds-grid slds-grid_align-end slds-m-bottom_small slds-m-right_small slds-gutters">
+                                <lightning-button variant="neutral" label="Simulate Income & Expenses"
+                                    onclick={openSimulationModal}></lightning-button>
+                            </div>
+                            <div class="slds-card__body slds-card__body_inner">
+                                <div class="chart-container">
+                                    <canvas lwc:dom="manual" class="income-expense-line-prediction"></canvas>
+                                </div>
+
+
+                            </div>
+
+
+
+                            <template if:true={simulationTableData1}>
+                                <div class="slds-m-top_medium">
+                                    <table class="slds-table slds-table_cell-buffer slds-table_bordered">
+                                        <thead>
+                                            <tr>
+                                                <th>Type</th>
+                                                <template for:each={monthLabels} for:item="month">
+                                                    <th key={month}>{month}</th>
+                                                </template>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={simulationTableData} for:item="row">
+                                                <tr key={row.label}>
+                                                    <td><b>{row.label}</b></td>
+                                                    <template for:each={row.values} for:item="entry">
+                                                        <td key={entry.key}>{entry.val}</td>
+                                                    </template>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </template>
+
+
+
+
+
+                            <!-- Simulation Popup -->
+                            <template if:true={showSimulationPanel}>
+                                <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open">
+                                    <div class="slds-modal__container">
+                                        <header class="slds-modal__header">
+                                            <h2 class="slds-modal__title slds-hyphenate">Simulate Income & Expenses</h2>
+                                        </header>
+
+                                        <div class="slds-modal__content slds-p-around_medium">
+                                            <!-- Simulated Income -->
+                                            <div class="slds-text-title_bold">Simulated Income (Future Months)</div>
+                                            <lightning-layout multiple-rows>
+                                                <template for:each={simulatedIncomeInputs} for:item="item">
+                                                    <lightning-layout-item key={item.label} size="3"
+                                                        class="slds-p-around_x-small">
+                                                        <lightning-input type="number" label={item.label}
+                                                            value={item.value} data-month={item.label}
+                                                            data-type="income" data-label={item.label}
+                                                            onchange={handleSimInputChange}>
+                                                        </lightning-input>
+                                                    </lightning-layout-item>
+                                                </template>
+                                            </lightning-layout>
+
+                                            <!-- Simulated Expenses -->
+                                            <div class="slds-text-title_bold slds-m-top_medium">Simulated Expenses
+                                                (Future Months)</div>
+                                            <lightning-layout multiple-rows>
+                                                <template for:each={simulatedExpenseInputs} for:item="item">
+                                                    <lightning-layout-item key={item.label} size="3"
+                                                        class="slds-p-around_x-small">
+                                                        <lightning-input type="number" label={item.label}
+                                                            value={item.value} data-month={item.label}
+                                                            data-type="expense" data-label={item.label}
+                                                            onchange={handleSimInputChange}>
+                                                        </lightning-input>
+                                                    </lightning-layout-item>
+                                                </template>
+                                            </lightning-layout>
+                                        </div>
+
+                                        <footer class="slds-modal__footer slds-text-align_right">
+                                            <lightning-button variant="neutral" label="Cancel"
+                                                onclick={resetSimulation}></lightning-button>
+                                            <lightning-button variant="brand" class="slds-m-left_small" label="Simulate"
+                                                onclick={handleSimulateForecast}></lightning-button>
+                                        </footer>
+                                    </div>
+                                </section>
+                                <div class="slds-backdrop slds-backdrop_open"></div>
+                            </template>
+
+                            <footer class="slds-card__footer slds-grid slds-grid_align-center">
+                                <lightning-button variant="neutral" label="Back to Main"
+                                    onclick={togglebackToMain}></lightning-button>
+                            </footer>
+                        </lightning-card>
+                    </div>
+
+
+
+                </template>
+
+                <template if:true={isCosting}>
+                    <!-- <h2 class="section-heading">📊 Outstanding Financial Overview</h2> -->
+                    <lightning-card class="maq">
+                        <div slot="title" class="slds-m-right_medium">
+                            <lightning-icon icon-name='standard:disclosure_and_compliance' alternative-text='date_input'
+                                size='small' title=''></lightning-icon>
+                            <a href="#" class="slds-card__header-link slds-truncate"
+                                title="Customer-wise Financial Summary"> Customer-wise Financial Summary </a>
+                        </div>
+
+
+                        <div class="slds-card__body slds-card__body_inner">
+
+                            <div class="slds-illustration slds-illustration_large">
+                                <!--div class="slds-text-longform">
+                                <p class="slds-text-body_regular">We couldn’t load your charts right now.</p>
+                                </div-->
+                                <div class="custom-illustration">
+                                </div>
+                            </div>
+
+
+                            <div class="chart-container">
+                                <div class="radio-group">
+                                    <label><input type="radio" name="summaryView" value="Overdue" checked
+                                            onchange={handleCustomerSummaryChange} /> Overdue Invoices</label>
+                                    <label><input type="radio" name="summaryView" value="Unpaid"
+                                            onchange={handleCustomerSummaryChange} /> Unpaid Bills</label>
+                                </div>
+                                <canvas class="heatmap-overdue" lwc:dom="manual"></canvas>
+                            </div>
+
+
+                        </div>
+                    </lightning-card>
+                    <div class="slds-m-top_small"></div>
+
+
+
+
+                    <lightning-card class="maq">
+                        <div slot="title">
+                            <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+                                <!-- Left Side: Icon + Title -->
+                                <div class="slds-col">
+                                    <lightning-icon icon-name="standard:metrics" alternative-text="Metrics" size="small"
+                                        title="Metrics"></lightning-icon>
+                                    &nbsp;
+                                    <a href="javascript:void(0);" class="slds-card__header-link slds-truncate"
+                                        title="summaryView">
+                                        {summaryView} Summary
+                                    </a>
+                                </div>
+
+                                <!-- Right Side: Button -->
+                               
+                            </div>
+                        </div>
+                        <div class="slds-grid" style="width: 100%; text-align: right;padding-right:20px;">
+                         <div class="slds-col slds-p-righ_medium">
+                                    <lightning-button variant="neutral" onclick={createBillOrInvoice}
+                                        label="Create Invoice"></lightning-button>
+                                </div>
+                                </div>
+
+
+                        <div class="summary-table-section slds-m-around_medium">
+                            <template if:true={displayRows}>
+                                <div class="scrollable-table">
+                                    <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+                                        <thead class="slds-text-title_caps">
+                                            <tr class="slds-line-height_reset">
+                                                <template if:true={showCheckboxes}>
+                                                    <th scope="col">
+                                                        <div class="slds-truncate" title="Checkbox">Checkbox</div>
+                                                    </th>
+                                                </template>
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="Count">Count</div>
+                                                </th>
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="Customer Name">Customer Name</div>
+                                                </th>
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="Invoice/Bill Name">Invoice/Bill
+                                                        Name</div>
+                                                </th>
+                                                <th scope="col">
+                                                    <div class="slds-truncate" title="Amount">Amount</div>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={displayRows} for:item="row">
+                                                <tr key={row.recordId} class={row.rowGroupClass}>
+                                                    <template if:true={showCheckboxes}>
+                                                        <td>
+                                                            <lightning-input type="checkbox" data-id={row.recordId}
+                                                                onclick={handleCheckboxClick}></lightning-input>
+                                                        </td>
+                                                    </template>
+                                                    <td>
+                                                        <div class="slds-truncate" title={row.slno}>{row.slno}</div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="slds-truncate" title={row.customer}>{row.customer}
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="slds-truncate" title={row.recordName}>
+                                                            <a href="javascript:void(0);" data-record-id={row.recordId}
+                                                                onclick={handleRecordClick}>
+                                                                {row.recordName}
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="slds-truncate" title={row.amount}>
+                                                            {currencySymbol}{row.amount}</div>
+                                                    </td>
+                                                </tr>
+
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </template>
+                            <template if:false={displayRows}>
+                                <div class="slds-text-body_regular slds-text-color_weak slds-p-around_medium">
+                                    No data found.
+                                </div>
+                            </template>
+                        </div>
+                    </lightning-card>
+
+                <div class="slds-m-top_small"></div>
+                    <lightning-card class="maq">
+                        <div slot="title" class="slds-m-right_medium">
+
+                            <lightning-icon icon-name='standard:metrics' alternative-text='date_input' size='small'
+                                title='metrics '></lightning-icon>&nbsp;
+                            <a href="#" class="slds-card__header-link slds-truncate" title="Chart of Accounts Overview">
+                                Chart of Accounts Overview </a>
+                        </div>
+
+
+                        <div class="slds-card__body slds-card__body_inner">
+
+                            <div class="slds-illustration slds-illustration_large">
+
+
+                                <div class="custom-illustration">
+
+
+                                </div>
+
+
+                            </div>
+
+
+                            <div class="chart-container">
+                                <div class="radio-group">
+                                    <label><input type="radio" name="recordType" value="Assets" checked
+                                            onchange={handleRecordTypeChange} /> Assets </label>
+                                    <label><input type="radio" name="recordType" value="Liabilities"
+                                            onchange={handleRecordTypeChange} /> Liabilities </label>
+                                    <label><input type="radio" name="recordType" value="Expense"
+                                            onchange={handleRecordTypeChange} /> Expense </label>
+                                    <label><input type="radio" name="recordType" value="Income/Revenue"
+                                            onchange={handleRecordTypeChange} /> Income/Revenue </label>
+                                </div>
+                                <canvas class="coa-pie-chart"></canvas>
+                            </div>
+
+
+                        </div>
+                    </lightning-card>
+
+
+                </template>
+
+
+
+
+                <template if:true={isNewBudget}>
+
+
+
+                    <!-- First 2 Charts - Visible Initially -->
+                    <template if:true={showInitialCharts}>
+
+                        <!-- Filters -->
+                        <div class="slds-grid slds-wrap slds-gutters_small">
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+                                <lightning-input type="date" label="From Date" value={fromDate}
+                                    onchange={handleFromDateChange} class="slds-form-element_stacked"></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+                                <lightning-input type="date" label="To Date" value={toDate}
+                                    onchange={handleToDateChange} class="slds-form-element_stacked"></lightning-input>
+                            </div>
+                            <div
+                                class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-m-top_large">
+                                <lightning-button variant="brand" label="Load Charts" onclick={loadIncomeExpenseCharts}
+                                    class="slds-button_stretch"></lightning-button>
+                            </div>
+                        </div>
+                        <div class="slds-grid slds-wrap slds-gutters margin-top-lg">
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12">
+                                <lightning-card class="maq">
+                                    <div slot="title" class="slds-m-right_medium">
+
+                                        <lightning-icon icon-name='standard:code_set_bundle'
+                                            alternative-text='date_input' size='small'
+                                            title='code_set_bundle'></lightning-icon>
+                                        <a href="#" class="slds-card__header-link slds-truncate"
+                                            title="Total Income vs Expenses"> Overall Total Income vs Expenses
+                                            (Gross)</a>
+                                    </div>
+                                    <div class="slds-card__body slds-card__body_inner">
+
+                                    </div>
+                                    <div class="slds-illustration slds-illustration_large">
+                                        <!--div class="slds-text-longform">
+                                        <p class="slds-text-body_regular">We couldn’t load your charts right now.</p>
+                                        </div-->
+                                        <div class="custom-illustration">
+                                        </div>
+                                    </div>
+
+
+                                    <div class="chart-container">
+                                        <canvas class="total-income-expense-pie"></canvas>
+                                    </div>
+
+                                </lightning-card>
+                            </div>
+
+
+
+
+
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12">
+                                <lightning-card class="maq">
+                                    <div slot="title" class="slds-m-right_medium">
+                                        <lightning-icon icon-name='standard:code_set_bundle'
+                                            alternative-text='date_input' size='small'
+                                            title='code_set_bundle'></lightning-icon>
+                                        <a href="#" class="slds-card__header-link slds-truncate"
+                                            title="Expense Breakdown"> Overall Expense Breakdown (Gross) </a>
+                                    </div>
+                                    <div class="slds-card__body slds-card__body_inner"></div>
+                                    <div class="slds-illustration slds-illustration_large">
+                                        <!--div class="slds-text-longform"><p class="slds-text-body_regular">We couldn’t load your charts right now.</p></div-->
+                                        <div class="custom-illustration"></div>
+                                    </div>
+                                    <div class="chart-container">
+                                        <canvas class="expense-type-doughnut"></canvas>
+                                    </div>
+                                </lightning-card>
+
+                            </div>
+
+
+
+                        </div>
+                        <lightning-card title="📊 Yearly Income vs Expense (with Prediction)">
+                            <div class="slds-p-around_medium">
+                                <canvas class="yearly-chart" lwc:dom="manual"></canvas>
+                            </div>
+                        </lightning-card>
+
+
+
+                    </template>
+
+
+
+                    <template if:true={showDetailedCharts}>
+
+                        <!-- <div class="slds-grid slds-wrap slds-gutters_small">
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+                                <lightning-input type="date" label="From Date" value={fromDate}
+                                    onchange={handleFromDateChange} class="slds-form-element_stacked"></lightning-input>
+                            </div>
+                            <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+                                <lightning-input type="date" label="To Date" value={toDate}
+                                    onchange={handleToDateChange} class="slds-form-element_stacked"></lightning-input>
+                            </div>
+                            <div
+                                class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-m-top_large">
+                                <lightning-button variant="brand" label="Load Charts" onclick={loadIncomeExpenseCharts}
+                                    class="slds-button_stretch slds-m-right_small"></lightning-button>
+
+                                <lightning-button variant="neutral" label="Get Overall Budget (Gross)"
+                                    onclick={backtoInitialCharts} class="slds-button_stretch"></lightning-button>
+                            </div>
+                            <div
+                                class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+
+                                  <lightning-combobox
+                                                    name="yearMode"
+                                                    label="Select Year Mode"
+                                                    value={selectedYearMode}
+                                                    placeholder="Choose Mode"
+                                                    options={yearModeOptions}
+                                                    onchange={handleYearModeChangeForProjuction}
+                                                    class="slds-m-bottom_small">
+                                                </lightning-combobox>
+                            </div>
+                        </div> -->
+
+                        <div class="slds-grid slds-wrap slds-gutters_small">
+    <!-- From Date -->
+    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12">
+        <lightning-input 
+            type="date" 
+            label="From Date" 
+            value={fromDate}
+            onchange={handleFromDateChange}
+             disabled={isdisableToDate}
+            class="slds-form-element_stacked">
+        </lightning-input>
+    </div>
+
+    <!-- To Date -->
+    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12">
+        <lightning-input 
+            type="date" 
+            label="To Date" 
+            value={toDate}
+            onchange={handleToDateChange}
+            disabled={isdisableToDate}
+            class="slds-form-element_stacked">
+        </lightning-input>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="slds-col slds-size_1-of-1 slds-medium-size_5-of-12 slds-m-top_large">
+        
+        <lightning-button 
+            variant="brand" 
+            label="Load Charts" 
+            onclick={loadIncomeExpenseCharts}
+            class="slds-button_stretch slds-m-right_small">
+        </lightning-button>
+
+        <lightning-button 
+            variant="neutral" 
+            label="Get Overall Budget (Gross)"
+            onclick={backtoInitialCharts}
+            class="slds-button_stretch">
+        </lightning-button>
+    </div>
+
+    <!-- Year Mode Combobox -->
+    <div class="slds-col slds-size_1-of-1 slds-medium-size_2-of-12">
+        <lightning-combobox
+            name="yearMode"
+            label="Select Year Mode"
+            value={selectedYearModeForProjuction}
+            placeholder="Choose Mode"
+            options={yearModeOptionsForProjuction}
+            onchange={handleYearModeChangeForProjuction}
+            class="slds-m-bottom_small"
+            style="width:100%;">
+        </lightning-combobox>
+    </div>
+</div>
+
+
+                        <!-- First 2 Charts Side by Side -->
+                        <div class="slds-grid slds-wrap slds-gutters margin-top-lg">
+                            <div
+                                class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-m-top_small">
+
+                                <lightning-card class="maq">
+                                    <div slot="title" class="slds-m-right_medium">
+                                        <lightning-icon icon-name='standard:code_set_bundle'
+                                            alternative-text='date_input' size='small'
+                                            title='code_set_bundle'></lightning-icon>
+                                        <a href="#" class="slds-card__header-link slds-truncate"
+                                            title="Total Income vs Expenses"> Total Income vs Expenses</a>
+                                    </div>
+                                    <div class="slds-card__body slds-card__body_inner"></div>
+                                    <div class="slds-illustration slds-illustration_large">
+                                        <!--div class="slds-text-longform"><p class="slds-text-body_regular">We couldn’t load your charts right now.</p></div-->
+                                        <div class="custom-illustration"></div>
+                                    </div>
+                                    <div class="chart-container">
+                                        <canvas class="total-income-expense-pie"></canvas>
+                                    </div>
+                                </lightning-card>
+
+                            </div>
+                            <div
+                                class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-m-top_small">
+                                <lightning-card class="maq">
+                                    <div slot="title" class="slds-m-right_medium">
+                                        <lightning-icon icon-name='standard:code_set_bundle'
+                                            alternative-text='date_input' size='small'
+                                            title='code_set_bundle'></lightning-icon>
+                                        <a href="#" class="slds-card__header-link slds-truncate"
+                                            title="Expense Breakdown"> Expense Breakdown</a>
+                                    </div>
+                                    <div class="slds-card__body slds-card__body_inner"></div>
+                                    <div class="slds-illustration slds-illustration_large">
+                                        <!--div class="slds-text-longform"><p class="slds-text-body_regular">We couldn’t load your charts right now.</p></div-->
+                                        <div class="custom-illustration"></div>
+                                    </div>
+                                    <div class="chart-container">
+                                        <canvas class="expense-type-doughnut"></canvas>
+                                    </div>
+                                </lightning-card>
+
+                            </div>
+
+
+                            <!-- Second 2 Charts (unchanged layout) -->
+
+                            <div
+                                class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-m-top_small">
+
+                                <lightning-card class="maq">
+                                    <div slot="title" class="slds-m-right_medium">
+                                        <lightning-icon icon-name='standard:code_set_bundle'
+                                            alternative-text='date_input' size='small'
+                                            title='code_set_bundle'></lightning-icon>
+                                        <a href="#" class="slds-card__header-link slds-truncate"
+                                            title="Paid Income vs Expenses"> Paid Income vs Expenses</a>
+                                    </div>
+                                    <div class="slds-card__body slds-card__body_inner"></div>
+                                    <div class="slds-illustration slds-illustration_large">
+                                        <!--div class="slds-text-longform"><p class="slds-text-body_regular">We couldn’t load your charts right now.</p></div-->
+                                        <div class="custom-illustration"></div>
+                                    </div>
+                                    <div class="chart-container">
+                                        <canvas class="paid-income-expense-chart"></canvas>
+                                    </div>
+                                </lightning-card>
+
+
+                            </div>
+                            <div
+                                class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 slds-large-size_6-of-12 slds-m-top_small">
+
+                                <lightning-card class="maq">
+                                    <div slot="title" class="slds-m-right_medium">
+                                        <lightning-icon icon-name='standard:code_set_bundle'
+                                            alternative-text='date_input' size='small'
+                                            title='code_set_bundle'></lightning-icon>
+                                        <a href="#" class="slds-card__header-link slds-truncate"
+                                            title="Unpaid Income vs Expenses"> Unpaid Income vs Expenses</a>
+                                    </div>
+                                    <div class="slds-card__body slds-card__body_inner"></div>
+                                    <div class="slds-illustration slds-illustration_large">
+                                        <!--div class="slds-text-longform"><p class="slds-text-body_regular">We couldn’t load your charts right now.</p></div-->
+                                        <div class="custom-illustration"></div>
+                                    </div>
+                                    <div class="chart-container">
+                                        <canvas class="unpaid-income-expense-chart"></canvas>
+                                    </div>
+                                </lightning-card>
+
+                            </div>
+                        </div>
+
+                    </template>
+
+                </template>
+
+
+                <template if:true={isNewPlanning}>
+                    <template if:true={isNewPlanningIn}>
+                        <!-- Chart of Account Lookup -->
+                        
+
+                        <!-- Original Chart -->
+                       
+
+
+                            <div class="slds-card__body slds-card__body_inner">
+                                <div class="slds-grid slds-wrap slds-gutters">
+                                    
+                                    <!-- Pie Chart -->
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12 ">
+                                         <lightning-card class="maq">
+                                            <div slot="title" class="slds-m-right_medium">
+                                                <lightning-icon icon-name='standard:ai_accelerator_card'
+                                                    alternative-text='date_input' size='small'
+                                                    title='Butget Overview'></lightning-icon>
+                                                <a href="#" class="slds-card__header-link slds-truncate"
+                                                    title="Butget Overview">&nbsp;Butget Overview</a>
+                                             </div>
+                                        <div class="chart-container"
+                                            style="position: relative; height: 400px; width: 100%;">
+                                            <canvas class="pie-chart-budget"></canvas>
+                                        </div>
+                                          </lightning-card>
+                                    </div>
+                                   
+                                    <!-- Budget Totals Panel -->
+                                  
+                                    <div class="slds-col slds-size_1-of-1 slds-medium-size_6-of-12">
+                                        <lightning-card class="maq">
+                                          
+                                            <!-- Card Header with Icon and Title -->
+                                            <div slot="title">
+                                            <div class="slds-grid slds-align_absolute-center slds-wrap slds-p-right_medium">
+                                                <lightning-icon
+                                                icon-name="standard:ai_accelerator_card"
+                                                alternative-text="Overall Budget"
+                                                size="small"
+                                                title="Overall Budget"
+                                                class="slds-m-right_x-small">
+                                                </lightning-icon>
+                                                <a href="#" class="slds-card__header-link slds-truncate" title="Overall Budget">
+                                                Overall Budget
+                                                </a>
+                                            </div>
+                                            </div>
+
+                                            <!-- Create Budget Button (Top Right) -->
+                                            <div class="slds-grid slds-grid_align-end slds-p-horizontal_medium slds-m-top_small">
+                                                <lightning-button
+                                                    variant="brand"
+                                                    label="Create New Budget"
+                                                    onclick={handleCreateNewBudget}
+                                                    class="slds-m-bottom_small">
+                                                </lightning-button>
+                                            </div>
+
+                                            <!-- Budget Totals -->
+                                           <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+                                                <h3 class="slds-text-heading_small slds-m-bottom_medium">💼 Budget Totals</h3>
+                                                    <template if:true={chartData}>
+                                                    <div class="slds-grid slds-wrap slds-text-body_regular">
+                                                        
+                                                        <!-- Approved -->
+                                                        <div class="slds-size_1-of-2 slds-p-vertical_x-small slds-grid slds-align_absolute-left">
+                                                        <lightning-icon
+                                                            icon-name="utility:check"
+                                                            alternative-text="Approved"
+                                                            size="x-small"
+                                                            class="slds-m-right_x-small">
+                                                        </lightning-icon>
+                                                        <strong>Approved:</strong>
+                                                        </div>
+                                                        <div class="slds-size_1-of-2 slds-text-align_right slds-p-vertical_x-small">
+                                                        <strong>{formattedApproved}</strong>
+                                                        </div>
+
+                                                        <!-- Consumed -->
+                                                        <div class="slds-size_1-of-2 slds-p-vertical_x-small slds-grid slds-align_absolute-left">
+                                                        <lightning-icon
+                                                            icon-name="utility:deprecate"
+                                                            alternative-text="Consumed"
+                                                            size="x-small"
+                                                            class="slds-m-right_x-small">
+                                                        </lightning-icon>
+                                                        <strong>Consumed:</strong>
+                                                        </div>
+                                                        <div class="slds-size_1-of-2 slds-text-align_right slds-p-vertical_x-small">
+                                                        <strong>{formattedConsumed}</strong>
+                                                        </div>
+
+                                                        <!-- Remaining -->
+                                                        <div class="slds-size_1-of-2 slds-p-vertical_x-small slds-grid slds-align_absolute-left">
+                                                        <lightning-icon
+                                                            icon-name="utility:money"
+                                                            alternative-text="Remaining"
+                                                            size="x-small"
+                                                            class="slds-m-right_x-small">
+                                                        </lightning-icon>
+                                                        <strong>Remaining:</strong>
+                                                        </div>
+                                                        <div class="slds-size_1-of-2 slds-text-align_right slds-p-vertical_x-small">
+                                                        <strong>{formattedRemaining}</strong>
+                                                        </div>
+
+                                                        <!-- Committed -->
+                                                        <div class="slds-size_1-of-2 slds-p-vertical_x-small slds-grid slds-align_absolute-left">
+                                                        <lightning-icon
+                                                            icon-name="utility:pin"
+                                                            alternative-text="Committed"
+                                                            size="x-small"
+                                                            class="slds-m-right_x-small">
+                                                        </lightning-icon>
+                                                        <strong>Committed:</strong>
+                                                        </div>
+                                                        <div class="slds-size_1-of-2 slds-text-align_right slds-p-vertical_x-small">
+                                                        <strong>{formattedCommitted}</strong>
+                                                        </div>
+
+                                                    </div>
+                                                    </template>
+
+                                                </div>
+
+                                            <!-- Simulate Budget Button -->
+                                        <div class="slds-grid slds-grid_align-end slds-p-top_small" style="margin-top: 123px;">
+                                            <lightning-button
+                                            variant="neutral"
+                                            label="Simulate the Budget"
+                                            onclick={handleSimulateBudget}>
+                                            </lightning-button>
+                                        </div>
+                                          
+                                        </lightning-card>
+
+                                        
+                                        </div>
+
+                                      
+                                   
+
+                                    <!-- <template if:true={isSimulatedBudgetVisible}>
+                                    <lightning-button variant="neutral" label="Close Simulation"
+                                        onclick={closeSimulationPanel} class="slds-m-top_medium"></lightning-button>
+                                </template> -->
+
+
+
+
+
+                                    <!-- Create New Budget Button -->
+
+                                  
+
+                                </div>
+
+                                <!-- Optional Illustration Slot (if needed) -->
+                                <div class="slds-illustration slds-illustration_large custom-illustration">
+                                    <!-- Add illustration SVG or message here if applicable -->
+                                </div>
+
+                                <!-- Grouped Bar Chart Section -->
+                                <div class="slds-grid slds-wrap">
+                            <div class="slds-m-bottom_small slds-m-top_small  slds-m-left_small slds-gutters"
+                                style="width: 300px;">
+                                <c-custom-input-lookup-l-w-c obj-name="Chart_of_Accounts__c"
+                                    search-placeholder="Search for a Chart of Account.." icon-name="standard:product"
+                                    selected-value={selectedChartOfAccount.Id}
+                                    selected-name={selectedChartOfAccount.Name}
+                                    onlookupselected={handleChartOfAccountSelected}
+                                    onremove={handleChartOfAccountRemoved} filter={chartOfAccountFilter}>
+                                </c-custom-input-lookup-l-w-c>
+
+                            </div>
+                        </div>
+                                  <lightning-card class="maq">
+                                    
+                                <div class="chart-container slds-m-top_large">
+                                    <template if:true={isGroupedChartVisible}>
+                                        <canvas class="grouped-bar-chart"></canvas>
+                                    </template>
+                                </div>
+                                  </lightning-card>
+                            </div>
+                     
+
+
+
+
+
+
+
+                        <!-- Project-wise Chart -->
+                        <template if:true={isProjectChartVisible}>
+                           
+
+
+                            <div class="slds-grid slds-wrap">
+                                <div
+                                    class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12 slds-m-top_small">
+                                    <c-custom-input-lookup-l-w-c obj-name="Project__c"
+                                        search-placeholder="Search for Specific Project.." icon-name="standard:product"
+                                        selected-value={selectedProject.Id} selected-name={selectedProject.Name}
+                                        onlookupselected={handleProjectSelected} onremove={handleProjectRemoved}
+                                        filter={projectFilter}>
+                                    </c-custom-input-lookup-l-w-c>
+                                </div>
+                            </div>
+
+                            <div class="slds-grid slds-wrap">
+                                <div
+                                    class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-m-top_small">
+                                    <lightning-card class="maq">
+                                         <div data-id="isProjectChartVisibleID">
+                                        <!--div slot="title" class="slds-m-right_medium">
+                                        <lightning-icon icon-name='standard:code_set_bundle' alternative-text='date_input' size='small' title='code_set_bundle'></lightning-icon>
+                                        <a href="#" class="slds-card__header-link slds-truncate" title="Unpaid Income vs Expenses"> Unpaid Income vs Expenses</a>
+                                    </div-->
+                                        <div class="slds-card__body slds-card__body_inner"></div>
+                                        <div class="slds-illustration slds-illustration_large">
+                                            <!--div class="slds-text-longform"><p class="slds-text-body_regular">We couldn’t load your charts right now.</p></div-->
+                                            <div class="custom-illustration"></div>
+                                        </div>
+                                        <div class="chart-container">
+                                            <canvas class="project-chart"></canvas>
+                                        </div>
+                                    </div> 
+                                    </lightning-card>
+
+                                </div>
+                            </div>
+
+                            
+                            <template if:true={isProjectPieVisible}>
+                                <div data-id="isProjectPieVisibleID">
+                                <div class="slds-grid slds-wrap">
+                                    <div
+                                        class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-m-top_small">
+                                        <lightning-card class="maq">
+                                            <!--div slot="title" class="slds-m-right_medium">
+                                        <lightning-icon icon-name='standard:code_set_bundle' alternative-text='date_input' size='small' title='code_set_bundle'></lightning-icon>
+                                        <a href="#" class="slds-card__header-link slds-truncate" title="Unpaid Income vs Expenses"> Unpaid Income vs Expenses</a>
+                                    </div-->
+                                            <div class="slds-card__body slds-card__body_inner"></div>
+                                            <div class="slds-illustration slds-illustration_large">
+                                                <!--div class="slds-text-longform"><p class="slds-text-body_regular">We couldn’t load your charts right now.</p></div-->
+                                                <div class="custom-illustration"></div>
+                                            </div>
+                                            <div class="chart-container">
+                                                <canvas class="project-pie"></canvas>
+                                            </div>
+                                        </lightning-card>
+
+                                    </div>
+                                </div>
+                                </div>
+                            </template>
+
+                        </template>
+
+
+                    </template>
+
+                    <template if:true={isSimulatedBudgetVisible}>
+                         <lightning-card class="maq">
+                                          
+                            <!-- Card Header with Icon and Title -->
+                            <div slot="title">
+                            <div class="slds-grid slds-align_absolute-center slds-wrap slds-p-right_medium">
+                                <lightning-icon
+                                icon-name="standard:ai_accelerator_card"
+                                alternative-text="Simulate Budget"
+                                size="small"
+                                title="Simulate Budget"
+                                class="slds-m-right_x-small">
+                                </lightning-icon>
+                                <a href="#" class="slds-card__header-link slds-truncate" title="Simulate Budget">
+                                Simulate Budget
+                                </a>
+                            </div>
+                            </div>
+                            
+
+
+
+                            <!-- Budget Details -->
+                            <!-- <h2 class="slds-text-heading_medium slds-m-bottom_medium">Chart of Account - Grand Totals</h2>
+                                <canvas class="grouped-bar-chart" style="max-width: 600px; height: 400px;"></canvas>
+
+                                 <div style="max-width: 400px;">
+                                <c-custom-input-lookup-l-w-c obj-name="Project__c" search-placeholder="Project.."
+                                    icon-name="standard:product" selected-value={simulatedProject.Id}
+                                    selected-name={simulatedProject.Name}
+                                    onlookupselected={handlesimulatedProjectSelected}
+                                    onremove={handlesimulatedProjectRemoved}>
+                                </c-custom-input-lookup-l-w-c>
+                            </div> -->
+
+                            <div class="slds-grid slds-wrap">
+<template if:true={issliderVisible}>
+  <div class="slds-col slds-size_1-of-1 slds-p-right_small slds-large-size_4-of-12">
+    <div class="slds-box" style="border:1px solid #ddd;padding:10px;">
+      <lightning-card title="Simulate the Budget" class="panel-card">
+        <div class="slds-p-around_medium">
+
+              <!-- Add new row button -->
+          <lightning-button 
+            label="Add Month" 
+            icon-name="utility:add"
+            class="slds-m-top_small"
+            onclick={addSimulationRow}>
+          </lightning-button>
+
+          <!-- Iterate over months -->
+          <template for:each={months} for:item="month">
+            <div key={month.id} class="slds-box slds-m-bottom_medium" style="border:1px solid #ddd;">
+
+              <!-- Month selector -->
+              <div class="slds-m-bottom_medium">
+                <lightning-combobox
+                  label="Select Month"
+                  name="simMonth"
+                  value={month.label}
+                  options={monthOptions}
+                  data-id={month.id}
+                  onchange={handleMonthChange2}>
+                </lightning-combobox>
+              </div>
+
+              <!-- Base Value + Adjusted Value -->
+              <div class="slds-grid slds-grid_align-spread slds-m-bottom_small">
+                <div class="slds-col slds-size_3-of-12">
+                  <lightning-input
+                    type="number"
+                    label="Base Value"
+                    value={month.originalValue}
+                    data-id={month.id}
+                    onchange={handleValueChange}>
+                  </lightning-input>
+                </div>
+                <div class="slds-col slds-size_9-of-12 slds-text-align_right slds-p-top_large">
+<!-- <lightning-badge label={getSliderPercentLabel(month)}></lightning-badge> -->
+                  <div>
+                    <strong>{month.adjustedText}</strong>
+                    <div class="slds-text-color_weak" style="font-size:0.75rem;">
+                      {month.deltaType}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Slider -->
+              <div class="slds-grid slds-grid_vertical-align-center slds-m-bottom_small">
+                <div class="slds-col slds-size_3-of-12 slds-text-title_bold">
+                  {month.label}
+                </div>
+                <div class="slds-col slds-size_9-of-12">
+                  <lightning-slider
+                    min="-50" max="50" step="5"
+                    value={month.sliderPercent}
+                    data-id={month.id}
+                    hide-value
+                     show-ticks="false"
+                    onchange={handleSliderInput}>
+                    
+                  </lightning-slider>
+                </div>
+              </div>
+
+              <!-- Project Statement -->
+              <div class="slds-m-bottom_medium">
+                <lightning-textarea
+                  label="Project Statement"
+                  value={month.statement}
+                  data-id={month.id}
+                  onchange={handleStatementChange}
+                  placeholder="Enter project statement...">
+                </lightning-textarea>
+                <lightning-button
+                  variant="neutral"
+                  label="Refine"
+                  icon-name="utility:magicwand"
+                  class="slds-m-top_small"
+                  data-id={month.id}
+                  onclick={handleRefineAI}>
+                </lightning-button>
+              </div>
+              <div class="slds-m-top_small slds-grid slds-grid_align-end">
+  <lightning-button
+      variant="destructive"  
+      label="Delete"
+      icon-name="utility:delete"
+      class="slds-m-left_x-small"
+      data-id={month.id}
+      onclick={handleDelete}>
+  </lightning-button>
+</div>
+
+            </div>
+          </template>
+
+        
+
+          <!-- Actions -->
+          <div class="slds-m-top_large slds-grid slds-grid_align-spread">
+            <lightning-button label="Reset" variant="neutral" onclick={resetSimulation}></lightning-button>
+            <lightning-button
+              label="Preview"
+              icon-name="utility:preview"
+              onclick={handleSimulateForecastNew}>
+            </lightning-button>
+          </div>
+
+        </div>
+      </lightning-card>
+    </div>
+  </div>
+</template>
+
+
+
+
+
+
+
+
+     <!-- Second column (two stacked boxes) -->
+  <div class={justchecking1}>
+    <div class="slds-grid slds-grid_vertical slds-gutters">
+      <div class="slds-col">
+        <div class="slds-box">
+            <canvas class="grouped-bar-chart" style="width: 100%; height: 400px;"></canvas>
+
+        </div>
+      </div>
+      <div class="slds-col slds-m-top_small">
+        <div class="slds-box">
+                         <canvas class="budget-expense-line" style="max-height: 400px;"></canvas>
+
+            
+        </div>
+      </div>
+  </div>
+  </div>
+                                <!-- Chart on the left -->
+                                 <!-- <div class={justchecking1}>
+                                    <canvas class="grouped-bar-chart" style="width: 100%; height: 400px;"></canvas>
+                                </div> -->
+
+                                <!-- Lookup and details on the right -->
+                                 
+                                 <div class={justchecking2}>
+                                    <div
+                                        class="slds-box slds-theme_default slds-p-around_medium slds-border_left slds-border_top slds-border_right slds-border_bottom">
+
+                                        <!-- 🔍 Project Lookup Section -->
+                                        <h3
+                                            class="slds-text-heading_small slds-m-bottom_small slds-border_bottom slds-p-bottom_x-small">
+                                            🔍 Select Project</h3>
+
+                                        <c-custom-input-lookup-l-w-c obj-name="Project__c"
+                                            search-placeholder="Search Project..." icon-name="standard:product"
+                                            selected-value={simulatedProject.Id} selected-name={simulatedProject.Name}
+                                            onlookupselected={handlesimulatedProjectSelected}
+                                            onremove={handlesimulatedProjectRemoved}>
+                                        </c-custom-input-lookup-l-w-c>
+
+                                        <!-- 📊 Budget Summary Section -->
+                                      <template if:true={chartDataSimulated}>
+  <div class="slds-m-top_medium">
+    <h3 class="slds-text-title_bold slds-m-bottom_x-small">Budget Summary</h3>
+
+    <div class="slds-grid slds-wrap slds-text-body_small">
+
+      <!-- Approved -->
+      <div class="slds-size_1-of-2 slds-p-vertical_xx-small">
+        <lightning-icon icon-name="utility:success" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+        <strong>Approved:</strong>
+      </div>
+      <div class="slds-size_1-of-2 slds-text-align_right slds-p-vertical_xx-small">
+        <span class="slds-text-color_success">{currencySymbol}{selectedApproved}</span>
+      </div>
+
+      <!-- Consumed -->
+      <div class="slds-size_1-of-2 slds-p-vertical_xx-small">
+        <lightning-icon icon-name="utility:deprecate" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+        <strong>Consumed:</strong>
+      </div>
+      <div class="slds-size_1-of-2 slds-text-align_right slds-p-vertical_xx-small">
+        <span class="slds-text-color_error">{currencySymbol}{selectedConsumed}</span>
+      </div>
+
+      <!-- Committed -->
+      <div class="slds-size_1-of-2 slds-p-vertical_xx-small">
+        <lightning-icon icon-name="utility:package" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+        <strong>Committed:</strong>
+      </div>
+      <div class="slds-size_1-of-2 slds-text-align_right slds-p-vertical_xx-small">
+        <span class="slds-text-color_warning">{currencySymbol}{selectedCommitted}</span>
+      </div>
+
+      <!-- Remaining -->
+      <div class="slds-size_1-of-2 slds-p-vertical_xx-small">
+        <lightning-icon icon-name="utility:money" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+        <strong>Remaining:</strong>
+      </div>
+      <div class="slds-size_1-of-2 slds-text-align_right slds-p-vertical_xx-small">
+        <span class="slds-text-color_success">{currencySymbol}{selectedRemaining}</span>
+      </div>
+
+      <!-- Adjusted Approved -->
+      <template if:true={isSimulationApproved}>
+        <div class="slds-size_1-of-2 slds-p-vertical_xx-small">
+          <lightning-icon icon-name="utility:success" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
+          <strong>Adjusted Approved Amount:</strong>
+        </div>
+        <div class="slds-size_1-of-2 slds-text-align_right slds-p-vertical_xx-small">
+          <span class="slds-text-color_success">{currencySymbol}{simulatedApproved}</span>
+        </div>
+      </template>
+    </div>
+
+    <!-- 🔽 Scroll Button -->
+    <div class="slds-m-top_small">
+      <lightning-button 
+        label="Go to Simulation Table"
+        variant="brand"
+        icon-name="utility:arrowdown"
+        onclick={scrollToSimulationTable}>
+      </lightning-button>
+    </div>
+  </div>
+</template>
+
+                                    </div>
+                                </div>
+
+                            </div>
+
+                            <!-- Budget Totals -->
+                            <div class="slds-p-around_medium">
+
+                                <template if:true={chartDataSimulated}>
+                                    <!-- <h2 class="slds-text-heading_small slds-m-bottom_medium">💼 Budget Totals</h2>
+                                    <p class="slds-m-bottom_small">✅ <strong>Approved:</strong> {selectedApproved}</p>
+                                    <p class="slds-m-bottom_small">🔥 <strong>Consumed:</strong> {selectedConsumed}</p>
+                                    <p class="slds-m-bottom_small">💰 <strong>Remaining:</strong> {selectedRemaining}
+                                    </p>
+                                    <p class="slds-m-bottom_small">📌 <strong>Committed:</strong> {selectedCommitted}
+                                    </p>
+                                    <lightning-button variant="brand" label="Simulate this budgets"
+                                        class="slds-m-right_small" onclick={handleSimulate}></lightning-button> -->
+                                </template>
+                            </div>
+
+
+
+                         
+                            <!-- Action Button -->
+                            <!-- Footer -->
+                            
+                         </lightning-card>
+                      <div class="slds-m-top_small"></div>
+                    <template if:true={isSimulationTableVisible}>
+                         <lightning-card class="maq">
+                                <!-- Simulation Table Section -->
+                                <div data-id="simulationTableSection">
+
+                                    <!-- Top Action Buttons -->
+                                    <div class="slds-grid slds-grid_align-spread slds-p-horizontal_medium slds-p-top_medium slds-p-bottom_small">
+                                    <lightning-button
+                                        label="Add"
+                                        icon-name="utility:add"
+                                        icon-position="left"
+                                        onclick={addRow}>
+                                    </lightning-button>
+
+                                    <lightning-button
+                                        label="Export to Excel"
+                                        icon-name="doctype:excel"
+                                        onclick={exportToExcel}>
+                                    </lightning-button>
+                                    </div>
+
+                                    <!-- Simulation Table -->
+                                    <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+                                     <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_fixed-layout slds-table_striped">
+        <thead>
+          <tr class="slds-line-height_reset slds-text-title_caps">
+            <th scope="col">Action</th>
+            <th scope="col" style="width: 35%;">Expense Description</th>
+            <th scope="col">Additional Allocation</th>
+            <th scope="col">Month</th>
+          </tr>
+        </thead>
+        <tbody>
+          <template for:each={simRows} for:item="row">
+            <tr key={row.id} class="slds-hint-parent">
+
+              <!-- Delete Icon -->
+              <td>
+                <lightning-icon 
+                  icon-name="action:delete" 
+                  alternative-text="Delete" 
+                  size="x-small" 
+                  title="Delete Row" 
+                  class="delete-icon"
+                  onclick={deleteRow}
+                  data-id={row.id}>
+                </lightning-icon>
+              </td>
+
+              <!-- Expense Description -->
+              <td>
+                <p class="slds-truncate" title={row.statement}>{row.statement}</p>
+              </td>
+
+<td>
+  <p class={row.allocationClass}>
+    {row.additionalAllocation}
+  </p>
+</td>
+
+
+
+              <!-- Month -->
+              <td>
+                <p>{row.month}</p>
+              </td>
+
+            </tr>
+          </template>
+        </tbody>
+      </table>
+                                    </div>
+
+                                    <!-- Simulate Button -->
+                                    <div class="slds-p-horizontal_medium slds-p-bottom_medium">
+                                    <lightning-button
+                                        variant="brand"
+                                        label="Simulate"
+                                        icon-name="utility:formula"
+                                        onclick={simulateAll}>
+                                    </lightning-button>
+                                    </div>
+                                </div>
+                         </lightning-card>
+
+                    </template>    
+                     <div class="slds-m-top_small"></div>
+                       <lightning-card class="maq">
+                         <canvas class="budget-expense-line" style="max-height: 400px;"></canvas>
+
+                            <div class="slds-modal__footer slds-text-align_center">
+                                <lightning-button label="Cancel" variant="neutral"
+                                    onclick={closeModal}></lightning-button>
+
+                            </div>
+                       </lightning-card>
+
+                        
+
+                    </template>
+
+
+                </template>
+
+
+
+
+
+                <template if:true={isNewSubscription}>
+                    <!-- <lightning-card class="maq">
+                        <div slot="title" class="slds-m-right_medium">
+                            <lightning-icon icon-name='standard:code_set_bundle' alternative-text='date_input'
+                                size='small' title='code_set_bundle'></lightning-icon>
+                            <a href="#" class="slds-card__header-link slds-truncate"
+                                title="Subscription Analysis and Dashboard">Subscription Analysis And Dashboard</a>
+                        </div>
+                        <div class="slds-card__body slds-card__body_inner">
+                            <div class="slds-illustration slds-illustration_large">
+                                
+                                <div class="custom-illustration">
+                                </div>
+                            </div>
+
+                            <div class="chart-container">
+                            </div>
+
+                        </div>
+                    </lightning-card> -->
+
+                </template>
+
+            </div>
+        </div>
+    </div>
+</template>

@@ -1,0 +1,122 @@
+import { LightningElement, track } from 'lwc';
+import SOPlogo from '@salesforce/resourceUrl/SOPlogo';
+import getDefaultOrganisation from '@salesforce/apex/sandOP.getDefaultOrganisation';
+
+export default class SandOP extends LightningElement {
+    logoUrl = SOPlogo;
+
+    @track DefaultOrganisation = { Id: '', Name: '' };
+    @track isDataLoaded = false;
+
+    // Main tabs
+    @track isDemandTabOpen = true;
+    @track isSupplyTabOpen = false;
+    @track isInventoryTabOpen = false;
+    @track isProductionTabOpen = false;
+    @track isFinanceTabOpen = false;
+    @track isExecutiveTabOpen = false;
+    @track isRiskAndReturnTabOpen = false;
+
+    // Subtab value
+    @track selectedForecastType = 'Short';
+
+    connectedCallback() {
+        this.loadDefaultOrganisation();
+    }
+
+    loadDefaultOrganisation() {
+        getDefaultOrganisation()
+            .then(result => {
+                this.DefaultOrganisation = { Id: result.Id, Name: result.Name };
+                this.isDataLoaded = true;
+            })
+            .catch(error => {
+                console.error('Error fetching default organisation:', error);
+            });
+    }
+
+    handleOrganisationSelect(event) {
+        this.DefaultOrganisation = { Id: event.detail.Id, Name: event.detail.Name };
+        console.log('Selected Organisation:', JSON.stringify(this.DefaultOrganisation));
+    }
+
+    resetTabs() {
+        this.isDemandTabOpen = false;
+        this.isSupplyTabOpen = false;
+        this.isInventoryTabOpen = false;
+        this.isProductionTabOpen = false;
+        this.isFinanceTabOpen = false;
+        this.isExecutiveTabOpen = false;
+        this.isRiskAndReturnTabOpen = false;
+    }
+
+    handleMainTabClick(event) {
+        const tab = event.currentTarget.dataset.tab;
+        this.resetTabs();
+        switch (tab) {
+            case 'demand':
+                this.isDemandTabOpen = true;
+                this.selectedForecastType = 'Short'; // Default subtab
+                break;
+            case 'supply':
+                this.isSupplyTabOpen = true;
+                break;
+            case 'inventory':
+                this.isInventoryTabOpen = true;
+                break;
+            case 'production':
+                this.isProductionTabOpen = true;
+                break;
+            case 'finance':
+                this.isFinanceTabOpen = true;
+                break;
+            case 'executive':
+                this.isExecutiveTabOpen = true;
+                break;
+            case 'riskAndReturn':
+                this.isRiskAndReturnTabOpen = true; console.log('Risk and Return tab clicked');
+                break;
+        }
+    }
+
+    // Handle subtab switching
+    handleSubTabClick(event) {
+        this.selectedForecastType = event.currentTarget.dataset.subtab;
+    }
+
+    // Subtab active class bindings
+    get shortTermTabClass() {
+        return `slds-tabs_default__link ${this.selectedForecastType === 'Short' ? 'slds-active' : ''}`;
+    }
+
+    get midTermTabClass() {
+        return `slds-tabs_default__link ${this.selectedForecastType === 'Mid' ? 'slds-active' : ''}`;
+    }
+
+    get longTermTabClass() {
+        return `slds-tabs_default__link ${this.selectedForecastType === 'Long' ? 'slds-active' : ''}`;
+    }
+
+    // Main tab styling (optional)
+    get demandTabClass() {
+        return `tab-item ${this.isDemandTabOpen ? 'active-tab' : ''}`;
+    }
+    get supplyTabClass() {
+        return `tab-item ${this.isSupplyTabOpen ? 'active-tab' : ''}`;
+    }
+    get inventoryTabClass() {
+        return `tab-item ${this.isInventoryTabOpen ? 'active-tab' : ''}`;
+    }
+    get productionTabClass() {
+        return `tab-item ${this.isProductionTabOpen ? 'active-tab' : ''}`;
+    }
+    get financeTabClass() {
+        return `tab-item ${this.isFinanceTabOpen ? 'active-tab' : ''}`;
+    }
+    get executiveTabClass() {
+        return `tab-item ${this.isExecutiveTabOpen ? 'active-tab' : ''}`;
+    }
+    get riskAndReturnTabClass() {
+        return `tab-item ${this.isRiskAndReturnTabOpen ? 'active-tab' : ''}`;
+    }
+}
