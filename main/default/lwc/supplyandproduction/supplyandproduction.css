@@ -1,0 +1,566 @@
+.ax-fullscreen {
+  position: fixed;
+  inset: 0;               
+  background: #fff;
+  z-index: 9999;     
+  display: flex;
+  flex-direction: column;
+}
+
+.ax-header {
+     background: #f3f3f3;
+  border-bottom: 1px solid #ddd;
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.ax-back-icon {
+  position: absolute;
+  left: 2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+    gap: 0.5rem; 
+
+}
+
+.ax-title {
+  flex: 1;
+  text-align: center;
+  margin: 0;
+  margin-left: 2rem;
+}
+
+
+.ax-content {
+  flex: 1;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.ax-footer {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;             
+  background: #f3f3f3;
+  border-top: 1px solid #ddd;
+  display: flex;
+  justify-content: center;  
+  align-items: center;
+  padding: 0.75rem 1rem;
+  z-index: 1000;
+
+}
+
+.status-block { margin-bottom: 4rem; }
+
+
+
+
+
+/* Sticky left panel */
+.left-panel {
+    position: sticky;
+    top: 1rem; /* Adjust based on any fixed header */
+    align-self: flex-start;
+    height: calc(100vh - 2rem); /* Keeps it within viewport height */
+    overflow-y: auto; /* Enables scroll inside left panel if content exceeds height */
+    z-index: 5;
+}
+
+/* Prevent scrollbars from looking bad */
+.left-panel::-webkit-scrollbar {
+    width: 6px;
+}
+.left-panel::-webkit-scrollbar-thumb {
+    background-color: #d8d8d8;
+    border-radius: 10px;
+}
+
+
+/* 📜 Make right panel scroll independently */
+.right-scroll-panel {
+    height: calc(100vh - 2rem);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+/* Smooth scrolling for UX */
+.right-scroll-panel::-webkit-scrollbar {
+    width: 8px;
+}
+.right-scroll-panel::-webkit-scrollbar-thumb {
+    background-color: #d8d8d8;
+    border-radius: 10px;
+}
+
+/* Optional inner container for proper spacing */
+.scrollable-content {
+    padding-bottom: 1rem;
+}
+
+
+.vertical-tab-layout {
+    display: flex;
+    width: 100vh;
+    overflow: hidden;
+}
+
+.buttonWrapper {
+  width: 100%;
+}
+.buttonWrapper lightning-button {
+  width: 100%;
+  display: block; /* ensures it stretches */
+}
+
+.chart-container {
+    min-height: 300px;
+}
+/* 📌 Container for the toggle */
+.year-toggle {
+    margin-bottom: 1rem;
+}
+
+.year-toggle-button-group {
+    display: flex;
+    /* gap: 0.5rem; */
+    margin-bottom: 1rem;
+    border-radius: 10px 0px 0px 10px;
+ 
+}
+ 
+
+/* Hover effect */
+.year-toggle-button-group button:hover {
+    background-color: #62b1f6;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Selected button styles (active state) */
+.year-toggle-button-group .selected {
+    background-color: #0070d2; /* Salesforce blue */
+    color: white;
+    border-color: #0070d2;
+    border-radius: 10px 0px 0px 10px;
+ 
+}
+.year-adjust-button {
+    padding: 0.3rem 0.7rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.year-adjust-button {
+    padding: 0.3rem 0.7rem;
+    font-size: 1.2rem;
+    font-weight: bold;
+    border: 1px solid #ccc;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.year-adjust-button:hover {
+    background-color: #e8e8e8;
+}
+
+.year-slider {
+    width: 60%;
+    margin-top: 0.2rem;
+}
+.slider-wrapper {
+    display: flex;
+    justify-content: center;
+}
+
+.slider-label {
+    font-size: 0.9rem;
+}
+
+.slider-value {
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: #333;
+}
+
+
+.year-adjust-button:hover {
+    background-color: #5dadf3;
+}
+
+.year-slider {
+    width: 100%;
+}
+
+/* 🔤 Label above toggle buttons */
+.year-toggle-label {
+    font-weight: 600;
+    font-size: 1.1rem;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+/* 🔘 Button group layout */
+.year-toggle-options {
+    display: flex;
+    border: 1px solid #d8dde6;
+    border-radius: 8px;
+    overflow: hidden;
+    width: fit-content;
+}
+
+.year-slider {
+    width: 100%;
+}
+.slider-value {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+
+/* 🔘 Base button style */
+.year-button {
+    background-color: #fff;
+    color: #000;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+/* 🔘 Add border between buttons */
+.year-button + .year-button {
+    border-left: 1px solid #d8dde6;
+}
+
+/* ✅ Selected state */
+.year-button.selected {
+    background-color: #1b75ff;
+    color: #fff;
+}
+
+
+.vertical-tabs {
+    width: 220px;
+   
+    border-right: 1px solid #e0e0e0;
+    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.03);
+
+    position: sticky;
+    top: 0;
+    align-self: flex-start;
+    height: 100vh;
+    overflow-y: auto;
+    z-index: 10;
+}
+
+.vertical-tab-content {
+    flex: 1;
+    height: 100vh;
+    overflow-y: auto;
+    padding: 1rem;
+    
+}
+
+.sub-tab {
+    padding: 12px 16px;
+    background: #f4f6f9;
+    cursor: pointer;
+    font-weight: 600;
+    border-radius: 4px;
+    margin: 8px 12px;
+    transition: background 0.2s;
+}
+
+.sub-tab:hover {
+    background-color: #e6f2ea;
+}
+
+.sub-tab.active {
+    background-color: #28a745;
+    color: white;
+}
+
+.section-heading {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+
+.description {
+    font-size: 1rem;
+    color: #555;
+}
+
+canvas {
+    min-height: 200px;
+    max-height: 300px;
+    max-width: 100%;
+}
+
+/* Layout for side-by-side charts */
+.charts-side-by-side {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+/* Card-like appearance for each chart panel */
+.chart-panel,
+.coa-panel {
+    flex: 1 1 48%;
+    background: #fff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+}
+
+/* Optional list styling */
+.metrics-list {
+    margin: 0 0 1rem 0;
+    padding-left: 1.2rem;
+    list-style: disc;
+    color: #333;
+}
+
+.vertical-tab-layout {
+    display: flex;
+   width: 100%;
+    overflow: hidden;
+}
+.horizontal-tab-layout {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.horizontal-tabs {
+    display: flex;
+    justify-content: flex-start;
+    padding: 0.5rem 1rem;
+    gap: 1rem;
+    overflow-x: auto;
+}
+.sub-tab-horizontal {
+    padding: 12px 16px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.sub-tab-horizontal:hover {
+        background-color: #f4f6f9;
+    border-bottom: 2px solid #4753b5;
+}
+
+.sub-tab-horizontal.active {
+   border-bottom: 2px solid #4753b5;
+    color: #4753b5;
+}
+
+.radio-button-group {
+    display: flex;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 320px;
+}
+
+.radio-button-group button {
+    flex: 1;
+    padding: 8px 16px;
+    border: none;
+    cursor: pointer;
+    background-color: white;
+    color: #333;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+
+.radio-button-group button:hover {
+    background-color: #62b1f6;
+}
+
+.radio-button-group .active {
+    background-color: #0070d2;
+    color: white;
+}
+
+.custom-year-selector-inline {
+    text-align: center;
+    width: 100%;
+}
+
+.year-slider-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 0.5rem;
+}
+
+.year-slider {
+    width: 60%;
+    height: 6px;
+    background-color: #d3d3d3;
+    border-radius: 5px;
+    outline: none;
+    cursor: pointer;
+}
+
+.year-adjust-button {
+    background-color: #f3f3f3;
+    border: 2px solid #ccc;
+    border-radius: 50%;
+    font-size: 1.2rem;
+    width: 2.2rem;
+    height: 2.2rem;
+    line-height: 1.8rem;
+    text-align: center;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.year-adjust-button:hover {
+    background-color: #e0e0e0;
+    border-color: #999;
+}
+
+.slider-value {
+    font-weight: 500;
+    margin-top: 8px;
+}
+.year-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e5e5;
+  outline: none;
+}
+
+.year-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1b5297; /* SLDS brand blue */
+  cursor: pointer;
+}
+
+.year-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1b5297;
+  cursor: pointer;
+}
+.year-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: #e5e5e5;
+  outline: none;
+}
+
+.year-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1b5297; /* SLDS brand blue */
+  cursor: pointer;
+}
+
+.year-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #1b5297;
+  cursor: pointer;
+}
+/* Card Container */
+.card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e0e0e0;
+    overflow: hidden;
+
+}
+
+/* Card Header */
+.card-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #f7f7f7;
+}
+
+.card-title {
+    margin: 0;
+    font-size: 1.25em;
+    font-weight: 600;
+}
+
+/* Card Body */
+.card-body {
+    padding: 20px;
+}
+
+/* For better mobile view */
+@media (max-width: 768px) {
+    .slds-size_1-of-3 {
+        width: 100%;
+        margin-bottom: 20px;
+    }
+}
+/* Custom styling for the radio button group to make it look clean */
+.radio-button-group {
+    display: flex;
+    border: 1px solid #c9c9c9;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.radio-button-group button {
+    border: none;
+    background-color: #fff;
+    padding: 8px 16px;
+    cursor: pointer;
+    flex-grow: 1; /* Ensures buttons always take equal space */
+}
+
+.radio-button-group button:hover {
+    background-color: #62b1f6;
+}
+
+.radio-button-group .selected {
+    background-color: #0070d2;
+    color: #fff;
+}
+
+/* Fix for slider width */
+.slds-range {
+    width: 100%;
+}
