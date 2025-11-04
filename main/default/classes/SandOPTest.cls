@@ -82,7 +82,7 @@ private class SandOPTest {
                              AccountId = acc.id, Pricebook2Id=standardPricebook.Id, Amount__c=345, Expected_Date__c=Date.today(), Ship_To_Address__c=add.Id, Bill_To_Address__c=add.id,
                              Order_Profile__c=profile.Id, Stage__c='Entered', Channel__c=channel.Id, Contact__c=contact.Id , Company__c = orgn.Id); 
         insert ord2;
-        System.debug('ord2 ->'+ord2.Name);  
+        System.debug('ord2 ->'+ord2.Name);
         // Set CreatedDate for the Order
         //Test.setCreatedDate(ord2.Id, DateTime.newInstance(2025, 1, 1));
         OrderItem orditem2 = new OrderItem(OrderId = ord2.Id, Quantity = 1, UnitPrice = 100, Product2Id = pro.Id, PricebookEntryId=pbe.Id, Active__c=true);        
