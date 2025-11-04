@@ -535,11 +535,12 @@
                                                         <div class="ax-content slds-p-around_medium">
                                                             <!-- Completed -->
                                                             <div class="status-block">
-                                                                <h3 class="slds-text-title_caps slds-m-bottom_small">
-                                                                    Completed ({selectedRowMo.completedCount})
-                                                                </h3>
+                                                                
                                                                 <template
                                                                     if:true={selectedRowMo.completeMODetails.length}>
+                                                                    <h3 class="slds-text-title_caps slds-m-bottom_small">
+                                                                    Completed ({selectedRowMo.completedCount})
+                                                                </h3>
                                                                     <table
                                                                         class="slds-table slds-table_cell-buffer slds-table_bordered">
                                                                         <thead>
@@ -616,18 +617,19 @@
                                                                     </div>
 
                                                                 </template>
-                                                                <template
+                                                                <!-- <template
                                                                     if:false={selectedRowMo.completeMODetails.length}>No
-                                                                    MOs</template>
+                                                                    MOs</template> -->
                                                             </div>
 
                                                             <!-- In Progress -->
                                                             <div class="status-block">
-                                                                <h3 class="slds-text-title_caps slds-m-bottom_small">
-                                                                    In Progress ({selectedRowMo.inProgressCount})
-                                                                </h3>
+                                                                
                                                                 <template
                                                                     if:true={selectedRowMo.inProgressMODetails.length}>
+                                                                    <h3 class="slds-text-title_caps slds-m-bottom_small">
+                                                                    In Progress ({selectedRowMo.inProgressCount})
+                                                                </h3>
                                                                     <table
                                                                         class="slds-table slds-table_cell-buffer slds-table_bordered">
                                                                         <thead>
@@ -706,17 +708,18 @@
                                                                     </div>
 
                                                                 </template>
-                                                                <template
+                                                                <!-- <template
                                                                     if:false={selectedRowMo.inProgressMODetails.length}>No
-                                                                    MOs</template>
+                                                                    MOs</template> -->
                                                             </div>
 
                                                             <!-- Draft -->
                                                             <div class="status-block">
-                                                                <h3 class="slds-text-title_caps slds-m-bottom_small">
+                                                                
+                                                                <template if:true={selectedRowMo.draftMODetails.length}>
+                                                                    <h3 class="slds-text-title_caps slds-m-bottom_small">
                                                                     Draft ({selectedRowMo.draftCount})
                                                                 </h3>
-                                                                <template if:true={selectedRowMo.draftMODetails.length}>
                                                                     <table
                                                                         class="slds-table slds-table_cell-buffer slds-table_bordered">
                                                                         <thead>
@@ -794,18 +797,19 @@
                                                                     </div>
 
                                                                 </template>
-                                                                <template
+                                                                <!-- <template
                                                                     if:false={selectedRowMo.draftMODetails.length}>No
-                                                                    MOs</template>
+                                                                    MOs</template> -->
                                                             </div>
 
                                                             <!-- Cancelled -->
                                                             <div class="status-block">
-                                                                <h3 class="slds-text-title_caps slds-m-bottom_small">
-                                                                    Cancelled ({selectedRowMo.cancelledCount})
-                                                                </h3>
+                                                                
                                                                 <template
                                                                     if:true={selectedRowMo.cancelledMODetails.length}>
+                                                                    <h3 class="slds-text-title_caps slds-m-bottom_small">
+                                                                    Cancelled ({selectedRowMo.cancelledCount})
+                                                                </h3>
                                                                     <table
                                                                         class="slds-table slds-table_cell-buffer slds-table_bordered">
                                                                         <thead>
@@ -883,18 +887,19 @@
                                                                     </div>
 
                                                                 </template>
-                                                                <template
+                                                                <!-- <template
                                                                     if:false={selectedRowMo.cancelledMODetails.length}>No
-                                                                    MOs</template>
+                                                                    MOs</template> -->
                                                             </div>
 
                                                             <!-- Release -->
                                                             <div class="status-block">
-                                                                <h3 class="slds-text-title_caps slds-m-bottom_small">
-                                                                    Release ({selectedRowMo.releaseCount})
-                                                                </h3>
+                                                               
                                                                 <template
                                                                     if:true={selectedRowMo.releaseMODetails.length}>
+                                                                     <h3 class="slds-text-title_caps slds-m-bottom_small">
+                                                                    Release ({selectedRowMo.releaseCount})
+                                                                </h3>
                                                                     <table
                                                                         class="slds-table slds-table_cell-buffer slds-table_bordered">
                                                                         <thead>
@@ -972,9 +977,9 @@
                                                                     </div>
 
                                                                 </template>
-                                                                <template
+                                                                <!-- <template
                                                                     if:false={selectedRowMo.releaseMODetails.length}>No
-                                                                    MOs</template>
+                                                                    MOs</template> -->
                                                             </div>
                                                         </div>
                                                         <!-- Footer -->

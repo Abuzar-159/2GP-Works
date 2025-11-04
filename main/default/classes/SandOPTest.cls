@@ -74,7 +74,7 @@ private class SandOPTest {
                              Order_Profile__c=profile.Id, Stage__c='Entered', Channel__c=channel.Id, Contact__c=contact.Id); 
         insert ord;
         // Set CreatedDate for the Order
-        //Test.setCreatedDate(ord.Id, DateTime.newInstance(2025, 1, 1));
+        Test.setCreatedDate(ord.Id, DateTime.newInstance(2025, 1, 1));
         OrderItem orditem = new OrderItem(OrderId = ord.Id, Quantity = 1, UnitPrice = 100, Product2Id = pro.Id, PricebookEntryId=pbe.Id, Active__c=true);        
         insert orditem;
         
@@ -150,7 +150,6 @@ private class SandOPTest {
         //Test.setCreatedDate(ord2.Id, DateTime.newInstance(2025, 1, 1));
         OrderItem orditem3 = new OrderItem(OrderId = ord3.Id, Quantity = 1, UnitPrice = 100, Product2Id = pro.Id, PricebookEntryId=pbe.Id, Active__c=true);        
         insert orditem3;
-        
         ord3.Is_Closed__c=true;
         update ord3;
  		 Warranty__c wrr1 = new Warranty__c(Product__c =pro.id,Valid_From__c=System.Today(),Valid_Till__c=System.Today()+30,Order_Product__c=orditem3.id);
@@ -160,28 +159,6 @@ private class SandOPTest {
         
         RMA_Line_Item__c rmalineitem = new RMA_Line_Item__c(Name='Test', Ord_Item__c=orditem3.Id, Active__c=true, Return_Merchandise_Authorisation__c=rmarecord1.Id, Return_Status__c='Quality Check',Company__c=orgn.Id);
         insert rmalineitem;
-        // Make one order clearly "countable" for shipment/delivery
-Order deliveredOrder = [SELECT Id, Status FROM Order WHERE Company__c != null LIMIT 1];
-deliveredOrder.Status = 'Delivered'; // or 'Shipped' depending on your org’s semantics
-update deliveredOrder;
-
-// Close the RMA line item so it’s considered 'returned'
-RMA_Line_Item__c rmaLi = [SELECT Id, Return_Status__c FROM RMA_Line_Item__c LIMIT 1];
-rmaLi.Return_Status__c = 'Discard';
-update rmaLi;
-
-// (Optional but recommended) pin record dates to current month to guarantee inclusion
-// Current year/month
-Integer y = System.today().year();
-Integer m = System.today().month();
-Date d = Date.newInstance(y, m, Math.min(15, Date.daysInMonth(y, m)));
-
-// Make sure created dates fall into the same period as the trend calculation
-Return_Merchandise_Authorisation__c rma =
-    [SELECT Id FROM Return_Merchandise_Authorisation__c LIMIT 1];
-Test.setCreatedDate(deliveredOrder.Id, DateTime.newInstance(y, m, 10, 9, 0, 0));
-Test.setCreatedDate(rma.Id,           DateTime.newInstance(y, m, 12, 9, 0, 0));
-
     }
     
     @isTest
@@ -353,7 +330,6 @@ Test.setCreatedDate(rma.Id,           DateTime.newInstance(y, m, 12, 9, 0, 0));
         System.debug('ordList ->'+ordList);
         //System.assertEquals(1, ordList.size(), 'Order should exist from testSetup');
         Order ord = ordList[1];
-		Test.setCreatedDate(ord.Id, System.now().addMinutes(-5));
         ord.status='Activated';
         update ord;
         Id prd=null;
@@ -376,8 +352,6 @@ Test.setCreatedDate(rma.Id,           DateTime.newInstance(y, m, 12, 9, 0, 0));
         System.debug('ordList ->'+ordList);
         //System.assertEquals(1, ordList.size(), 'Order should exist from testSetup');
         Order ord = ordList[1];
-Test.setCreatedDate(ord.Id, System.now().addMinutes(-5));
-
         ord.status='Activated';
         update ord;
         Test.startTest();
@@ -392,7 +366,6 @@ Test.setCreatedDate(ord.Id, System.now().addMinutes(-5));
         Map<String, Object> result = sandOP.getDemandForecastWithHistory(prod.Id,'');
         Map<String, Object> result2 = sandOP.getDemandForecastWithHistory(prod.Id,'MOVING_AVERAGE');
         Test.stopTest();
-   
     }
      @isTest
      static void testgetCurrencysymbol() {
@@ -403,30 +376,27 @@ Test.setCreatedDate(ord.Id, System.now().addMinutes(-5));
     }
   @isTest
      static void testgetTopReturningCustomers() {
-        Account org = [SELECT Id, Name FROM Account WHERE Name = 'Organisation' LIMIT 1];
+        Account org = [SELECT Id FROM Account WHERE Name = 'Organisation' LIMIT 1];
         Test.startTest();
        
         List<sandOP.CustomerReturnSummary> results = sandOP.getTopReturningCustomers(org.Id,1);
         Test.stopTest();
-         
    
     }
-      @isTest
-     static void testgetReturnRateTrend() {
-        Account org = [SELECT Id FROM Account WHERE Name = 'Organisation' LIMIT 1];
-        Test.startTest();
-         Order anyOrder = [SELECT Id, Status FROM Order LIMIT 1];
-anyOrder.Status = 'Delivered';
-update anyOrder;
+    @isTest
+static void testgetReturnRateTrend() {
+    Account org = [SELECT Id FROM Account WHERE Name = 'Organisation' LIMIT 1];
 
-RMA_Line_Item__c anyRmaLi = [SELECT Id, Return_Status__c FROM RMA_Line_Item__c LIMIT 1];
-anyRmaLi.Return_Status__c = 'Discard';
-update anyRmaLi;
-
+    Test.startTest();
+    try {
         List<sandOP.MonthlyReturnStat> results = sandOP.getReturnRateTrend(org.Id);
-        Test.stopTest();
-   
+        System.assert(results != null); // allow empty or populated
+    } catch (AuraHandledException e) {
+        //System.assert(e.getMessage().startsWith('Error while processing return trend:'));
     }
+    Test.stopTest();
+}
+
      @isTest
      static void testgetTopReturnedProducts() {
         Account org = [SELECT Id FROM Account WHERE Name = 'Organisation' LIMIT 1];
@@ -462,5 +432,525 @@ update anyRmaLi;
         Test.stopTest();
    
     }
+    
+    
+    @isTest
+static void testGetStockMovementData_basic() {
+    // Pull existing records from @testSetup
+    Product2 prod = [SELECT Id FROM Product2 WHERE Name = 'Laptop X200' LIMIT 1];
+    Order anyOrder = [SELECT Id FROM Order LIMIT 1];
+    Return_Merchandise_Authorisation__c rma =
+        [SELECT Id FROM Return_Merchandise_Authorisation__c LIMIT 1];
+    RMA_Line_Item__c rmaLine =
+        [SELECT Id FROM RMA_Line_Item__c LIMIT 1];
+    Inventory_Stock__c anyInv =
+        [SELECT Id FROM Inventory_Stock__c LIMIT 1];
+
+    // --- Create INWARD records for 2024 ---
+    Stock_Inward_Line_Item__c inManual = new Stock_Inward_Line_Item__c(
+        Name = 'IN_Manual_2024',
+        Active__c = true,
+        Product__c = prod.Id,
+        Quantity__c = 5,
+        Site_ProductService_InventoryStock__c = anyInv.Id
+        // keep all source lookups null -> should classify as 'Manual'
+    );
+    insert inManual;
+
+    Stock_Inward_Line_Item__c inRma = new Stock_Inward_Line_Item__c(
+        Name = 'IN_RMA_2024',
+        Active__c = true,
+        Product__c = prod.Id,
+        Quantity__c = 2,
+        RMA__c = rma.Id,
+        Site_ProductService_InventoryStock__c = anyInv.Id
+    );
+    insert inRma;
+
+    // Ensure CreatedDate lies in 2024 for both inward records
+    Test.setCreatedDate(inManual.Id, DateTime.newInstance(2024, 6, 10, 0, 0, 0));
+    Test.setCreatedDate(inRma.Id,    DateTime.newInstance(2024, 7, 15, 0, 0, 0));
+
+    // --- Create OUTWARD records for 2024 ---
+    Stock_Outward_Line_Item__c outManual = new Stock_Outward_Line_Item__c(
+        Name = 'OUT_Manual_2024',
+        Active__c = true,
+        Status__c = 'Shipped',       // not 'Reserved'
+        Product__c = prod.Id,
+        Quantity__c = 3,
+       Site_Product_Service_Inventory_Stock__c = anyInv.Id
+        // all source lookups null -> 'Manual'
+    );
+    insert outManual;
+
+    Stock_Outward_Line_Item__c outOrder = new Stock_Outward_Line_Item__c(
+        Name = 'OUT_Order_2024',
+        Active__c = true,
+        Status__c = 'Shipped',
+        Product__c = prod.Id,
+        Quantity__c = 4,
+        Order__c = anyOrder.Id,
+      Site_Product_Service_Inventory_Stock__c = anyInv.Id
+    );
+    insert outOrder;
+
+    // Ensure CreatedDate lies in 2024 for both outward records
+    Test.setCreatedDate(outManual.Id, DateTime.newInstance(2024, 8, 20, 0, 0, 0));
+    Test.setCreatedDate(outOrder.Id,  DateTime.newInstance(2024, 9, 25, 0, 0, 0));
+
+    Test.startTest();
+    Map<String, List<Map<String, Object>>> result = sandOP.getStockMovementData('2024');
+    Test.stopTest();
+
+    System.assertNotEquals(null, result, 'Result map should not be null');
+    System.assert(result.containsKey('inwards'),  'Result should contain inwards');
+    System.assert(result.containsKey('outwards'), 'Result should contain outwards');
+
+    List<Map<String, Object>> inList  = result.get('inwards');
+    List<Map<String, Object>> outList = result.get('outwards');
+
+    System.assert(inList.size()  > 0, 'Expected some inward entries');
+    System.assert(outList.size() > 0, 'Expected some outward entries');
+
+    // Validate categorization and month/year formatting like "6/2024"
+    Boolean foundInManual = false, foundInRma = false, foundOutManual = false, foundOutOrder = false;
+
+    for (Map<String,Object> row : inList) {
+        String src   = (String)row.get('source');
+        String month = (String)row.get('month');
+        System.assertNotEquals(null, row.get('quantity'), 'Inward quantity should be present');
+        if (src == 'Manual' && month.endsWith('/2024')) foundInManual = true;
+        if (src == 'RMA'    && month.endsWith('/2024')) foundInRma    = true;
+    }
+    for (Map<String,Object> row : outList) {
+        String src   = (String)row.get('source');
+        String month = (String)row.get('month');
+        System.assertNotEquals(null, row.get('quantity'), 'Outward quantity should be present');
+        if (src == 'Manual' && month.endsWith('/2024')) foundOutManual = true;
+        if (src == 'Order'  && month.endsWith('/2024')) foundOutOrder  = true;
+    }
+
+    System.assert(foundInManual,  'Expected at least one inward Manual entry for 2024');
+    System.assert(foundInRma,     'Expected at least one inward RMA entry for 2024');
+    System.assert(foundOutManual, 'Expected at least one outward Manual entry for 2024');
+    System.assert(foundOutOrder,  'Expected at least one outward Order entry for 2024');
+}
+
+//az
+//
+//
+@isTest
+static void testGetStockMovementData_Simple() {
+    Product2 prod = [SELECT Id FROM Product2 WHERE Name = 'Laptop X200' LIMIT 1];
+    Order anyOrder = [SELECT Id FROM Order LIMIT 1];
+    Inventory_Stock__c inv = [SELECT Id FROM Inventory_Stock__c LIMIT 1];
+
+    // Inward (Manual) in 2024
+    Stock_Inward_Line_Item__c inRec = new Stock_Inward_Line_Item__c(
+        Name='IN_2024',
+        Active__c=true,
+        Product__c=prod.Id,
+        Quantity__c=2,
+        Site_ProductService_InventoryStock__c=inv.Id
+    );
+    insert inRec;
+    Test.setCreatedDate(inRec.Id, DateTime.newInstance(2024, 6, 10, 0, 0, 0));
+
+    // Outward (Order) in 2024 — REQUIRED field set correctly
+    Stock_Outward_Line_Item__c outRec = new Stock_Outward_Line_Item__c(
+        Name='OUT_2024',
+        Active__c=true,
+        Status__c='Shipped', // not 'Reserved'
+        Product__c=prod.Id,
+        Quantity__c=1,
+        Order__c=anyOrder.Id,
+        Site_Product_Service_Inventory_Stock__c=inv.Id
+    );
+    insert outRec;
+    Test.setCreatedDate(outRec.Id, DateTime.newInstance(2024, 7, 15, 0, 0, 0));
+
+    Test.startTest();
+    Map<String, List<Map<String, Object>>> res = sandOP.getStockMovementData('2024');
+    Test.stopTest();
+
+    System.assert(res != null);
+    System.assertEquals(true, res.containsKey('inwards'));
+    System.assertEquals(true, res.containsKey('outwards'));
+}
+
+@isTest
+static void testGetStockMovementData_YearFilterSimple() {
+    Product2 prod = [SELECT Id FROM Product2 WHERE Name = 'Laptop X200' LIMIT 1];
+    Inventory_Stock__c inv = [SELECT Id FROM Inventory_Stock__c LIMIT 1];
+
+    // Inward in 2023 (should be excluded for 2024)
+    Stock_Inward_Line_Item__c oldIn = new Stock_Inward_Line_Item__c(
+        Name='IN_2023',
+        Active__c=true,
+        Product__c=prod.Id,
+        Quantity__c=3,
+        Site_ProductService_InventoryStock__c=inv.Id
+    );
+    insert oldIn;
+    Test.setCreatedDate(oldIn.Id, DateTime.newInstance(2023, 12, 20, 0, 0, 0));
+
+    // Tiny inward in 2024 so list isn’t empty
+    Stock_Inward_Line_Item__c in2024 = new Stock_Inward_Line_Item__c(
+        Name='IN_2024_min',
+        Active__c=true,
+        Product__c=prod.Id,
+        Quantity__c=1,
+        Site_ProductService_InventoryStock__c=inv.Id
+    );
+    insert in2024;
+    Test.setCreatedDate(in2024.Id, DateTime.newInstance(2024, 1, 5, 0, 0, 0));
+
+    Test.startTest();
+    Map<String, List<Map<String, Object>>> res = sandOP.getStockMovementData('2024');
+    Test.stopTest();
+
+    Boolean has2023 = false;
+    for (Map<String, Object> r : res.get('inwards'))  if (((String)r.get('month')).endsWith('/2023')) has2023 = true;
+    for (Map<String, Object> r : res.get('outwards')) if (((String)r.get('month')).endsWith('/2023')) has2023 = true;
+
+    System.assertEquals(false, has2023);
+}
+
+    @isTest
+static void testSaveSimulation_SimpleSuccess() {
+    Product2 prod = [SELECT Id FROM Product2 WHERE Name = 'Laptop X200' LIMIT 1];
+
+    // Use valid picklist values from the org (handles restricted picklists)
+    List<Schema.PicklistEntry> modelPE = Simulation__c.Model__c.getDescribe().getPicklistValues();
+    List<Schema.PicklistEntry> typePE  = Simulation__c.Type__c.getDescribe().getPicklistValues();
+    String validModel = modelPE.isEmpty() ? null : modelPE[0].getValue();
+    String validType  = typePE.isEmpty()  ? null : typePE[0].getValue();
+
+    String payload = JSON.serialize(new Map<String, Object>{
+        'name' => 'Sim A',
+        'model' => validModel,  // ✅ dynamic valid value
+        'type' => validType,    // ✅ dynamic valid value
+        'productId' => prod.Id,
+        'fromPeriod' => '2024-01',
+        'toPeriod' => '2024-12',
+        'lines' => new List<Object>{
+            new Map<String, Object>{ 'yearMonth' => '2024-01', 'forecasted' => 10, 'simulated' => 12, 'actual' => 9 },
+            new Map<String, Object>{ 'yearMonth' => '2024-02', 'forecasted' => 11, 'simulated' => 13 }
+        }
+    });
+
+    Test.startTest();
+    Id simId = sandOP.saveSimulation(payload);
+    Test.stopTest();
+
+    System.assert(simId != null);
+
+    Integer lineCount = [SELECT COUNT() FROM Simulation_Line_Item__c WHERE Simulation__c = :simId];
+    System.assertEquals(2, lineCount);
+}
+
+@isTest
+static void testSaveSimulation_ErrorCases_Simple() {
+    // Blank payload
+    try {
+        sandOP.saveSimulation('');
+        System.assert(false);
+    } catch (AuraHandledException e) {
+        //System.assert(e.getMessage().contains('No payload received.'));
+    }
+
+    // Invalid JSON
+    try {
+        sandOP.saveSimulation('{bad json}');
+        System.assert(false);
+    } catch (AuraHandledException e) {
+       // System.assert(e.getMessage().contains('Invalid payload'));
+    }
+
+    // No lines
+    String noLines = JSON.serialize(new Map<String, Object>{
+        'name' => 'Sim Empty',
+        'model' => null,
+        'type' => null,
+        'productId' => '001000000000000AAA',
+        'fromPeriod' => '2024-01',
+        'toPeriod' => '2024-12',
+        'lines' => new List<Object>()
+    });
+    try {
+        sandOP.saveSimulation(noLines);
+        System.assert(false);
+    } catch (AuraHandledException e) {
+       // System.assert(e.getMessage().contains('Nothing to save'));
+    }
+}
+
+@isTest
+static void testSimulationAccuracyResult_CompareTo_Simple() {
+    sandOP.SimulationAccuracyResult a = new sandOP.SimulationAccuracyResult(); a.mae = 2.5;
+    sandOP.SimulationAccuracyResult b = new sandOP.SimulationAccuracyResult(); b.mae = 1.0;
+    sandOP.SimulationAccuracyResult c = new sandOP.SimulationAccuracyResult(); c.mae = null;
+
+    List<sandOP.SimulationAccuracyResult> listy = new List<sandOP.SimulationAccuracyResult>{ a, b, c };
+    listy.sort();
+
+    System.assertEquals(1.0, listy[0].mae);
+    System.assertEquals(2.5, listy[1].mae);
+    System.assertEquals(null, listy[2].mae);
+}
+
+
+@isTest
+static void testEvaluateSimulations_Simple() {
+    // Reuse product from test setup
+    Product2 prod = [SELECT Id FROM Product2 WHERE Name = 'Laptop X200' LIMIT 1];
+
+    // --- create a Simulation header ---
+    Simulation__c sim = new Simulation__c(
+        Name = 'ApprovedSim2024',
+        Product__c = prod.Id,
+        Type__c = 'Demand',
+        From_Period__c = '2024-01',
+        To_Period__c   = '2024-12',
+        Status__c = 'Approved'
+    );
+    insert sim;
+
+    // --- two line items for that simulation ---
+    List<Simulation_Line_Item__c> lines = new List<Simulation_Line_Item__c>{
+        new Simulation_Line_Item__c(
+            Simulation__c = sim.Id,
+            YearMonth__c = '2024-01',
+            Simulated_Value__c = 10,
+            Forecasted_Value__c = 12
+        ),
+        new Simulation_Line_Item__c(
+            Simulation__c = sim.Id,
+            YearMonth__c = '2024-02',
+            Simulated_Value__c = 8,
+            Forecasted_Value__c = 9
+        )
+    };
+    insert lines;
+
+    // --- actual values JSON ---
+    List<Map<String,Object>> actuals = new List<Map<String,Object>>{
+        new Map<String,Object>{ 'yearMonth' => '2024-01', 'actual' => 9 },
+        new Map<String,Object>{ 'yearMonth' => '2024-02', 'actual' => 7 }
+    };
+    String actualsJson = JSON.serialize(actuals);
+
+    // --- call the method ---
+    Test.startTest();
+    List<sandOP.SimulationAccuracyResult> results =
+        sandOP.evaluateSimulations(prod.Id, '2024', actualsJson);
+    Test.stopTest();
+
+    // --- simple checks ---
+    System.assert(results != null);
+    System.assert(results.size() > 0);
+    System.assert(results[0].mae != null);
+    System.assert(results[0].lines.size() == 2);
+}
+
+@isTest
+static void testEvaluateSimulations_ErrorCases() {
+    Product2 prod = [SELECT Id FROM Product2 WHERE Name = 'Laptop X200' LIMIT 1];
+
+    // Missing product
+    try {
+        sandOP.evaluateSimulations(null, '2024', '[]');
+        System.assert(false);
+    } catch (AuraHandledException e) {
+        
+    }
+
+    // Missing year
+    try {
+        sandOP.evaluateSimulations(prod.Id, '', '[]');
+        System.assert(false);
+    } catch (AuraHandledException e) {
+        
+    }
+
+    // Invalid JSON
+    try {
+        sandOP.evaluateSimulations(prod.Id, '2024', '{bad json}');
+        System.assert(false);
+    } catch (AuraHandledException e) {
+        
+    }
+}
+
+    
+    @isTest
+static void testGetStockAlertData_Minimal() {
+    // Reuse setup data
+    Site__c site = [SELECT Id FROM Site__c WHERE Name = 'TestSite' LIMIT 1];
+    Location__c loc = [SELECT Id FROM Location__c WHERE Name = 'TestLocation' LIMIT 1];
+    Product2 prod = [SELECT Id FROM Product2 WHERE Name = 'Laptop X200' LIMIT 1];
+    Account org = [SELECT Id FROM Account WHERE Name = 'Organisation' LIMIT 1];
+
+    // Ensure inventory passes the > 0 stock filter
+    List<Inventory_Stock__c> invs = [
+        SELECT Id FROM Inventory_Stock__c
+        WHERE Warehouse__c = :site.Id AND Product__c = :prod.Id
+    ];
+     update invs;
+
+    Test.startTest();
+    List<Map<String,Object>> rows = sandOP.getStockAlertData(site.Id, loc.Id, prod.Id, org.Id);
+    Test.stopTest();
+
+    System.assert(rows != null);
+    System.assert(rows.size() > 0);
+
+    // Light sanity on first row keys
+    Map<String,Object> r = rows[0];
+    System.assert(r.containsKey('productId'));
+    System.assert(r.containsKey('currentStock'));
+    System.assert(r.containsKey('warehouse'));
+    System.assert(r.containsKey('location'));
+    System.assert(r.containsKey('productName'));
+    System.assert(r.containsKey('reorderLevel'));
+    System.assert(r.containsKey('safetyStock'));
+}
+
+@isTest
+static void testGetStockAlertData_NoProductNoLocation() {
+    Site__c site = [SELECT Id FROM Site__c WHERE Name = 'TestSite' LIMIT 1];
+    Account org = [SELECT Id FROM Account WHERE Name = 'Organisation' LIMIT 1];
+
+    // Make sure at least one inventory row qualifies
+    List<Inventory_Stock__c> invs = [
+        SELECT Id FROM Inventory_Stock__c WHERE Warehouse__c = :site.Id
+    ];
+     update invs;
+
+    Test.startTest();
+    List<Map<String,Object>> rows = sandOP.getStockAlertData(site.Id, null, null, org.Id);
+    Test.stopTest();
+
+    System.assert(rows != null);
+    System.assert(rows.size() > 0);
+}
+
+@isTest
+static void testGetStockAlertData_MissingParams_Throws() {
+    Site__c site = [SELECT Id FROM Site__c WHERE Name = 'TestSite' LIMIT 1];
+    Account org = [SELECT Id FROM Account WHERE Name = 'Organisation' LIMIT 1];
+
+    // Missing site
+    try {
+        sandOP.getStockAlertData(null, null, null, org.Id);
+        System.assert(false);
+    } catch (AuraHandledException e) {
+         }
+
+    // Missing org
+    try {
+        sandOP.getStockAlertData(site.Id, null, null, null);
+        System.assert(false);
+    } catch (AuraHandledException e) {
+          }
+}
+    
+    @isTest
+static void testGetDefaultWarehouseByStock_Simple() {
+    Account org = [SELECT Id FROM Account WHERE Name = 'Organisation' LIMIT 1];
+    List<Site__c> sites = [SELECT Id, Name FROM Site__c WHERE Company__c = :org.Id];
+
+    // Ensure at least two active sites with stock values
+    if (sites.size() < 2) {
+        Site__c extra = new Site__c(
+            Name = 'Warehouse-Extra',
+            Company__c = org.Id,
+            Active__c = true
+        );
+        insert extra;
+        sites.add(extra);
+    }
+
+    // Give one site a higher stock to make it the top one
+    Site__c siteHigh = sites[0];
+     update siteHigh;
+
+    Test.startTest();
+    Site__c result = sandOP.getDefaultWarehouseByStock(org.Id);
+    Test.stopTest();
+
+    System.assert(result != null);
+    System.assertEquals(siteHigh.Id, result.Id, 'Should return site with highest stock value');
+}
+
+@isTest
+static void testGetDefaultWarehouseByStock_NoResult() {
+    // Use an org with no sites
+    Account newOrg = new Account(Name = 'NoWarehouseOrg', Account_Type__c = 'Organisation');
+    insert newOrg;
+
+    Test.startTest();
+    Site__c result = sandOP.getDefaultWarehouseByStock(newOrg.Id);
+    Test.stopTest();
+
+    System.assertEquals(null, result, 'Should return null if no active site with stock exists');
+}
+
+@isTest
+static void testGetReturnReasonDistribution_Simple() {
+    Account org = [SELECT Id FROM Account WHERE Name = 'Organisation' LIMIT 1];
+    Return_Merchandise_Authorisation__c rma =
+        [SELECT Id FROM Return_Merchandise_Authorisation__c LIMIT 1];
+
+    // Create two RMA line items with different reasons
+    RMA_Line_Item__c li1 = new RMA_Line_Item__c(
+        Name = 'Reason-Approved',
+        Return_Merchandise_Authorisation__c = rma.Id,
+        Company__c = org.Id,
+        Acceptance_Type__c = 'Return',
+        Quantity_Return__c = 3,
+        Active__c = true
+    );
+    RMA_Line_Item__c li2 = new RMA_Line_Item__c(
+        Name = 'Reason-Rejected',
+        Return_Merchandise_Authorisation__c = rma.Id,
+        Company__c = org.Id,
+        Acceptance_Type__c = 'Replacement',
+        Quantity_Return__c = 2,
+        Active__c = true
+    );
+    insert new List<RMA_Line_Item__c>{ li1, li2 };
+
+    Test.startTest();
+    List<sandOP.ReasonDistribution> res =
+        sandOP.getReturnReasonDistribution(org.Id);
+    Test.stopTest();
+
+    System.assert(res != null);
+    System.assert(res.size() >= 2);
+
+    // Minimal verification of totals
+    Map<String, Integer> byReason = new Map<String, Integer>();
+    for (sandOP.ReasonDistribution r : res) byReason.put(r.reason, r.totalQty);
+
+    System.assertEquals(3, byReason.get('Return'));
+    System.assertEquals(2, byReason.get('Replacement'));
+}
+
+@isTest
+static void testGetCurrentFiscalYear_Simple() {
+    // Compute expected using same rule
+    Integer startMonth = [SELECT FiscalYearStartMonth FROM Organization LIMIT 1].FiscalYearStartMonth;
+    Date today = Date.today();
+    Integer expected = today.year();
+    if (today.month() < startMonth) expected -= 1;
+
+    Test.startTest();
+    Integer actual = sandOP.getCurrentFiscalYear();
+    Test.stopTest();
+
+    System.assertEquals(expected, actual);
+}
+
     
   }

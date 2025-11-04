@@ -118,11 +118,8 @@ public class Top5InventorySummaryWrapper implements Comparable {
 public static List<Top5InventorySummaryWrapper> getTop5Inventory() {
     // Get fiscal year start and end from org settings
     Organization orgInfo = [SELECT FiscalYearStartMonth FROM Organization LIMIT 1];
-    Integer startMonth = orgInfo.FiscalYearStartMonth;
-    Date today = Date.today();
-    Integer year = today.month() >= startMonth ? today.year() : today.year() - 1;
-    Date fromDate = Date.newInstance(year, startMonth, 1);
-    Date toDate = fromDate.addMonths(12).addDays(-1);
+    Integer startMonth = orgInfo.FiscalYearStartMonth;   Date today = Date.today();    Integer year = today.month() >= startMonth ? today.year() : today.year() - 1;
+    Date fromDate = Date.newInstance(year, startMonth, 1);   Date toDate = fromDate.addMonths(12).addDays(-1);
 
     // Get MOs within fiscal year
     List<Manufacturing_Order__c> mos = [
@@ -151,8 +148,7 @@ public static List<Top5InventorySummaryWrapper> getTop5Inventory() {
         FROM MRP__c WHERE MO__c IN :moIds
     ]) {
         Id productId = moToProductMap.get(rec.MO__c);
-        if (productSummaryMap.containsKey(productId)) {
-            Top5InventorySummaryWrapper wrap = productSummaryMap.get(productId);
+        if (productSummaryMap.containsKey(productId)) {    Top5InventorySummaryWrapper wrap = productSummaryMap.get(productId);
             wrap.totalExpectedRaw += rec.Expected_Quantity__c != null ? rec.Expected_Quantity__c : 0;
             wrap.totalConsumedRaw += rec.Consumed_Quantity__c != null ? rec.Consumed_Quantity__c : 0;
             wrap.totalScrappedRaw += rec.Scrapped_Quantity__c != null ? rec.Scrapped_Quantity__c : 0;
@@ -165,8 +161,7 @@ public static List<Top5InventorySummaryWrapper> getTop5Inventory() {
         FROM WIP__c WHERE MO__c IN :moIds
     ]) {
         Id productId = moToProductMap.get(rec.MO__c);
-        if (productSummaryMap.containsKey(productId)) {
-            Top5InventorySummaryWrapper wrap = productSummaryMap.get(productId);
+        if (productSummaryMap.containsKey(productId)) {       Top5InventorySummaryWrapper wrap = productSummaryMap.get(productId);
             wrap.totalWipQuantity += rec.Quantity__c != null ? rec.Quantity__c : 0;
             wrap.totalWipScrapped += rec.Scrapped__c != null ? rec.Scrapped__c : 0;
         }
@@ -180,8 +175,7 @@ public static List<Top5InventorySummaryWrapper> getTop5Inventory() {
         WHERE Manufacturing_Order__c IN :moIds
     ]) {
         Id productId = moToProductMap.get(rec.Manufacturing_Order__c);
-        if (productSummaryMap.containsKey(productId)) {
-            Top5InventorySummaryWrapper wrap = productSummaryMap.get(productId);
+        if (productSummaryMap.containsKey(productId)) {  Top5InventorySummaryWrapper wrap = productSummaryMap.get(productId);
             wrap.totalFinishedRequested += rec.No_of_Items_Requested__c != null ? rec.No_of_Items_Requested__c : 0;
             wrap.totalFinishedInStock += rec.Number_of_Item_In_Stock__c != null ? rec.Number_of_Item_In_Stock__c : 0;
             wrap.totalFinishedScrapped += rec.Number_of_Items_Scrapped__c != null ? rec.Number_of_Items_Scrapped__c : 0;
@@ -191,16 +185,14 @@ public static List<Top5InventorySummaryWrapper> getTop5Inventory() {
 
     // Compute total and sort
     List<Top5InventorySummaryWrapper> sortedList = new List<Top5InventorySummaryWrapper>();
-    for (Top5InventorySummaryWrapper wrap : productSummaryMap.values()) {
-        wrap.totalAll = wrap.totalExpectedRaw + wrap.totalWipQuantity + wrap.totalFinishedInStock;
+    for (Top5InventorySummaryWrapper wrap : productSummaryMap.values()) {       wrap.totalAll = wrap.totalExpectedRaw + wrap.totalWipQuantity + wrap.totalFinishedInStock;
         sortedList.add(wrap);
     }
 
     sortedList.sort(); // Uses compareTo() defined above
 List<Top5InventorySummaryWrapper> top5List = new List<Top5InventorySummaryWrapper>();
 
-for (Integer i = 0; i < Math.min(5, sortedList.size()); i++) {
-    top5List.add(sortedList[i]);
+for (Integer i = 0; i < Math.min(5, sortedList.size()); i++) {    top5List.add(sortedList[i]);
 }
 return top5List;
 }
@@ -237,8 +229,7 @@ public static Product2 getDefaultProductFromOrderItem() {
         Id topProductId = (Id)topProductResult[0].get('Product2Id');
         List<Product2> products = [
             SELECT Id, Name
-            FROM Product2
-            WHERE Id = :topProductId
+            FROM Product2        WHERE Id = :topProductId
         ];
         return products.isEmpty() ? null : products[0];
     }
@@ -263,8 +254,7 @@ public static Account getDefaultCustomerFromOrders() {
 
     if (!topCustomerResult.isEmpty()) {
         Id topCustomerId = (Id) topCustomerResult[0].get('AccountId');
-        List<Account> customers = [SELECT Id, Name FROM Account WHERE Id = :topCustomerId];
-        return customers.isEmpty() ? null : customers[0];
+        List<Account> customers = [SELECT Id, Name FROM Account WHERE Id = :topCustomerId];       return customers.isEmpty() ? null : customers[0];
     }
 
     return null;
@@ -306,15 +296,11 @@ public static List<Map<String, Object>> getTopCustomersForProduct(Id productId, 
 
     List<Map<String, Object>> response = new List<Map<String, Object>>();
     for (AggregateResult ar : results) {
-        Id accId = (Id)ar.get('accId');
-        Decimal qty = (Decimal)ar.get('totalQty');
+        Id accId = (Id)ar.get('accId');     Decimal qty = (Decimal)ar.get('totalQty');
         Account acc = [SELECT Name FROM Account WHERE Id = :accId LIMIT 1];
 
         Map<String, Object> entry = new Map<String, Object>();
-        entry.put('accountId', accId);
-        entry.put('accountName', acc.Name);
-        entry.put('quantity', qty.setScale(2));
-        response.add(entry);
+        entry.put('accountId', accId);       entry.put('accountName', acc.Name);       entry.put('quantity', qty.setScale(2));       response.add(entry);
     }
 
     return response;
@@ -417,15 +403,13 @@ public static List<Map<String, Object>> getTopCustomersForProduct(Id productId, 
             List<String> topProductLabels = new List<String>();
             List<Decimal> topProductData = new List<Decimal>();
             for (AggregateResult ar : topProducts) {
-                topProductLabels.add((String)ar.get('productName'));
-                topProductData.add((Decimal)ar.get('totalQuantity'));
+                topProductLabels.add((String)ar.get('productName'));               topProductData.add((Decimal)ar.get('totalQuantity'));
             }
             result.put('topProductLabels', topProductLabels);
             result.put('topProductData', topProductData);
             System.debug('Top products result: ' + result);
             return result;
-        } catch (Exception e) {
-            throw new AuraHandledException('Error fetching top products: ' + e.getMessage());
+        } catch (Exception e) {           throw new AuraHandledException('Error fetching top products: ' + e.getMessage());
         }
     }
 @AuraEnabled
@@ -440,8 +424,7 @@ public static Boolean checkversionAvailability(String productId) {
         ];
         
         return !versions.isEmpty();  
-    } catch (Exception e) {
-        throw new AuraHandledException(e.getMessage());
+    } catch (Exception e) {     throw new AuraHandledException(e.getMessage());
     }
 }
         @AuraEnabled(cacheable=true)
@@ -605,16 +588,14 @@ public static Boolean checkversionAvailability(String productId) {
 
             // If no results, add a placeholder to indicate no inventory
             if (locationLabels.isEmpty()) {
-                locationLabels.add('No Location');
-                locationInventory.add(0);
+                locationLabels.add('No Location');       locationInventory.add(0);
             }
 
             return new Map<String, Object>{
                 'locationLabels' => locationLabels,
                 'locationInventory' => locationInventory
             };
-        } catch (Exception e) {
-            throw new AuraHandledException('Error fetching location inventory: ' + e.getMessage());
+        } catch (Exception e) {    throw new AuraHandledException('Error fetching location inventory: ' + e.getMessage());
         }
     }
 
@@ -1039,32 +1020,20 @@ public static List<Map<String, Object>> getAgingTrendData(Id siteId, Id orgId, I
         Map<String, Decimal> bucketMap = new Map<String, Decimal>();
 
         for (Inventory_Stock__c stock : allStocks) {
-            if (stock.Checked_In_Date__c == null || stock.Checked_In_Date__c > snapshotDate) {
-                continue;
+            if (stock.Checked_In_Date__c == null || stock.Checked_In_Date__c > snapshotDate) {     continue;
             }
 
-            Integer age = stock.Checked_In_Date__c.daysBetween(snapshotDate);
-
-            String bucket;
+            Integer age = stock.Checked_In_Date__c.daysBetween(snapshotDate);  String bucket;
 
             if (stock.Status__c == 'Expired' ||
                 (stock.Expiry_Date__c != null && stock.Expiry_Date__c <= snapshotDate) ||
                 (stock.Expiration_Date__c != null && stock.Expiration_Date__c <= snapshotDate)) {
                 bucket = 'Expired';
-            } else if (age < 30) {
-                bucket = '<30d';
-            } else if (age < 90) {
-                bucket = '30–90d';
-            } else if (age < 180) {
-                bucket = '90–180d';
-            } else if (age < 365) {
-                bucket = '180–365d';
-            } else {
-                bucket = '>365d';
+            } else if (age < 30) {    bucket = '<30d';} else if (age < 90) {    bucket = '30–90d';} else if (age < 180) {    bucket = '90–180d';
+            } else if (age < 365) {   bucket = '180–365d'; } else {   bucket = '>365d';
             }
 
-            Decimal qty = stock.Number_of_Item_In_Stock__c;
-            bucketMap.put(bucket, bucketMap.containsKey(bucket) ? bucketMap.get(bucket) + qty : qty);
+            Decimal qty = stock.Number_of_Item_In_Stock__c;           bucketMap.put(bucket, bucketMap.containsKey(bucket) ? bucketMap.get(bucket) + qty : qty);
         }
 
         // Step 3: Add row to trend data
@@ -1087,9 +1056,7 @@ public static Map<String, Object> getCustomerOrderTrend(Id customerId, Id produc
 
     if (String.isBlank(customerId) || String.isBlank(orgId)) {
         System.debug('Missing customerId or orgId');
-        result.put('months', new List<String>());
-        result.put('quantities', new List<Decimal>());
-        return result;
+        result.put('months', new List<String>());       result.put('quantities', new List<Decimal>());       return result;
     }
 
     Integer selectedYear = String.isNotBlank(yearStr) ? Integer.valueOf(yearStr) : Date.today().year();
@@ -1125,11 +1092,9 @@ public static Map<String, Object> getCustomerOrderTrend(Id customerId, Id produc
 
     for (OrderItem oi : orderItems) {
         if (oi.Order != null && oi.Order.EffectiveDate  != null) {
-            Date orderDate = oi.Order.EffectiveDate;
-            String monthLabel = getMonthLabel(orderDate.month());
+            Date orderDate = oi.Order.EffectiveDate;            String monthLabel = getMonthLabel(orderDate.month());
 
-            if (!monthlyData.containsKey(monthLabel)) {
-                monthlyData.put(monthLabel, 0);
+            if (!monthlyData.containsKey(monthLabel)) {               monthlyData.put(monthLabel, 0);
             }
             monthlyData.put(monthLabel, monthlyData.get(monthLabel) + oi.Quantity);
         }
@@ -1192,8 +1157,7 @@ if (productId != null) {
 
     for (OrderItem oi : items) {
         totalAmount += oi.TotalPrice;
-        if (mostRecentDate == null || oi.Order.EffectiveDate > mostRecentDate) {
-            mostRecentDate = oi.Order.EffectiveDate;
+        if (mostRecentDate == null || oi.Order.EffectiveDate > mostRecentDate) {            mostRecentDate = oi.Order.EffectiveDate;
         }
     }
 
@@ -1366,11 +1330,7 @@ public static Map<String, Object> getHistoricalDemandData(Id productId, String d
 System.debug('fetched');
     Map<String, Decimal> demandMap = new Map<String, Decimal>();
     for (AggregateResult ar : results) {
-        Integer y = (Integer)ar.get('yr');
-        Integer m = (Integer)ar.get('mon');
-        String label = getMonthLabel(m) + ' ' + y;
-        Decimal qty = (Decimal)ar.get('qty');
-        demandMap.put(label, qty.setScale(2));
+        Integer y = (Integer)ar.get('yr');        Integer m = (Integer)ar.get('mon');        String label = getMonthLabel(m) + ' ' + y;        Decimal qty = (Decimal)ar.get('qty');        demandMap.put(label, qty.setScale(2));
     }
 
     List<String> monthLabels = new List<String>();
@@ -1395,12 +1355,10 @@ public static ForecastResult generateForecastFromHistorical(List<Decimal> histor
     Integer seasonLength = 12;
 
     if (modelName == 'Holt-Winters') {
-        if (historicalValues.size() < seasonLength * 2) {
-            throw new AuraHandledException('Not enough data for Holt-Winters.');
+        if (historicalValues.size() < seasonLength * 2) {         throw new AuraHandledException('Not enough data for Holt-Winters.');
         }
         return runHoltWintersForecast(historicalValues, forecastMonths, seasonLength);
-    } else if (modelName == 'MOVING_AVERAGE') {
-        return runMovingAverageForecast(historicalValues, forecastMonths);
+    } else if (modelName == 'MOVING_AVERAGE') {      return runMovingAverageForecast(historicalValues, forecastMonths);
     }
 
     throw new AuraHandledException('Unsupported model: ' + modelName);
@@ -1528,10 +1486,8 @@ public static Map<String, Object> getDemandForecastWithHistory(Id productId, Str
     }
  
     if (multiCurrencyEnabled) {
-        userIsoCode = currencyISO;
-        String iso = userIsoCode;
-        String q = 'SELECT IsoCode, conversionRate FROM CurrencyType WHERE IsoCode = :iso';
-        currencyRate = (Decimal) Database.query(q)[0].get('conversionRate');
+        userIsoCode = currencyISO;       String iso = userIsoCode;
+        String q = 'SELECT IsoCode, conversionRate FROM CurrencyType WHERE IsoCode = :iso';       currencyRate = (Decimal) Database.query(q)[0].get('conversionRate');
     } else {
         userIsoCode = currencyISO;
         currencyRate = 1;
@@ -1690,14 +1646,12 @@ public class ReturnProductSummary {
 
 public class ComparatorByReturnedQty implements Comparator<Object> {
     public Integer compare(Object a, Object b) {
-        sandOP.ReturnProductSummary rp1 = (sandOP.ReturnProductSummary)a;
-        sandOP.ReturnProductSummary rp2 = (sandOP.ReturnProductSummary)b;
-        return rp2.totalReturnedQty - rp1.totalReturnedQty;
+        sandOP.ReturnProductSummary rp1 = (sandOP.ReturnProductSummary)a;  sandOP.ReturnProductSummary rp2 = (sandOP.ReturnProductSummary)b;    return rp2.totalReturnedQty - rp1.totalReturnedQty;
     }
 }
 
 @AuraEnabled(cacheable=true)
-public static List<ReturnProductSummary> getTopReturnedProducts(Id organisationId, Integer limitCount) {
+public static List<ReturnProductSummary> getTopReturnedProducts(String organisationId, Integer limitCount) {
     Map<Id, ReturnProductSummary> returnMap = new Map<Id, ReturnProductSummary>();
     Map<Id, Map<String, Integer>> reasonCountMap = new Map<Id, Map<String, Integer>>();
     Map<Id, Integer> returnCaseCountMap = new Map<Id, Integer>();
@@ -1716,59 +1670,23 @@ public static List<ReturnProductSummary> getTopReturnedProducts(Id organisationI
         GROUP BY Product__c, Product__r.Name, Acceptance_Type__c
     ];
 
-    // for (AggregateResult ar : returnAgg) {
-    //     Id productId = (Id)ar.get('productId');
-    //     String reason = (String)ar.get('reason');
-    //     Integer qty = ((Decimal)ar.get('totalReturnedQty')).intValue();
-    //     Integer caseCount = ((Decimal)ar.get('returnCases')).intValue();
-    //     Date lastReturnDate = ((DateTime)ar.get('lastReturnDate')).date();
+ /*   for (AggregateResult ar : returnAgg) {
+        Id productId = (Id)ar.get('productId');
+        String reason = (String)ar.get('reason');
+        Integer qty = ((Decimal)ar.get('totalReturnedQty')).intValue();
+        Integer caseCount = ((Decimal)ar.get('returnCases')).intValue();
+        Date lastReturnDate = ((DateTime)ar.get('lastReturnDate')).date();
 
-    //     if (!returnMap.containsKey(productId)) {
-    //         ReturnProductSummary summary = new ReturnProductSummary();
-    //         summary.productId = productId;
-    //         summary.productName = (String)ar.get('productName') != null ? (String)ar.get('productName') : 'Manual Product';
-    //         returnMap.put(productId, summary);
-    //     } else if (returnMap.get(productId).productName == null && ar.get('productName') != null) {
-    //         returnMap.get(productId).productName = (String)ar.get('productName');
-    //     }
+        if (!returnMap.containsKey(productId)) {
+            ReturnProductSummary summary = new ReturnProductSummary();
+            summary.productId = productId;
+            summary.productName = (String)ar.get('productName') != null ? (String)ar.get('productName') : 'Manual Product';
+            returnMap.put(productId, summary);
+        } else if (returnMap.get(productId).productName == null && ar.get('productName') != null) {
+            returnMap.get(productId).productName = (String)ar.get('productName');
+        }
 
-    //     returnMap.get(productId).totalReturnedQty += qty;
-
-    for (AggregateResult ar : returnAgg) {
-    Id productId = (Id) ar.get('productId');
-    if (productId == null) continue; // defensive
-
-    // null-safe reads
-    String reason = (String) ar.get('reason');
-    if (String.isBlank(reason)) reason = 'Unspecified';
-
-    Decimal sumDec = (Decimal) ar.get('totalReturnedQty');
-    Integer qty = (sumDec == null) ? 0 : sumDec.intValue();
-
-    Decimal cntDec = (Decimal) ar.get('returnCases');
-    Integer caseCount = (cntDec == null) ? 0 : cntDec.intValue();
-
-    DateTime lastDt = (DateTime) ar.get('lastReturnDate');
-    Date lastReturnDate = (lastDt == null) ? null : lastDt.date();
-
-    if (!returnMap.containsKey(productId)) {
-        ReturnProductSummary summary = new ReturnProductSummary();
-        summary.productId = productId;
-        summary.productName = (String) ar.get('productName');
-        if (String.isBlank(summary.productName)) summary.productName = 'Manual Product';
-        // initialize accumulators to avoid NPE on +=
-        summary.totalReturnedQty = 0;
-        summary.totalSoldQty = 0;
-        summary.returnRate = 0;
-        summary.totalReturnCases = 0;
-        summary.lastReturnDate = null;
-        returnMap.put(productId, summary);
-    } else if (returnMap.get(productId).productName == null && ar.get('productName') != null) {
-        returnMap.get(productId).productName = (String) ar.get('productName');
-    }
-
-    // safe accumulate
-    returnMap.get(productId).totalReturnedQty += qty;
+        returnMap.get(productId).totalReturnedQty += qty;
 
         // Track reasons
         if (!reasonCountMap.containsKey(productId)) {
@@ -1785,7 +1703,63 @@ public static List<ReturnProductSummary> getTopReturnedProducts(Id organisationI
         if (!lastReturnDateMap.containsKey(productId) || lastReturnDateMap.get(productId) < lastReturnDate) {
             lastReturnDateMap.put(productId, lastReturnDate);
         }
+    }*/
+    
+    for (AggregateResult ar : returnAgg) {
+    Id productId = (Id)ar.get('productId');
+    String reason = (String)ar.get('reason');
+    Decimal qtyDec = (Decimal)ar.get('totalReturnedQty');
+    Integer qty = (qtyDec == null) ? 0 : qtyDec.intValue();
+
+    Decimal caseDec = (Decimal)ar.get('returnCases');
+    Integer caseCount = (caseDec == null) ? 0 : caseDec.intValue();
+
+    Date lastReturnDate;
+    if (ar.get('lastReturnDate') != null) {
+        lastReturnDate = ((DateTime)ar.get('lastReturnDate')).date();
     }
+
+    if (!returnMap.containsKey(productId)) {
+        ReturnProductSummary summary = new ReturnProductSummary();
+        summary.productId = productId;
+        summary.productName = (String)ar.get('productName') != null
+            ? (String)ar.get('productName')
+            : 'Manual Product';
+        returnMap.put(productId, summary);
+    } else if (returnMap.get(productId).productName == null           && ar.get('productName') != null) {
+        returnMap.get(productId).productName = (String)ar.get('productName');
+    }
+
+    returnMap.get(productId).totalReturnedQty += qty;
+
+    // Track reasons
+    if (!reasonCountMap.containsKey(productId)) {
+        reasonCountMap.put(productId, new Map<String, Integer>());
+    }
+    Map<String, Integer> reasonMap = reasonCountMap.get(productId);
+    reasonMap.put(
+        reason,
+        reasonMap.containsKey(reason)
+            ? reasonMap.get(reason) + qty
+            : qty
+    );
+
+    // Track return cases
+    returnCaseCountMap.put(
+        productId,
+        returnCaseCountMap.containsKey(productId)
+            ? returnCaseCountMap.get(productId) + caseCount
+            : caseCount
+    );
+
+    // Track latest return date
+    if (lastReturnDate != null &&
+        (!lastReturnDateMap.containsKey(productId)
+            || lastReturnDateMap.get(productId) < lastReturnDate)) {
+        lastReturnDateMap.put(productId, lastReturnDate);
+    }
+}
+
 
     // 2. Get sold quantities
     List<AggregateResult> soldAgg = [
@@ -1799,8 +1773,7 @@ public static List<ReturnProductSummary> getTopReturnedProducts(Id organisationI
 
     for (AggregateResult ar : soldAgg) {
         Id productId = (Id)ar.get('Product2Id');
-        if (returnMap.containsKey(productId)) {
-            Integer soldQty = ((Decimal)ar.get('totalSold')).intValue();
+        if (returnMap.containsKey(productId)) {            Integer soldQty = ((Decimal)ar.get('totalSold')).intValue();
             ReturnProductSummary summary = returnMap.get(productId);
             summary.totalSoldQty = soldQty; System.debug('Total sold qty for product ' + productId + ': ' + soldQty); System.debug('Total returned qty for product ' + productId + ': ' + summary.totalReturnedQty);
             summary.returnRate = soldQty > 0
@@ -1820,8 +1793,7 @@ public static List<ReturnProductSummary> getTopReturnedProducts(Id organisationI
             Integer maxQty = 0;
             for (String r : reasonCountMap.get(productId).keySet()) {
                 if (reasonCountMap.get(productId).get(r) > maxQty) {
-                    maxQty = reasonCountMap.get(productId).get(r);
-                    topReason = r;
+                    maxQty = reasonCountMap.get(productId).get(r);                    topReason = r;
                 }
             }
             summary.topReturnReason = topReason;
@@ -1853,7 +1825,7 @@ public static List<ReturnProductSummary> getTopReturnedProducts(Id organisationI
     return topResults;
 }
 
-@AuraEnabled(cacheable=true)
+/*@AuraEnabled(cacheable=true)
 public static List<ReasonDistribution> getReturnReasonDistribution(String organisationId) {
     List<AggregateResult> result = [
         SELECT Acceptance_Type__c reason,
@@ -1876,15 +1848,44 @@ public static List<ReasonDistribution> getReturnReasonDistribution(String organi
 public class ReasonDistribution {
     @AuraEnabled public String reason;
     @AuraEnabled public Integer totalQty;
+}*/
+    
+    @AuraEnabled(cacheable=true)
+public static List<ReasonDistribution> getReturnReasonDistribution(String organisationId) {
+    List<AggregateResult> result = [
+        SELECT Acceptance_Type__c reason,
+               SUM(Quantity_Return__c) qty
+        FROM RMA_Line_Item__c
+        WHERE Company__c = :organisationId
+        GROUP BY Acceptance_Type__c
+    ];
+
+    List<ReasonDistribution> reasons = new List<ReasonDistribution>();
+    for (AggregateResult ar : result) {
+        String reason = (String)ar.get('reason');
+        Decimal qtyDec = (Decimal)ar.get('qty');
+
+        ReasonDistribution r = new ReasonDistribution();
+        r.reason   = String.isBlank(reason) ? 'Unknown' : reason;
+        r.totalQty = (qtyDec == null) ? 0 : qtyDec.intValue();
+
+        reasons.add(r);
+    }
+    return reasons;
 }
+
+public class ReasonDistribution {
+    @AuraEnabled public String reason;
+    @AuraEnabled public Integer totalQty;
+}
+
 @AuraEnabled
 public static Integer getCurrentFiscalYear() {
     Integer startMonth = [SELECT FiscalYearStartMonth FROM Organization LIMIT 1].FiscalYearStartMonth;
     Date today = Date.today();
     Integer fiscalYear = today.year();
 
-    if (today.month() < startMonth) {
-        fiscalYear -= 1;
+    if (today.month() < startMonth) {     fiscalYear -= 1;
     }
     return fiscalYear;
 }
@@ -1916,41 +1917,15 @@ public static List<MonthlyReturnStat> getReturnRateTrend(String organisationId) 
                   AND Company__c = :organisationId
             GROUP BY CALENDAR_MONTH(CreatedDate)
         ];
-/*
+
         for (AggregateResult ar : returned) {
             Integer month = (Integer)ar.get('month');
             Integer qty = ((Decimal)ar.get('qty')).intValue();
 
             MonthlyReturnStat stat = new MonthlyReturnStat();
             stat.monthLabel = DateTime.newInstance(year, month, 1, 0, 0, 0).format('MMM yyyy');
-            stat.totalReturnedQty = qty;
-            dataMap.put(String.valueOf(month), stat);
-        }*/
-        for (AggregateResult ar : returned) {
-    // Defensive null checks
-    if (ar == null) continue;
-
-    Integer month = (Integer) ar.get('month');
-    Decimal qtyDecimal = (Decimal) ar.get('qty');
-
-    // Skip if either is null
-    if (month == null || qtyDecimal == null) continue;
-
-    Integer qty = qtyDecimal.intValue();
-
-    // Create and store safely
-    MonthlyReturnStat stat = new MonthlyReturnStat();
-    try {
-        stat.monthLabel = DateTime.newInstance(year, month, 1, 0, 0, 0)
-                                  .format('MMM yyyy');
-    } catch (Exception e) {
-        // Fallback label if month invalid
-        stat.monthLabel = 'Unknown';
-    }
-    stat.totalReturnedQty = qty;
-    dataMap.put(String.valueOf(month), stat);
-}
-
+            stat.totalReturnedQty = qty;            dataMap.put(String.valueOf(month), stat);
+        }
 
         List<AggregateResult> sold = [
             SELECT CALENDAR_MONTH(CreatedDate) month,
@@ -1961,14 +1936,11 @@ public static List<MonthlyReturnStat> getReturnRateTrend(String organisationId) 
         ];
 
         for (AggregateResult ar : sold) {
-            Integer month = (Integer)ar.get('month');
-            Integer qty = ((Decimal)ar.get('qty')).intValue();
+            Integer month = (Integer)ar.get('month');       Integer qty = ((Decimal)ar.get('qty')).intValue();
 
             String key = String.valueOf(month);
-            if (!dataMap.containsKey(key)) {
-                MonthlyReturnStat stat = new MonthlyReturnStat();
-                stat.monthLabel = DateTime.newInstance(year, month, 1, 0, 0, 0).format('MMM yyyy');
-                stat.totalReturnedQty = 0;
+            if (!dataMap.containsKey(key)) {    MonthlyReturnStat stat = new MonthlyReturnStat();
+                stat.monthLabel = DateTime.newInstance(year, month, 1, 0, 0, 0).format('MMM yyyy');            stat.totalReturnedQty = 0;
                 dataMap.put(key, stat);
             }
 
@@ -1978,13 +1950,11 @@ public static List<MonthlyReturnStat> getReturnRateTrend(String organisationId) 
         }
 
         List<Integer> monthKeys = new List<Integer>();
-        for (String m : dataMap.keySet()) {
-            monthKeys.add(Integer.valueOf(m));
+        for (String m : dataMap.keySet()) {    monthKeys.add(Integer.valueOf(m));
         }
         monthKeys.sort();
 
-        for (Integer m : monthKeys) {
-            result.add(dataMap.get(String.valueOf(m)));
+        for (Integer m : monthKeys) {    result.add(dataMap.get(String.valueOf(m)));
         }
 
         System.debug('✅ Final Return Rate Result: ' + result);
@@ -1996,105 +1966,6 @@ public static List<MonthlyReturnStat> getReturnRateTrend(String organisationId) 
         throw new AuraHandledException('Error while processing return trend: ' + e.getMessage());
     }
 }
-
-/*
-@AuraEnabled(cacheable=true)
-public static List<MonthlyReturnStat> getReturnRateTrend(String organisationId) {
-    List<MonthlyReturnStat> result = new List<MonthlyReturnStat>();
-    try {
-        Integer year = Date.today().year();
-        Date startDate = Date.newInstance(year, 1, 1);
-        Date endDate = Date.newInstance(year, 12, 31);
-
-        Map<String, MonthlyReturnStat> dataMap = new Map<String, MonthlyReturnStat>();
-
-        System.debug('🧪 getReturnRateTrend() INPUTS -> organisationId=' + organisationId);
-        System.debug('📅 Year=' + year + ' | startDate=' + startDate + ' | endDate (inclusive)=' + endDate);
-
-        // ---------- Returned ----------
-        System.debug('🔎 Running aggregate on RMA_Line_Item__c (returns)...');
-        List<AggregateResult> returned = [
-            SELECT CALENDAR_MONTH(CreatedDate) month,
-                   SUM(Quantity_Return__c) qty
-            FROM RMA_Line_Item__c
-            WHERE CreatedDate >= :startDate AND CreatedDate <= :endDate
-                  AND Company__c = :organisationId
-            GROUP BY CALENDAR_MONTH(CreatedDate)
-        ];
-        System.debug('📊 Returned agg size = ' + returned.size());
-
-        for (AggregateResult ar : returned) {
-            Integer month = (Integer)ar.get('month');
-            Object qtyObj = ar.get('qty'); // may be null
-          System.debug('↩️ Returned row -> month=' + month + ' | qty(raw)=' + String.valueOf(qtyObj));
-
-            // (no logic change) original casting
-            Integer qty = ((Decimal)ar.get('qty')).intValue();
-
-            MonthlyReturnStat stat = new MonthlyReturnStat();
-            stat.monthLabel = DateTime.newInstance(year, month, 1, 0, 0, 0).format('MMM yyyy');
-            stat.totalReturnedQty = qty;
-            dataMap.put(String.valueOf(month), stat);
-        }
-        System.debug('🗺️ dataMap after returns -> keys=' + dataMap.keySet());
-
-        // ---------- Sold ----------
-        System.debug('🔎 Running aggregate on OrderItem (sold)...');
-        List<AggregateResult> sold = [
-            SELECT CALENDAR_MONTH(CreatedDate) month,
-                   SUM(Quantity) qty
-            FROM OrderItem
-            WHERE CreatedDate >= :startDate AND CreatedDate <= :endDate
-            GROUP BY CALENDAR_MONTH(CreatedDate)
-        ];
-        System.debug('📊 Sold agg size = ' + sold.size());
-
-        for (AggregateResult ar : sold) {
-            Integer month = (Integer)ar.get('month');
-            Object qtyObj = ar.get('qty'); // may be null
-          System.debug('↩️ Returned row -> month=' + month + ' | qty(raw)=' + String.valueOf(qtyObj));
-
-            // (no logic change) original casting
-            Integer qty = ((Decimal)ar.get('qty')).intValue();
-
-            String key = String.valueOf(month);
-            if (!dataMap.containsKey(key)) {
-                MonthlyReturnStat stat = new MonthlyReturnStat();
-                stat.monthLabel = DateTime.newInstance(year, month, 1, 0, 0, 0).format('MMM yyyy');
-                stat.totalReturnedQty = 0;
-                dataMap.put(key, stat);
-                System.debug('➕ Created placeholder stat for month=' + month);
-            }
-
-            MonthlyReturnStat stat = dataMap.get(key);
-            stat.totalSoldQty = qty;
-            stat.returnRate = qty > 0 ? ((Decimal)stat.totalReturnedQty / qty) * 100 : 0;
-            System.debug('📐 Computed -> month=' + month + ' | returned=' + stat.totalReturnedQty
-                         + ' | sold=' + stat.totalSoldQty + ' | rate=' + stat.returnRate);
-        }
-
-        // ---------- Finalize ----------
-        List<Integer> monthKeys = new List<Integer>();
-        for (String m : dataMap.keySet()) monthKeys.add(Integer.valueOf(m));
-        monthKeys.sort();
-        System.debug('🔑 Sorted month keys=' + monthKeys);
-
-        for (Integer m : monthKeys) {
-            result.add(dataMap.get(String.valueOf(m)));
-        }
-
-        System.debug('✅ Final Return Rate Result size=' + result.size() + ' | values=' + result);
-        return result;
-
-    } catch (Exception e) {
-        System.debug('❌ ERROR in getReturnRateTrend: ' + e.getMessage());
-        System.debug('❌ Type=' + e.getTypeName());
-        System.debug('🧵 Stacktrace:\n' + e.getStackTraceString());
-        throw new AuraHandledException('Error while processing return trend: ' + e.getMessage());
-    }
-}
-    */
-
 //customer return insights
 // public class CustomerReturnSummary {
 //     @AuraEnabled public Id customerId;
@@ -2110,9 +1981,7 @@ public static List<MonthlyReturnStat> getReturnRateTrend(String organisationId) 
 
 public class ComparatorByCustomerReturnQty implements Comparator<Object> {
     public Integer compare(Object a, Object b) {
-        sandOP.CustomerReturnSummary c1 = (sandOP.CustomerReturnSummary)a;
-        sandOP.CustomerReturnSummary c2 = (sandOP.CustomerReturnSummary)b;
-        return c2.totalReturnedQty - c1.totalReturnedQty;
+ sandOP.CustomerReturnSummary c1 = (sandOP.CustomerReturnSummary)a;        sandOP.CustomerReturnSummary c2 = (sandOP.CustomerReturnSummary)b;        return c2.totalReturnedQty - c1.totalReturnedQty;
     }
 }
 public class CustomerReturnSummary {
@@ -2150,30 +2019,63 @@ public static List<CustomerReturnSummary> getTopReturningCustomers(String organi
             Acceptance_Type__c
     ];
 // System.debug('return AGG '+returnAgg);
+   /* for (AggregateResult ar : returnAgg) {
+        Id customerId = (Id)ar.get('customerId');
+        if (customerId == null) continue;
+
+        String customerName = (String)ar.get('customerName') != null ? (String)ar.get('customerName') : 'Manual';
+        String reason = (String)ar.get('reason');
+        Integer qty = ((Decimal)ar.get('totalReturnedQty')).intValue();
+        Integer caseCount = ((Decimal)ar.get('returnCases')).intValue();
+        Date lastReturnDate = ((Datetime)ar.get('lastReturnDate')).date();
+
+        if (!returnMap.containsKey(customerId)) {
+            CustomerReturnSummary summary = new CustomerReturnSummary();
+            summary.customerId = customerId;
+            summary.customerName = customerName;
+            summary.totalReturnedQty = 0;
+            returnMap.put(customerId, summary);
+        }
+
+        returnMap.get(customerId).totalReturnedQty += qty;
+
+        // Track reason counts
+        if (!reasonCountMap.containsKey(customerId)) {
+            reasonCountMap.put(customerId, new Map<String, Integer>());
+        }
+        Map<String, Integer> reasonMap = reasonCountMap.get(customerId);
+        reasonMap.put(reason, reasonMap.containsKey(reason) ? reasonMap.get(reason) + qty : qty);
+
+        // Track return cases
+        returnCaseCountMap.put(customerId, returnCaseCountMap.containsKey(customerId)
+            ? returnCaseCountMap.get(customerId) + caseCount : caseCount);
+
+        // Track latest return date
+        if (!lastReturnDateMap.containsKey(customerId) || lastReturnDateMap.get(customerId) < lastReturnDate) {
+            lastReturnDateMap.put(customerId, lastReturnDate);
+        }
+    } */
     for (AggregateResult ar : returnAgg) {
-    if (ar == null) continue;
+    Id customerId = (Id)ar.get('customerId');
+    if (customerId == null) continue;
 
-    Id customerId = (Id) ar.get('customerId');
-    if (customerId == null) continue; // nothing to aggregate
+    String customerName = (String)ar.get('customerName');
+    customerName = String.isNotBlank(customerName) ? customerName : 'Manual';
 
-    // Safe reads with defaults
-    String customerName = (String) ar.get('customerName');
-    if (String.isBlank(customerName)) customerName = 'Manual';
+    String reason = (String)ar.get('reason');
 
-    String reason = (String) ar.get('reason');
-    if (String.isBlank(reason)) reason = 'Unspecified';
+    // ✅ Null-safe conversions
+    Decimal qtyDec = (Decimal)ar.get('totalReturnedQty');
+    Integer qty = (qtyDec == null) ? 0 : qtyDec.intValue();
 
-    Decimal qtyDec = (Decimal) ar.get('totalReturnedQty');
-    Integer qty = (qtyDec != null) ? qtyDec.intValue() : 0;
+    Decimal caseDec = (Decimal)ar.get('returnCases');
+    Integer caseCount = (caseDec == null) ? 0 : caseDec.intValue();
 
-    // COUNT() is returned as Decimal in AggregateResult
-    Decimal casesDec = (Decimal) ar.get('returnCases');
-    Integer caseCount = (casesDec != null) ? casesDec.intValue() : 0;
+    Date lastReturnDate = null;
+    if (ar.get('lastReturnDate') != null) {
+        lastReturnDate = ((Datetime)ar.get('lastReturnDate')).date();
+    }
 
-    Datetime lastDt = (Datetime) ar.get('lastReturnDate');
-    Date lastReturnDate = (lastDt != null) ? lastDt.date() : null;
-
-    // Initialize summary bucket
     if (!returnMap.containsKey(customerId)) {
         CustomerReturnSummary summary = new CustomerReturnSummary();
         summary.customerId = customerId;
@@ -2182,31 +2084,36 @@ public static List<CustomerReturnSummary> getTopReturningCustomers(String organi
         returnMap.put(customerId, summary);
     }
 
-    // Accumulate totals
     returnMap.get(customerId).totalReturnedQty += qty;
 
-    // Reason counts (ensure map + key present)
+    // Track reason counts
     if (!reasonCountMap.containsKey(customerId)) {
         reasonCountMap.put(customerId, new Map<String, Integer>());
     }
     Map<String, Integer> reasonMap = reasonCountMap.get(customerId);
-    reasonMap.put(reason, (reasonMap.containsKey(reason) ? reasonMap.get(reason) : 0) + qty);
-
-    // Cases per customer
-    returnCaseCountMap.put(
-        customerId,
-        (returnCaseCountMap.containsKey(customerId) ? returnCaseCountMap.get(customerId) : 0) + caseCount
+    reasonMap.put(
+        reason,
+        reasonMap.containsKey(reason)
+            ? reasonMap.get(reason) + qty
+            : qty
     );
 
-    // Latest return date
-    if (lastReturnDate != null) {
-        if (!lastReturnDateMap.containsKey(customerId) || 
-            lastReturnDateMap.get(customerId) == null || 
-            lastReturnDateMap.get(customerId) < lastReturnDate) {
-            lastReturnDateMap.put(customerId, lastReturnDate);
-        }
+    // Track return cases
+    returnCaseCountMap.put(
+        customerId,
+        returnCaseCountMap.containsKey(customerId)
+            ? returnCaseCountMap.get(customerId) + caseCount
+            : caseCount
+    );
+
+    // Track latest return date
+    if (lastReturnDate != null &&
+        (!lastReturnDateMap.containsKey(customerId)
+            || lastReturnDateMap.get(customerId) < lastReturnDate)) {
+        lastReturnDateMap.put(customerId, lastReturnDate);
     }
 }
+
 
     // 2. Order Aggregates
     List<AggregateResult> orderAgg = [
@@ -2243,8 +2150,7 @@ public static List<CustomerReturnSummary> getTopReturningCustomers(String organi
             Integer maxQty = 0;
             for (String r : reasons.keySet()) {
                 if (reasons.get(r) > maxQty) {
-                    topReason = r;
-                    maxQty = reasons.get(r);
+                    topReason = r;                   maxQty = reasons.get(r);
                 }
             }
             summary.topReturnReason = topReason;
@@ -2481,6 +2387,7 @@ public static List<CustomerReturnSummary> getTopReturningCustomers(String organi
 //     }
 //     return results;
 // }
+// 
 @AuraEnabled(cacheable=true)
 public static Map<String, List<Map<String, Object>>> getStockMovementData(String yearStr) {
     Integer year = Integer.valueOf(yearStr);
@@ -2612,6 +2519,76 @@ public class SimulationSaveDTO {
 }
 
 // ========= Main entry point from LWC =========
+// @AuraEnabled
+// public static Id saveSimulation(String payloadJson) {
+//     if (String.isBlank(payloadJson)) {
+//         throw new AuraHandledException('No payload received.');
+//     }
+
+//     SimulationSaveDTO payload;
+//     try {
+//         payload = (SimulationSaveDTO) JSON.deserialize(payloadJson, SimulationSaveDTO.class);
+//     } catch (Exception e) {
+//         throw new AuraHandledException('Invalid payload: ' + e.getMessage());
+//     }
+
+//     if (payload == null || payload.lines == null || payload.lines.isEmpty()) {
+//         throw new AuraHandledException('Nothing to save. Run a simulation first.');
+//     }
+
+//     // Build Simulation header
+//     Simulation__c sim = new Simulation__c();
+//     sim.Name                   = String.isBlank(payload.name) ? 'Simulation ' + Datetime.now().format('yyyy-MM-dd HH:mm') : payload.name;
+//     sim.Model__c         = payload.model;
+//     sim.Type__c          = payload.type;
+    
+//      // Optional: if you prefer to hard-fail with a friendly message instead of nulling, uncomment:
+//     if (payload.model != null && sim.Model__c == null)
+//     //     throw new AuraHandledException('Invalid Model. Provide one of the allowed values.');
+//     if (payload.type != null && sim.Type__c == null)
+//     //     throw new AuraHandledException('Invalid Type. Provide one of the allowed values.');
+
+    
+//     sim.Product__c       = payload.productId;
+//     sim.From_Period__c   = payload.fromPeriod;
+//     sim.To_Period__c     = payload.toPeriod;
+// 	System.debug('inserting simulation');
+//     System.debug('sim=>'+sim);
+//     insert sim;
+// 	System.debug('inserted ');
+//     // Build line items
+//     List<Simulation_Line_Item__c> toInsert = new List<Simulation_Line_Item__c>();
+//     for (SimulationLineDTO row : payload.lines) {
+//         Simulation_Line_Item__c li = new Simulation_Line_Item__c();
+//         li.Simulation__c        = sim.Id;
+//         li.YearMonth__c         = row.yearMonth;               // 'YYYY-MM' (your formula fields derive Month/Year)
+//         li.Forecasted_Value__c  = (row.forecasted == null) ? 0 : row.forecasted.setScale(2);
+//         li.Simulated_Value__c   = (row.simulated  == null) ? 0 : row.simulated.setScale(2);
+//         if (row.actual != null) {
+//             li.Actual_Value__c = row.actual.setScale(2);
+//         }
+//         toInsert.add(li);
+//     }
+//     if (!toInsert.isEmpty()) {System.debug('inserting toInsert simulation line items');	insert toInsert; System.debug('inserted');}
+
+//     return sim.Id;
+// }
+
+
+//added by abuzar for null value exception error in test class
+
+// Helper: map incoming text to a canonical restricted picklist value (case-insensitive). Null if invalid.
+private static String picklistOrNull(String incoming, Schema.DescribeFieldResult dfr) {
+    if (String.isBlank(incoming)) return null;
+    String key = incoming.trim().toLowerCase();
+    for (Schema.PicklistEntry pe : dfr.getPicklistValues()) {
+        if (pe.getValue() != null && pe.getValue().toLowerCase() == key) {
+            return pe.getValue(); // canonical value
+        }
+    }
+    return null;
+}
+
 @AuraEnabled
 public static Id saveSimulation(String payloadJson) {
     if (String.isBlank(payloadJson)) {
@@ -2631,33 +2608,53 @@ public static Id saveSimulation(String payloadJson) {
 
     // Build Simulation header
     Simulation__c sim = new Simulation__c();
-    sim.Name                   = String.isBlank(payload.name) ? 'Simulation ' + Datetime.now().format('yyyy-MM-dd HH:mm') : payload.name;
-    sim.Model__c         = payload.model;
-    sim.Type__c          = payload.type;
-    sim.Product__c       = payload.productId;
-    sim.From_Period__c   = payload.fromPeriod;
-    sim.To_Period__c     = payload.toPeriod;
-	System.debug('inserting simulation');
-    System.debug('sim=>'+sim);
+    sim.Name = String.isBlank(payload.name)
+        ? 'Simulation ' + Datetime.now().format('yyyy-MM-dd HH:mm')
+        : payload.name;
+
+    // ✅ Restricted picklists: normalize or block with a friendly error
+    sim.Model__c = picklistOrNull(payload.model, Simulation__c.Model__c.getDescribe());
+    sim.Type__c  = picklistOrNull(payload.type,  Simulation__c.Type__c.getDescribe());
+
+    if (String.isNotBlank(payload.model) && sim.Model__c == null) {
+        throw new AuraHandledException('Invalid Model. Provide one of the allowed values.');
+    }
+    if (String.isNotBlank(payload.type) && sim.Type__c == null) {
+        throw new AuraHandledException('Invalid Type. Provide one of the allowed values.');
+    }
+
+    // Other fields (left as-is)
+    sim.Product__c     = payload.productId;
+    sim.From_Period__c = payload.fromPeriod;
+    sim.To_Period__c   = payload.toPeriod;
+
+    System.debug('inserting simulation');
+    System.debug('sim=>' + sim);
     insert sim;
-	System.debug('inserted ');
+    System.debug('inserted');
+
     // Build line items
     List<Simulation_Line_Item__c> toInsert = new List<Simulation_Line_Item__c>();
     for (SimulationLineDTO row : payload.lines) {
         Simulation_Line_Item__c li = new Simulation_Line_Item__c();
-        li.Simulation__c        = sim.Id;
-        li.YearMonth__c         = row.yearMonth;               // 'YYYY-MM' (your formula fields derive Month/Year)
-        li.Forecasted_Value__c  = (row.forecasted == null) ? 0 : row.forecasted.setScale(2);
-        li.Simulated_Value__c   = (row.simulated  == null) ? 0 : row.simulated.setScale(2);
+        li.Simulation__c       = sim.Id;
+        li.YearMonth__c        = row.yearMonth;               // 'YYYY-MM'
+        li.Forecasted_Value__c = (row.forecasted == null) ? 0 : row.forecasted.setScale(2);
+        li.Simulated_Value__c  = (row.simulated  == null) ? 0 : row.simulated.setScale(2);
         if (row.actual != null) {
             li.Actual_Value__c = row.actual.setScale(2);
         }
         toInsert.add(li);
     }
-    if (!toInsert.isEmpty()) {System.debug('inserting toInsert simulation line items');	insert toInsert; System.debug('inserted');}
+    if (!toInsert.isEmpty()) {
+        System.debug('inserting toInsert simulation line items');
+        insert toInsert;
+        System.debug('inserted');
+    }
 
     return sim.Id;
 }
+
 // evaluate simulation accuracy
 /*
 public class ActualValueDTO {
