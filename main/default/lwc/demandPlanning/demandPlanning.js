@@ -42,6 +42,15 @@ import { NavigationMixin } from 'lightning/navigation';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 export default class DemandPlanning extends NavigationMixin(LightningElement) {
+
+
+//       @api initContext({ organisationId, flags }) {
+//     this.organisationId = organisationId;
+//     this.isDemandTabOpen = flags?.isDemandTabOpen;
+//     this.isInventoryTabOpen = flags?.isInventoryTabOpen;
+//     this.isRiskAndReturnTabOpen = flags?.isRiskAndReturnTabOpen;
+//   }
+
     selectedFiscalYear = new Date().getFullYear();
     @track currencySymbol=null;
     @track isDemandProductSel = false;
@@ -716,8 +725,9 @@ fetchDemandData() {
     this.isLoading = true;
 console.log(' in fetch demand data orgId:', this.organisationId);
     getDemandForecastWithHistory({
-        productId: this.selectedProduct.Id,
-         modelName: this.selectedModel
+         productId: this.selectedProduct.Id,
+         modelName: this.selectedModel,
+         organisationId: this.organisationId
     })
     .then(result => {
         // 🔹 Extract data
@@ -3402,7 +3412,9 @@ fetchStockMovements() {
     console.log('calling stock movement');
     this.isLoading = true;
     getStockMovementData({
-         yearStr: this.selectedYear.toString()
+         yearStr: this.selectedYear.toString(),
+             organisationId: this.organisationId       // ✅ added this line
+
     })
     .then(result => {
         let inwards = result.inwards || [];

@@ -27,6 +27,20 @@ export default class SandOP extends LightningElement {
         this.loadDefaultOrganisation();
     }
 
+//     renderedCallback() {
+//   const orgId = this?.DefaultOrganisation?.Id;
+//   if (!orgId || !this.isDataLoaded) return;
+
+//   if (this.refs.demand) {
+//     this.refs.demand.initContext({
+//       organisationId: orgId,
+//       flags: { isDemandTabOpen: this.isDemandTabOpen }
+//     });
+//   }
+
+  
+// }
+
     loadDefaultOrganisation() {
         getDefaultOrganisation()
             .then(result => {

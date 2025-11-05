@@ -1308,7 +1308,8 @@ public class ForecastResult {
 
 // new 
 @AuraEnabled
-public static Map<String, Object> getHistoricalDemandData(Id productId, String dummyYear) {
+public static Map<String, Object> getHistoricalDemandData(Id productId, String dummyYear, Id orgId) {
+
     //System.debug('OrgId -> ' + OrgId + ' | productId -> ' + productId);
     // If(OrgId == null || orgId == ''){
     //     throw new AuraHandledException('Organisation ID is required.');
@@ -1324,6 +1325,7 @@ public static Map<String, Object> getHistoricalDemandData(Id productId, String d
         WHERE Product2Id = :productId
         AND Order.Status NOT IN ('Cancelled', 'Draft', 'Entered')
         AND Order.EffectiveDate >= :startDate AND Order.EffectiveDate <= :endDate
+        AND Company__c = :orgId
         GROUP BY CALENDAR_YEAR(Order.EffectiveDate), CALENDAR_MONTH(Order.EffectiveDate)
         ORDER BY CALENDAR_YEAR(Order.EffectiveDate), CALENDAR_MONTH(Order.EffectiveDate)
     ];
@@ -1450,9 +1452,9 @@ private static ForecastResult runMovingAverageForecast(List<Decimal> inputValues
 }
 
 @AuraEnabled(cacheable=true)
-public static Map<String, Object> getDemandForecastWithHistory(Id productId, String modelName) {
-    System.debug('getDemandForecastWithHistory called for productId: ' + productId + ', modelName: ' + modelName);
-    Map<String, Object> history = getHistoricalDemandData(productId, ''); // will ignore this year filter for now
+public static Map<String, Object> getDemandForecastWithHistory(Id productId, String modelName, Id organisationId) {
+    System.debug('getDemandForecastWithHistory called for productId: ' + productId + ', modelName: ' + modelName + ',Organisation Id '+organisationId);
+    Map<String, Object> history = getHistoricalDemandData(productId, '',organisationId); // will ignore this year filter for now
     List<Decimal> demandValues = (List<Decimal>) history.get('historicalValues');
 
     ForecastResult forecast;
@@ -2389,7 +2391,7 @@ public static List<CustomerReturnSummary> getTopReturningCustomers(String organi
 // }
 // 
 @AuraEnabled(cacheable=true)
-public static Map<String, List<Map<String, Object>>> getStockMovementData(String yearStr) {
+public static Map<String, List<Map<String, Object>>> getStockMovementData(String yearStr, Id organisationId) {
     Integer year = Integer.valueOf(yearStr);
     Date startDate = Date.newInstance(year, 1, 1);
     Date endDate = Date.newInstance(year, 12, 31);
@@ -2401,7 +2403,7 @@ public static Map<String, List<Map<String, Object>>> getStockMovementData(String
 
     List<Stock_Inward_Line_Item__c> inwardRecords = [
         SELECT CreatedDate,
-               Purchase_Orders__c,
+               Purchase_Orders__c, Purchase_Orders__r.Company__c,
                Manufacturing_Order__c,
                Stock_Take_Line_Item__c,
                Cart__c,
@@ -2412,6 +2414,7 @@ public static Map<String, List<Map<String, Object>>> getStockMovementData(String
         FROM Stock_Inward_Line_Item__c
         WHERE CreatedDate >= :startDate
           AND CreatedDate <= :endDate
+          AND Purchase_Orders__r.Company__c = :organisationId
     ];
 
     for (Stock_Inward_Line_Item__c rec : inwardRecords) {
@@ -2451,7 +2454,7 @@ public static Map<String, List<Map<String, Object>>> getStockMovementData(String
     List<Stock_Outward_Line_Item__c> outwardRecords = [
         SELECT CreatedDate,
                Order__c,
-               Purchase_Orders__c,
+               Purchase_Orders__c, Purchase_Orders__r.Company__c,
                Manufacturing_Order__c,
                Cart__c,
                Stock_Take_Line_Item__c,
@@ -2464,6 +2467,7 @@ public static Map<String, List<Map<String, Object>>> getStockMovementData(String
           AND CreatedDate <= :endDate
           AND Status__c != 'Reserved'
           AND Active__c = true
+          AND Purchase_Orders__r.Company__c = :organisationId
     ];
 
     for (Stock_Outward_Line_Item__c rec : outwardRecords) {

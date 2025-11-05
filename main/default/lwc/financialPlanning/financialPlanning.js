@@ -208,11 +208,11 @@ connectedCallback() {
     this.populateYearsDropdown();
 
     // Get org
-    getDefaultOrg()
-        .then(org => {
-            this.organisationId = org.Id;
-            console.log('🔄 Org Id:', this.organisationId);
-        });
+    // getDefaultOrg()
+    //     .then(org => {
+    //         this.organisationId = org.Id;
+    //         console.log('🔄 Org Id:', this.organisationId);
+    //     });
 
 
 
@@ -223,7 +223,7 @@ connectedCallback() {
     }
 
     // Fetch Chart of Accounts with Budget Accounts
-    getChartOfAccountsWithBudgetAccounts()
+    getChartOfAccountsWithBudgetAccounts({organisationId: this.organisationId})
         .then(ids => {
             if (ids.length > 0) {
                 this.chartOfAccountFilter = `Id IN (${ids.map(id => `'${id}'`).join(',')})`;
@@ -398,7 +398,7 @@ handleRecordTypeChange(event) {
 
 
  fetchCustomerSummaryTable() {
-        getCustomerTableDetails({ type: this.summaryView })
+        getCustomerTableDetails({ type: this.summaryView, organisationId: this.organisationId })
             .then(result => {
                 console.log('📊 Customer Summary Table Data:', JSON.stringify(result, null, 2));
                 this.summaryTableData = result || {};
@@ -576,7 +576,7 @@ handleSimulateForecast() {
     console.log('🚀 Simulated data to send:', JSON.stringify(inputMap));
 
     // Step 2: Send to Apex for simulation
-    simulateForecastWithInputs({ simulatedValues: inputMap })
+    simulateForecastWithInputs({ simulatedValues: inputMap, organisationId: this.organisationId })
         .then((result) => {
             console.log('📊 Simulated Forecast Result from Apex:', JSON.stringify(result));
             this.renderSimulatedForecastChart(result);
@@ -958,7 +958,7 @@ get justchecking2() {
 
 
     fetchProjectBudget(projectId) {
-        getSingleProjectBudgetSimulated({ projectId })
+        getSingleProjectBudgetSimulated({ projectId, organisationId: this.organisationId })
             .then(result => {
                 console.log('📊 Project Budget Data:', JSON.stringify(result, null, 2));
                 this.simulatedProjectBudgetData = result;
@@ -1865,7 +1865,7 @@ initializeLineChartforFiscalYear() {
     }
     console.log('📅 Selected Fiscal Start Date:', this.selectedFiscalStartDate);
 
-    getMonthlyIncomeExpenseForFiscalYear({ fiscalStartDate: this.selectedFiscalStartDate })
+    getMonthlyIncomeExpenseForFiscalYear({ fiscalStartDate: this.selectedFiscalStartDate, organisationId: this.organisationId })
     
         .then(result => {
             console.log('📊 Raw Chart Data:', JSON.stringify(result));
@@ -1953,7 +1953,7 @@ initializeLineChart() {
         return;
     }
 
-    getMonthlyIncomeExpense({ year: this.selectedYearforIncome })
+    getMonthlyIncomeExpense({ year: this.selectedYearforIncome, organisationId: this.organisationId })
         .then(result => {
             console.log('📊 Raw Chart Data:', JSON.stringify(result));
 
@@ -2084,7 +2084,7 @@ initializeLineChartwithPrediction() {
         return;
     }
 
-    getMonthlyIncomeExpenseWithPrediction()
+    getMonthlyIncomeExpenseWithPrediction({organisationId: this.organisationId})
         .then(result => {
             console.log('📊 Chart Data:', JSON.stringify(result));
 
@@ -2230,7 +2230,7 @@ initializeLineChartwithPrediction() {
         const ctx = this.template.querySelector('.coa-pie-chart')?.getContext('2d');
         if (!ctx) return;
 
-        getChartOfAccountsByType({ recordType: this.selectedRecordType })
+        getChartOfAccountsByType({ recordType: this.selectedRecordType, organisationId: this.organisationId })
             .then(result => {
                 console.log('📊 COA Chart Data:', result);
 
@@ -2306,7 +2306,7 @@ this.chartInstances.coaChart = new window.Chart(ctx, {
     const ctx = this.template.querySelector('.heatmap-overdue')?.getContext('2d');
     if (!ctx) return;
 
-    getCustomerInvoiceSummary({ type: this.summaryView }) // 'Overdue' or 'Unpaid'
+    getCustomerInvoiceSummary({ type: this.summaryView , organisationId: this.organisationId}) // 'Overdue' or 'Unpaid'
         .then(result => {
             const customers = result.labels;
             const amounts = result.amounts;
@@ -2397,7 +2397,7 @@ this.chartInstances.coaChart = new window.Chart(ctx, {
 
     let delayed; // 👈 Delayed flag to control animation sequence
 
-    getMonthlyCreditDebitSummary({ year: this.selectedYearforIncome })
+    getMonthlyCreditDebitSummary({ year: this.selectedYearforIncome ,  organisationId: this.organisationId })
         .then(result => {
             const months = [
                 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
@@ -2487,7 +2487,7 @@ updateCreditDebitChartForFiscalYear() {
     let delayed; // Delayed flag to control animation sequence
 
     // Call Apex for fiscal year data
-    getMonthlyCreditDebitSummaryForFiscalYear({ fiscalStartDate: this.selectedFiscalStartDate })
+    getMonthlyCreditDebitSummaryForFiscalYear({ fiscalStartDate: this.selectedFiscalStartDate,  organisationId: this.organisationId })
         .then(result => {
            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -2604,8 +2604,8 @@ loadIncomeExpenseChartsforfiscalyear() {
 
     // ✅ Call both APIs (monthly + expense breakdown)
     Promise.all([
-        getMonthlyIncomeExpensenew({ fromDate: this.fromDate, toDate: this.toDate }),
-        getExpenseTypeBreakdown({ fromDate: this.fromDate, toDate: this.toDate })
+        getMonthlyIncomeExpensenew({ fromDate: this.fromDate, toDate: this.toDate, organisationId: this.organisationId }),
+        getExpenseTypeBreakdown({ fromDate: this.fromDate, toDate: this.toDate, organisationId: this.organisationId })
     ])
     .then(([data, expenseTypeData]) => {
         console.log('📥 Chart Data received:', data);
@@ -2717,7 +2717,7 @@ loadIncomeExpenseCharts() {
     this.showDetailedCharts = true;
 
     Promise.all([
-        getMonthlyIncomeExpensenew({ fromDate: this.fromDate, toDate: this.toDate }),
+        getMonthlyIncomeExpensenew({ fromDate: this.fromDate, toDate: this.toDate , organisationId: this.organisationId}),
         getExpenseTypeBreakdown({ fromDate: this.fromDate, toDate: this.toDate })
     ])
     .then(([data, expenseTypeData]) => {
@@ -2935,7 +2935,7 @@ renderBarChartforfiscalyear(selector, labels, incomeData, expenseData, incomeLab
 
 loadInitialCharts() {
     console.log('🔄 Starting loadInitialCharts');
-    getOverallIncomeAndExpenseTotals()
+    getOverallIncomeAndExpenseTotals({organisationId: this.organisationId})
         .then(result => {
             console.log('💰 Overall Income and Expense Totals:', result);
             const labels = ['Income', 'Expenses'];
@@ -2945,7 +2945,7 @@ loadInitialCharts() {
             this.renderPieChart2('.total-income-expense-pie', labels, values, colors, 'Total Income vs Expenses');
         });
 
-   getOverallExpenseBreakdown()
+   getOverallExpenseBreakdown({organisationId: this.organisationId})
     .then(result => {
         console.log('📊 Overall Expense Breakdown:', JSON.stringify(result));
         const labels = ['Expense Bill', 'PO Bill', 'Advance to Vendor', 'My Expenses'];
@@ -3006,7 +3006,7 @@ this.chartInstances[key] = new window.Chart(ctx, {
 
 
   loadGrandTotalData() {
-        getChartOfAccountGrandTotal()
+        getChartOfAccountGrandTotal({organisationId: this.organisationId})
             .then(result => {
                 this.chartData = result;
                 this.renderPieChart();
@@ -3081,7 +3081,7 @@ this.chartInstances[key] = new window.Chart(ctx, {
 
 
  budgetPlanData() {
-    getChartOfAccountTotals()
+    getChartOfAccountTotals({organisationId: this.organisationId})
         .then(data => {
             console.log('📊 Grouped Budget Plan Data:', JSON.stringify(data));
             if (!data.length) {
@@ -3223,7 +3223,7 @@ handleChartOfAccountSelected(event) {
         this.isSingleProjectChartVisible = false;
 
         // 👇 Fetch filtered projects for project lookup
-        getProjectsByChartOfAccount({ chartOfAccountId: this.selectedChartOfAccount.Id })
+        getProjectsByChartOfAccount({ chartOfAccountId: this.selectedChartOfAccount.Id, organisationId: this.organisationId })
             .then(projects => {
                 console.log('📋 Filtered Projects:', projects);
 
@@ -3277,7 +3277,8 @@ handleProjectSelected(event) {
         if (this.selectedProject?.Id && this.selectedChartOfAccount?.Id) {
             getSingleProjectBudget({
                 chartOfAccountId: this.selectedChartOfAccount.Id,
-                projectId: this.selectedProject.Id
+                projectId: this.selectedProject.Id,
+                organisationId: this.organisationId
             })
                 .then(data => {
                     this.isProjectPieVisible = true;
@@ -3493,7 +3494,7 @@ this.chartInstances.projectBudgetChart = new window.Chart(ctx, {
 
 loadChartDataforYearlySummary() {
     console.log('🔄 Starting loadChartDataforYearlySummary');
-    getYearlyIncomeAndExpenseWithPrediction()
+    getYearlyIncomeAndExpenseWithPrediction({organisationId: this.organisationId})
         .then(result => {
             console.log('📊 Yearly Data:', result);
             const years = result.years;
@@ -3667,7 +3668,7 @@ handleSimulateBudget() {
     this.isNewPlanningIn = false;
     this.isSimulatedBudgetVisible = true;
 
-    getProjectIDs()
+    getProjectIDs({organisationId: this.organisationId})
         .then((jsonString) => {
             const ids = JSON.parse(jsonString);
             this.filteredProjectIdList = ids; // ✅ Save the filtered list
@@ -3699,7 +3700,7 @@ closeModal() {
 loadBudgetingExpenseChart() {
     const currentYear = new Date().getFullYear(); // 👈 current year
 
-    getMonthlyExpensesOnly({ year: currentYear })
+    getMonthlyExpensesOnly({ year: currentYear, organisationId: this.organisationId })
         .then(result => {
             const expenseData = result?.expense || [];
             const labels = this.allMonthLabels || ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -3850,7 +3851,7 @@ renderChartForBudgeting(labels, expenseData, simulatedPoints = []) {
 }
 
   loadGrandTotalDataInitial() {
-        getChartOfAccountGrandTotal()
+        getChartOfAccountGrandTotal({organisationId: this.organisationId})
             .then(result => {
                 this.chartData = result;
                 this.renderGroupedBarChartInitial(

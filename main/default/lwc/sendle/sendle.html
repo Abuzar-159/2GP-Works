@@ -1,0 +1,915 @@
+<template>
+  <div class="epr_mark7" style="background:#F7F8F9;min-height: 81vh;">
+    <!-- Header Logo Image -->
+    <div class="slds-page-header">
+      <div class="slds-page-header__row">
+        <div class="slds-page-header__col-title">
+          <div class="slds-media">
+            <img src={sendle} style="height:38px;" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Header Logo Image End -->
+
+    <!-- Create order -->
+    <div class="epr_Mark7" style="background:#fff;">
+      <div class="slds-grid">
+        <!-- Info section -->
+        <div class="col-md-6 slds-m-top--small slds-p-left--small">
+          <div class="slds-m-bottom_small">
+            <div class="slds-page-header" style="background-color: #31d0e5; color:#fff" onclick={toggleOne}>
+              <section class="slds-clearfix">
+                <span class="arrow" if:true={isOpenOne}>▽</span>
+                <span class="arrow" if:false={isOpenOne}>◁</span>
+                <strong class="slds-m-left_small">1. Where is this shipment going?</strong>
+              </section>
+            </div>
+
+            <!-- To Info -->
+            <div id="firstArticle" if:true={isOpenOne}>
+              <div class="epr_Mark7 fedex-class4">
+                <div class="slds-grid slds-wrap slds-m-around--small">
+                  <!-- To Address -->
+                  <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>To Address</label>&nbsp;
+                        <div class="required">*</div>
+                      </div>
+                      <c-Custom-input-lookup-l-w-c obj-name="Address__c" search-placeholder="Search Address"
+                        icon-name="standard:address" is-value-selected={toAddressSelected} selected-value={toAddress.Id}
+                        selected-name={toAddress.Name} selected-name-url={toAddressUrl}
+                        hide-remove="false"></c-Custom-input-lookup-l-w-c>
+                    </div>
+                  </div>
+                  <!-- Contact -->
+                  <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>Contact</label>&nbsp;
+                        <div class="required">*</div>
+                      </div>
+                      <div lwc:if={toAddress.Contact__r.Name}>
+                        <lightning-input type="text" variant="label-hidden" value={toAddress.Contact__r.Name}>
+                        </lightning-input>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Company -->
+                  <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>Company</label>&nbsp;
+                        <div class="required">*</div>
+                      </div>
+                      <div lwc:if={toAddress.Contact__r.Company__c}>
+                        <lightning-input type="text" value={toAddress.Contact__r.Company__c}
+                          variant="label-hidden"></lightning-input>
+                      </div>
+                      <div lwc:else>
+                        <lightning-input type="text" value={toContact.Account.Name}
+                          variant="label-hidden"></lightning-input>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Email -->
+                  <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>Email</label>&nbsp;
+                        <div class="required">*</div>
+                      </div>
+                      <div lwc:if={toAddress.Contact__r.Email}>
+                        <lightning-input type="text" value={toAddress.Contact__r.Email}
+                          variant="label-hidden"></lightning-input>
+                      </div>
+                      <div lwc:else>
+                        <lightning-input type="text" value={toContact.Account.email__c}
+                          variant="label-hidden"></lightning-input>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Phone -->
+                  <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>Phone</label>&nbsp;
+                        <div class="required">*</div>
+                      </div>
+                      <div lwc:if={toAddress.Contact__r.Phone}>
+                        <lightning-input type="text" value={toAddress.Contact__r.Phone}
+                          variant="label-hidden"></lightning-input>
+                      </div>
+                      <div lwc:else>
+                        <lightning-input type="text" value={toContact.Account.Phone}
+                          variant="label-hidden"></lightning-input>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Address Line 1-->
+                  <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>Address Line 1</label>&nbsp;
+                        <div class="required">*</div>
+                      </div>
+                      <div>
+                        <lightning-input type="text" variant="label-hidden"
+                          value={toAddress.Address_Line1__c}></lightning-input>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Address Line 2-->
+                  <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>Address Line 2</label>&nbsp;
+                      </div>
+                      <div>
+                        <lightning-input type="text" variant="label-hidden" value={toAddress.Address_Line2__c}>
+                        </lightning-input>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- City -->
+                  <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>City/Suburb</label>&nbsp;
+                        <div class="required">*</div>
+                      </div>
+                      <div>
+                        <lightning-input type="text" variant="label-hidden" value={toAddress.City__c}></lightning-input>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- State -->
+                  <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>State</label>&nbsp;
+                        <div class="required">*</div>
+                      </div>
+                      <div>
+                        <lightning-input type="text" variant="label-hidden" value={toAddress.State__c}>
+                        </lightning-input>
+                        <!-- State Error Message -->
+                        <template if:true={toStateError}>
+                          <div class="slds-text-color_error">{toStateError}</div>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Country -->
+                  <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>Country</label>&nbsp;
+                        <div class="required">*</div>
+                      </div>
+                      <div>
+                        <lightning-input type="text" variant="label-hidden"
+                          value={toAddress.Country__c}></lightning-input>
+                        <!-- Country Error Message -->
+                        <template if:true={toCountryError}>
+                          <div class="slds-text-color_error">{toCountryError}</div>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Postal Code -->
+                  <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>Postal Code</label>&nbsp;
+                        <div class="required">*</div>
+                      </div>
+                      <div>
+                        <lightning-input type="text" variant="label-hidden"
+                          value={toAddress.Postal_Code__c}></lightning-input>
+                        <!-- Postal Code Error Message -->
+                        <template if:true={toPostalCodeError}>
+                          <div class="slds-text-color_error">{toPostalCodeError}</div>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Instructions -->
+                  <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>Delivery Instructions</label>
+                      </div>
+                      <div>
+                        <lightning-input type="text" variant="label-hidden" placeholder="Instructions for shipping"
+                          onchange={toInstructionsChange}></lightning-input>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- to Info Ends -->
+            <!-- End Shipment going -->
+            <!-- Shipment Picking -->
+            <div class="slds-m-bottom_small">
+              <div class="fedex-class3 slds-page-header" style="background-color: #31d0e5; color:#fff"
+                onclick={toggleTwo}>
+                <section class="slds-clearfix">
+                  <span class="arrow" if:true={isOpenTwo}>▽</span>
+                  <span class="arrow" if:false={isOpenTwo}>◁</span>
+                  <strong class="slds-m-left_small">2. Where is this shipment coming from?</strong>
+                </section>
+              </div>
+              <!-- From Info -->
+              <div id="secondArticle" if:true={isOpenTwo}>
+                <div class="epr_Mark7 fedex-class4">
+                  <div class="slds-grid slds-wrap slds-m-around--small">
+                    <!-- To Address -->
+                    <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                      <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                        <div class="slds-grid">
+                          <label>From Address</label>&nbsp;
+                          <div class="required">*</div>
+                        </div>
+                        <c-Custom-input-lookup-l-w-c obj-name="Address__c" search-placeholder="Search Address"
+                          icon-name="standard:address" is-value-selected={fromAddressSelected}
+                          selected-value={fromAddress.Id} selected-name={fromAddress.Name}
+                          selected-name-url={fromAddressUrl} hide-remove="true"></c-Custom-input-lookup-l-w-c>
+                      </div>
+                    </div>
+                    <!-- Contact -->
+                    <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                      <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                        <div class="slds-grid">
+                          <label>Contact</label>&nbsp;
+                          <div class="required">*</div>
+                        </div>
+                        <div lwc:if={fromAddress.Contact__r.Name}>
+                          <lightning-input type="text" value={fromAddress.Contact__r.Name}
+                            variant="label-hidden"></lightning-input>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Company -->
+                    <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                      <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                        <div class="slds-grid">
+                          <label>Company</label>&nbsp;
+                          <div class="required">*</div>
+                        </div>
+                        <div lwc:if={fromAddress.Contact__r.Company__c}>
+                          <lightning-input type="text" value={fromAddress.Contact__r.Company__c}
+                            variant="label-hidden"></lightning-input>
+                        </div>
+                        <div lwc:else>
+                          <lightning-input type="text" value={fromContact.Account.Name}
+                            variant="label-hidden"></lightning-input>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Email -->
+                    <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                      <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                        <div class="slds-grid">
+                          <label>Email</label>&nbsp;
+                          <div class="required">*</div>
+                        </div>
+                        <div lwc:if={fromAddress.Contact__r.Email}>
+                          <lightning-input type="text" value={fromAddress.Contact__r.Email}
+                            variant="label-hidden"></lightning-input>
+                        </div>
+                        <div lwc:else>
+                          <lightning-input type="text" value={fromContact.Account.email__c}
+                            variant="label-hidden"></lightning-input>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Phone -->
+                    <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                      <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                        <div class="slds-grid">
+                          <label>Phone</label>&nbsp;
+                          <div class="required">*</div>
+                        </div>
+                        <div lwc:if={fromAddress.Contact__r.Phone}>
+                          <lightning-input type="text" value={fromAddress.Contact__r.Phone}
+                            variant="label-hidden"></lightning-input>
+                        </div>
+                        <div lwc:else>
+                          <lightning-input type="text" value={fromContact.Account.Phone}
+                            variant="label-hidden"></lightning-input>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Address Line 1-->
+                    <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                      <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                        <div class="slds-grid">
+                          <label>Address Line 1</label>&nbsp;
+                          <div class="required">*</div>
+                        </div>
+                        <div>
+                          <lightning-input type="text" variant="label-hidden"
+                            value={fromAddress.Address_Line1__c}></lightning-input>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Address Line 2-->
+                    <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                      <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                        <div class="slds-grid">
+                          <label>Address Line 2</label>&nbsp;
+                        </div>
+                        <div>
+                          <lightning-input type="text" variant="label-hidden" value={fromAddress.Address_Line2__c}>
+                          </lightning-input>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- City -->
+                    <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                      <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                        <div class="slds-grid">
+                          <label>City/Suburb</label>&nbsp;
+                          <div class="required">*</div>
+                        </div>
+                        <div>
+                          <lightning-input type="text" variant="label-hidden"
+                            value={fromAddress.City__c}></lightning-input>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- State -->
+                    <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                      <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                        <div class="slds-grid">
+                          <label>State</label>&nbsp;
+                          <div class="required">*</div>
+                        </div>
+                        <div>
+                          <lightning-input type="text" variant="label-hidden" value={fromAddress.State__c}>
+                          </lightning-input>
+                          <!-- State Error Message -->
+                          <template if:true={fromStateError}>
+                            <div class="slds-text-color_error">{fromStateError}</div>
+                          </template>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Country -->
+                    <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                      <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                        <div class="slds-grid">
+                          <label>Country</label>&nbsp;
+                          <div class="required">*</div>
+                        </div>
+                        <div>
+                          <lightning-input type="text" variant="label-hidden"
+                            value={fromAddress.Country__c}></lightning-input>
+                          <!-- Country Error Message -->
+                          <template if:true={fromCountryError}>
+                            <div class="slds-text-color_error">{fromCountryError}</div>
+                          </template>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Postal Code -->
+                    <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                      <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                        <div class="slds-grid">
+                          <label>Postal Code</label>&nbsp;
+                          <div class="required">*</div>
+                        </div>
+                        <div>
+                          <lightning-input type="text" variant="label-hidden"
+                            value={fromAddress.Postal_Code__c}></lightning-input>
+                          <template if:true={fromPostalCodeError}>
+                            <div class="slds-text-color_error">{fromPostalCodeError}</div>
+                          </template>
+                        </div>
+                      </div>
+                    </div>
+                    <!-- Instructions -->
+                    <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                      <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                        <div class="slds-grid">
+                          <label>Delivery Instructions</label>
+                        </div>
+                        <div>
+                          <lightning-input type="text" variant="label-hidden" placeholder="Instructions for Picking"
+                            onchange={fromInstructionsChange}></lightning-input>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- From Info Ends -->
+              <!-- Shipment Picking End -->
+              <!-- package Info -->
+              <div class="slds-m-bottom_small">
+                <div class="fedex-class3 Message slds-page-header" style="background-color: #31d0e5; color:#fff"
+                  onclick={toggleThree}>
+                  <section class="slds clearfix">
+                    <span class="arrow" if:true={isOpenThree}>▽</span>
+                    <span class="arrow" if:false={isOpenThree}>◁</span>
+                    <strong class="slds-m-left_small">
+                      3. What are you shipping?
+                    </strong>
+                  </section>
+                </div>
+                <!-- Item Info -->
+                <div id="thirdArticle" if:true={isOpenThree}>
+                  <div class="epr_mark7 fedex-class4">
+                    <div class="slds-grid slds-wrap slds-m-arround--small">
+                      <table class="slds-table slds-table--bordered slds-table--cell-buffer slds-p-bottom_small">
+                        <thead>
+                          <tr class="slds-text-title--caps">
+                            <th scope="col">
+                              <div class="slds-truncate" title="Name">Package</div>
+                            </th>
+                            <th scope="col">
+                              <div class="slds-truncate" title="Name">Order</div>
+                            </th>
+                            <th scope="col">
+                              <div class="slds-truncate" title="Name">Weight</div>
+                            </th>
+                            <th scope="col">
+                              <div class="slds-truncate" title="Name">Length</div>
+                            </th>
+                            <th scope="col">
+                              <div class="slds-truncate" title="Name">Width</div>
+                            </th>
+                            <th scope="col">
+                              <div class="slds-truncate" title="Name">Height</div>
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <template if:true={packageList} for:each={packageList} for:item="pck" for:index="index">
+                            <tr key={pck.Id}>
+                              <td class="greyheadlabel">
+                                <div class="slds-truncate2">
+                                  <lightning-formatted-url label={pck.Name} value={pck.packUrl}
+                                    target="_blank"></lightning-formatted-url>
+                                </div>
+                              </td>
+                              <td class="greyheadlabel">
+                                <div class="slds-truncate2">
+                                  <div if:true={pck.Sales_Order__c}>
+                                    <lightning-formatted-text
+                                      value={pck.Sales_Order__r.Name}></lightning-formatted-text>
+                                  </div>
+                                  <div if:true={pck.Transfer_Order__c}>
+                                    <lightning-formatted-text
+                                      value={pck.Transfer_Order__r.Name}></lightning-formatted-text>
+                                  </div>
+                                  <div if:true={pck.Order__c}>
+                                    <lightning-formatted-text value={pck.Order__r.Name}></lightning-formatted-text>
+                                  </div>
+                                  <div if:true={pck.Return_Merchandise_Authorisation__c}>
+                                    <lightning-formatted-text
+                                      value={pck.Return_Merchandise_Authorisation__r.Name}></lightning-formatted-text>
+                                  </div>
+                                </div>
+                              </td>
+                              <td class="greyheadlabel">
+                                <div class="slds-truncate2" data-weight={pck.Weight__c}
+                                  data-weight-unit={pck.Weight_Unit__c}>
+                                  {pck.Weight__c} {pck.Weight_Unit__c}
+                                </div>
+                              </td>
+                              <td class="greyheadlabel">
+                                <div class="slds-truncate2" data-l={pck.Length__c} data-l-unit={pck.Dimension__c}>
+                                  {pck.Length__c} {pck.Dimension__c}
+                                </div>
+                              </td>
+                              <td class="greyheadlabel">
+                                <div class="slds-truncate2" data-width={pck.Width__c}
+                                  data-width-unit={pck.Dimension__c}>
+                                  {pck.Width__c} {pck.Dimension__c}
+                                </div>
+                              </td>
+                              <td class="greyheadlabel">
+                                <div class="slds-truncate2" data-height={pck.Height__c}
+                                  data-height-unit={pck.Dimension__c}>
+                                  {pck.Height__c} {pck.Dimension__c}
+                                </div>
+                              </td>
+                            </tr>
+                          </template>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+                <!-- Item Info end -->
+              </div>
+              <!-- package Info End -->
+              <!-- Additional Details -->
+              <div class="slds-m-bottom_small">
+                <div class="slds-page-header" style="background-color: #31d0e5; color:#fff" onclick={toggleFour}>
+                  <section class="slds clearfix">
+                    <span class="arrow" if:true={isOpenThree}>▽</span>
+                    <span class="arrow" if:false={isOpenThree}>◁</span>
+                    <strong class="slds-m-left_small">
+                      4. Additional Details
+                    </strong>
+                  </section>
+                </div>
+                <!-- details -->
+                <div id="fourthArticle" if:true={isOpenFour}>
+                  <div class="epr_mark7 fedex-class4">
+                    <div class="slds-grid slds-wrap slds-m-arround--small">
+                      <!-- Package Description -->
+                      <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                          <div class="slds-grid">
+                            <label>Description</label>&nbsp;
+                            <div class="required">*</div>
+                          </div>
+                          <div>
+                            <lightning-input type="text" variant="label-hidden" placeholder="Describe your package"
+                              onchange={handlePackageDescription} value={description}>
+                            </lightning-input>
+                            <template if:true={packageDescriptionError}>
+                              <div class="slds-text-color_error">{packageDescriptionError}</div>
+                            </template>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- Customer Reference -->
+                      <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                          <div class="slds-grid">
+                            <label>Customer Reference</label>&nbsp;
+                          </div>
+                          <div>
+                            <lightning-input type="text" variant="label-hidden" value={customerReferenceNumber}>
+                            </lightning-input>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- Hide pickup address? -->
+                      <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                          <div class="slds-grid">
+                            <label>Hide pickup address</label>&nbsp;
+                          </div>
+                          <lightning-input type="checkbox" variant="label-hidden" onchange={handleHideSelect}>
+                          </lightning-input>
+                        </div>
+                      </div>
+                      <!-- International shipment Details -->
+                      <!-- Content Type -->
+                      <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                          <div class="slds-grid">
+                            <label>Content Type</label>&nbsp;
+                            <div class="required">*</div>
+                          </div>
+                          <div>
+                            <lightning-combobox type="text" variant="label-hidden" value={contentType}
+                              placeholder="Select Content Type" options={contentTypeOptions}
+                              onchange={handleContentTypeChange}>
+                            </lightning-combobox>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- Value -->
+                      <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                          <div class="slds-grid">
+                            <label>Value</label>&nbsp;
+                            <div class="required">*</div>
+                          </div>
+                          <div>
+                            <lightning-input type="number" variant="label-hidden" value={contentValue}
+                              onchange={valueChange}>
+                            </lightning-input>
+                          </div>
+                        </div>
+                      </div>
+                      <!-- HS Code -->
+                      <div class="col-md-4 col-xs-4 slds-m-top_x-small">
+                        <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                          <div class="slds-grid">
+                            <label>HS Code</label>&nbsp;
+                            <div class="required">*</div>
+                          </div>
+                          <div>
+                            <lightning-input type="text" variant="label-hidden" onchange={hsCode} value={hsCodeValue}>
+                            </lightning-input>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- details end -->
+              </div>
+              <!-- Additional Details End -->
+              <div class="slds-m-bottom_small">
+                <div class="slds-page-header" style="background-color: #31d0e5; color:#fff"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- Tabs -->
+        <div class="col-md-6 slds-m-top--small">
+          <div>
+            <lightning-tabset>
+              <!-- Services and cost tab -->
+              <lightning-tab label="Shipping Services / Cost" icon-class="fa fa-file-text">
+                <div class="slds-grid slds-wrap slds-m-around--small fedex-class5">
+                  <!-- Pickup date -->
+                  <div class="col-md-4 col-xs-4">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>Pickup Date</label>&nbsp;
+                      </div>
+                      <div>
+                        <lightning-input type="date" value={selectedDate} onchange={handleDateChange}
+                          message-when-bad-input="Pick-up date must be at least 24 hours ahead and on a business day"
+                          variant="label-hidden">
+                        </lightning-input>
+                        <!-- Show error message if date is invalid -->
+                        <template if:true={showError}>
+                          <p class="slds-text-color_error required">{errorMessage}</p>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Services -->
+                  <div class="col-md-4 col-xs-4">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>Sendle Services</label>&nbsp;
+                        <div class="required">*</div>
+                      </div>
+                      <div>
+                        <lightning-combobox variant="label-hidden" placeholder="Select" options={picklistOptions}
+                          value={selectedPicklistValue} onchange={handleChange} style="width: 350px;"
+                          disabled={isServiceDisabled}>
+                        </lightning-combobox>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Is Pickup Or DropOff -->
+                  <div class="col-md-12 col-xs-12 slds-m-top_x-small">
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>Is Pickup Or DropOff</label>&nbsp;
+                        <div class="required">*</div>
+                      </div>
+                      <div>
+                        <lightning-radio-group variant="label-hidden" options={options} value={selectedRadioValue}
+                          onchange={handleRadioChange} type="button" disabled={isPickDropDisabled}>
+                        </lightning-radio-group> <!-- Error Message if Product Code is Empty -->
+                        <template if:true={showProductCodeError}>
+                          <div class="slds-text-color_error">Please select a valid product code.</div>
+                        </template>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Product Code -->
+                  <div class="col-md-4 col-xs-4 slds-m-top_x-small" if:true={productCode}>
+                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                      <div class="slds-grid">
+                        <label>Product Code</label>&nbsp;
+                        <div class="required">*</div>
+                      </div>
+                      <div>
+                        <lightning-input type="text" variant="label-hidden" value={productCode} disabled={isDisabled}
+                          style="width: 350px;"></lightning-input>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <!-- Get rates -->
+                <div class="slds-grid slds-wrap slds-m-around--small fedex-class5 text-center"
+                  if:true={showRatesButton}>
+                  <div class="col-xs-12 col-sm-12 col-md-12 fedex-class6">
+                    <lightning-button label="Get Rates" onclick={getRates} variant="brand"></lightning-button>
+                  </div>
+                </div>
+                <!-- Initiate Product -->
+                <div class="slds-grid slds-wrap slds-m-around--small fedex-class5 text-center"
+                  if:true={showInitiateButton}>
+                  <div class="col-xs-12 col-sm-12 col-md-12 fedex-class6">
+                    <lightning-button label="Initiate Order" onclick={InitiateOrder} variant="brand"></lightning-button>
+                  </div>
+                </div>
+                <!-- Label Button -->
+                <div class="slds-grid slds-wrap slds-m-around--small fedex-class5 text-center"
+                  if:true={showLabelButton}>
+                  <div class="col-xs-12 col-sm-12 col-md-12 fedex-class6">
+                    <lightning-button label="Create Label" onclick={ShowLabel} variant="brand"></lightning-button>
+                  </div>
+                </div>
+                <!-- Letter Label Button -->
+                <div class="slds-grid slds-wrap slds-m-around--small fedex-class5 text-center" if:true={showLetter}>
+                  <div class="col-xs-12 col-sm-12 col-md-12 fedex-class6">
+                    <lightning-button label="View Letter Label" onclick={LetterLabel}
+                      variant="brand"></lightning-button>
+                  </div>
+                </div>
+                <!-- Cropped Label button -->
+                <div class="slds-grid slds-wrap slds-m-around--small fedex-class5 text-center" if:true={showCropped}>
+                  <div class="col-xs-12 col-sm-12 col-md-12 fedex-class6">
+                    <lightning-button label="View Cropped Label" onclick={CroppedLabel}
+                      variant="brand"></lightning-button>
+                  </div>
+                </div>
+                <!-- Cancel Button -->
+                <div class="slds-grid slds-wrap slds-m-around--small fedex-class5 text-center"
+                  if:true={showCancelButton}>
+                  <div class="col-xs-12 col-sm-12 col-md-12 fedex-class6">
+                    <lightning-button class="slds-button slds-button_destructive" label="Cancel Order"
+                      onclick={InitiateCancelOrder} variant="destructive"></lightning-button>
+                  </div>
+                </div>
+                <template if:true={showQuotes}>
+                  <div class="row">
+                    <table class="slds-table slds-table--bordered slds-table--cell-buffer col-sm-12 slds-m-top--small">
+                      <thead>
+                        <tr class="slds-text-tittle--caps">
+                          <th scope="col">
+                            <div class="slds-truncate" title="Name">Service Type</div>
+                          </th>
+                          <th scope="col">
+                            <div class="slds-truncate" title="Gross">Gross Amount</div>
+                          </th>
+                          <th scope="col">
+                            <div class="slds-truncate" title="Pickup">Pickup Date</div>
+                          </th>
+                          <th>
+                            <div class="slds-truncate" title="Route">Route Description</div>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>
+                            <div class="slds-truncate" title="Name">{quoteResponse.productName}</div>
+                          </td>
+                          <td>
+                            <div class="slds-truncate" title="Gross">{quoteResponse.grossAmount}
+                              {quoteResponse.currency}</div>
+                          </td>
+                          <td>
+                            <div class="slds-truncate" title="Pickup">{quoteResponse.pickupDate}</div>
+                          </td>
+                          <td>
+                            <div class="slds-text-longform" style="white-space: normal; word-wrap: break-word;"
+                              title="Route">
+                              <lightning-formatted-rich-text
+                                value={quoteResponse.routeDescription}></lightning-formatted-rich-text>
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </template>
+                <!-- Display the error message if present -->
+                <template if:true={quoteErrorMessage}>
+                  <div class="slds-m-around_medium">
+                    <template for:each={quoteErrorMessage} for:item="line">
+                      <p class="slds-text-color_error" key={line}>{line}<br></p>
+                    </template>
+                  </div>
+                </template>
+                <template if:true={showProducts}>
+                  <div class="row">
+                    <table class="slds-table slds-table--bordered slds-table--cell-buffer col-sm-12 slds-m-top--small">
+                      <thead>
+                        <tr class="slds-text-tittle--caps">
+                          <th scope="col">
+                            <div class="slds-truncate" title="Name">Select</div>
+                          </th>
+                          <th scope="col">
+                            <div class="slds-truncate" title="Name">Service Type</div>
+                          </th>
+                          <th scope="col">
+                            <div class="slds-truncate" title="Gross">Gross Amount</div>
+                          </th>
+                          <th scope="col">
+                            <div class="slds-truncate" title="Pickup">Pickup Date</div>
+                          </th>
+                          <th>
+                            <div class="slds-truncate" title="Route">Route Description</div>
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <template for:each={productResponse} for:item="product">
+                          <tr key={product.productName}>
+                              <td>
+                                <lightning-input type="radio" name="productSelection" label=""
+                                  value={product.productName} data-index={product.productName}
+                                  onchange={handleProductSelection}>
+                                </lightning-input>
+                              </td>
+                              <td>
+                                <div class="slds-truncate" title="Name">{product.productName}</div>
+                              </td>
+                              <td>
+                                <div class="slds-truncate" title="Pickup">{product.grossAmount} {product.currency}</div>
+                              </td>
+                              <td>
+                                <div class="slds-truncate" title="Date">{product.pickupDate}</div>
+                              </td>
+                              <td>
+                                <div class="slds-truncate" title="Code">
+                                  {product.productCode}
+                                </div>
+                              </td>
+                          </tr>
+                        </template>
+                      </tbody>
+                    </table>
+                  </div>
+                </template>
+                <!-- Success Message and Order Details -->
+                  <template if:true={showOrderErrorMessage}>
+                      <!-- red Error Message -->
+                    <p style="color: red; font-weight: bold;">{sendleOrderError}</p>
+                    <!-- <h2>Weight or Dimensions must not be 0</h2> -->
+                  </template>
+                  <template if:true={showSuccessMessage}>
+                    <!-- Green Success Message -->
+                    <p style="color: green; font-weight: bold;">{successMessage}</p>
+                    <div class="slds-box slds-m-around_medium">
+                      <h2>Shipment Details</h2>
+                      <p><strong>Order ID:</strong> {orderId}</p>
+                      <p><strong>Sendle Reference (for tracking):</strong> {sendleReference}</p>
+                      <br>
+                      <strong>Route Details</strong>
+                      <p><strong>Route:</strong> {routeDescription}</p>
+                      <p><strong>Expires At:</strong> {expiryDate}</p>
+                    </div>
+                  </template>
+                  <template if:true={showCancelMessage}>
+                    <!-- red Success Message -->
+                    <p style="color: red; font-weight: bold;">{cancelMessage}</p>
+                    <div class="slds-box slds-m-around_medium">
+                      <h2>Cancelled Shipment Details</h2>
+                      <p><strong>Order ID:</strong> {cancelledOrderId}</p>
+                      <p><strong>Sendle Reference (for tracking):</strong> {cancelledSendleReference}</p>
+                      <p><strong>State:</strong> {cancelState} </p>
+                      <p><strong>Cancelled At:</strong> {cancelledAt}</p>
+                      <p><strong>Cancellation Message:</strong> {cancelMessage}</p>
+                    </div>
+                  </template>
+              </lightning-tab>
+              <lightning-tab label="Track Shipment">
+                <div class="slds-grid slds-wrap slds-m-around--small fedex-class5">
+                  <!-- Tracking No. -->
+                  <div class="row">
+                    <div class="col-xs-12 col-sm-6 col-md-6">
+                      <div class="slds-form-element">
+                        <label class="slds-form-element__label" for="text-input-01">Tracking no
+                          :</label>
+                        <div class="slds-form-element__control">
+                          <lightning-formatted-text value={trackingNumber}></lightning-formatted-text>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-xs-12 col-sm-6 col-md-6">
+                      <div class="col-sm-12 slds-m-top--xxx-small slds-m-bottom_small">
+                        <lightning-button variant="neutral" class="width100p" onclick={initiateTrackShipment}
+                          label="Track Shipment"></lightning-button>
+                      </div>
+                    </div>
+                  </div>
+                    <template if:true={showTrackingMessage}>
+                      <!-- red Success Message -->
+                      <p style="color: red; font-weight: bold;">{trackingMessage}
+                        <lightning-formatted-rich-text value={trackingDescription}></lightning-formatted-rich-text>
+                      </p>
+                      <div class="slds-box slds-m-around_medium">
+                        <h2>Shipment Details</h2>
+                        <p><strong>Last Changed Date :</strong> {trackingStatus}</p>
+                        <p><strong>Picked Up On:</strong> {trackingStatusPickup_on}</p>
+                        <p><strong>Delivered On:</strong> {trackingStatusDelivered_on} </p>
+                        <p><strong>Picked At:</strong> {trackingStatusPickup_date}</p>
+                        <p><strong>Minimum Estimated Delivery Date :</strong> {trackingEstimationMin}</p>
+                        <p><strong>Maximum Estimated Delivery Date :</strong> {trackingEstimationMax}</p>
+                      </div>
+                    </template>
+                </div>
+              </lightning-tab>
+              <!-- Services and cost tab end -->
+            </lightning-tabset>
+          </div>
+        </div>
+        <!-- Ends of Tabs -->
+        <!-- Info Section End -->
+      </div>
+    </div>
+    <!-- Create order End -->
+  </div>
+</template>

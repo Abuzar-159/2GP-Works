@@ -45,16 +45,17 @@ public with sharing class financialplanning {
 }
 
    @AuraEnabled(cacheable=true)
-public static Map<String, List<Decimal>> getMonthlyCreditDebitSummary(Integer year) {
-    Account org = UtilClass.getOrganisationByLogin_Employee();
-    System.debug('🔍 Organisation ID: ' + org.Id);
+public static Map<String, List<Decimal>> getMonthlyCreditDebitSummary(Integer year, Id organisationId) {
+    // var org = orgId;
+
+    System.debug('🔍 Organisation ID: ' + organisationId);
     System.debug('📅 Filtering by Year: ' + year);
 
     // Get credit notes with valid date
     List<AggregateResult> creditResults = [
         SELECT CALENDAR_MONTH(Date__c) month, SUM(Balance__c) total
         FROM Credit_Note__c
-        WHERE Company__c = :org.Id
+        WHERE Company__c = :organisationId
             AND Date__c != null
             AND CALENDAR_YEAR(Date__c) = :year
         GROUP BY CALENDAR_MONTH(Date__c)
@@ -65,7 +66,7 @@ public static Map<String, List<Decimal>> getMonthlyCreditDebitSummary(Integer ye
     List<AggregateResult> debitResults = [
         SELECT CALENDAR_MONTH(Credit_Note_Date__c) month, SUM(Debit__c) total
         FROM Debit_Note__c
-        WHERE Company__c = :org.Id
+        WHERE Company__c = :organisationId
             AND Credit_Note_Date__c != null
             AND CALENDAR_YEAR(Credit_Note_Date__c) = :year
         GROUP BY CALENDAR_MONTH(Credit_Note_Date__c)
@@ -101,9 +102,9 @@ public static Map<String, List<Decimal>> getMonthlyCreditDebitSummary(Integer ye
 
 
 @AuraEnabled(cacheable=true)
-public static Map<String, List<Decimal>> getMonthlyCreditDebitSummaryForFiscalYear(Date fiscalStartDate) {
-    Account org = UtilClass.getOrganisationByLogin_Employee();
-    System.debug('🔎 Organisation: ' + org);
+public static Map<String, List<Decimal>> getMonthlyCreditDebitSummaryForFiscalYear(Date fiscalStartDate, Id organisationId) {
+    
+    System.debug('🔎 Organisation: ' + organisationId);
     System.debug('🗓️ Fiscal Start Date: ' + fiscalStartDate);
 
     Date fiscalEndDate = fiscalStartDate.addMonths(12).addDays(-1);
@@ -113,7 +114,7 @@ public static Map<String, List<Decimal>> getMonthlyCreditDebitSummaryForFiscalYe
     List<AggregateResult> creditResults = [
         SELECT CALENDAR_MONTH(Date__c) month, SUM(Balance__c) total
         FROM Credit_Note__c
-        WHERE Company__c = :org.Id
+        WHERE Company__c = :organisationId
             AND Date__c != null
             AND Date__c >= :fiscalStartDate
             AND Date__c <= :fiscalEndDate
@@ -125,7 +126,7 @@ public static Map<String, List<Decimal>> getMonthlyCreditDebitSummaryForFiscalYe
     List<AggregateResult> debitResults = [
         SELECT CALENDAR_MONTH(Credit_Note_Date__c) month, SUM(Debit__c) total
         FROM Debit_Note__c
-        WHERE Company__c = :org.Id
+        WHERE Company__c = :organisationId
             AND Credit_Note_Date__c != null
             AND Credit_Note_Date__c >= :fiscalStartDate
             AND Credit_Note_Date__c <= :fiscalEndDate
@@ -175,16 +176,16 @@ public static Map<String, List<Decimal>> getMonthlyCreditDebitSummaryForFiscalYe
 
 
 @AuraEnabled(cacheable=true)
-public static Map<String, List<Decimal>> getMonthlyIncomeExpense(Integer year) {
-    Account org = UtilClass.getOrganisationByLogin_Employee();
-    System.debug('🔍 Organisation: ' + org);
+public static Map<String, List<Decimal>> getMonthlyIncomeExpense(Integer year , Id organisationId) {
+    
+    System.debug('🔍 Organisation: ' + organisationId);
     System.debug('📅 Year filter: ' + year);
 
     List<AggregateResult> invoiceResults = [
         SELECT CALENDAR_MONTH(Invoice_Date__c) month, SUM(Sub_Total_Amount__c) total
         FROM Invoice__c
         WHERE Paid__c = true
-            AND Company__c = :org.Id
+            AND Company__c = :organisationId
             AND Invoice_Date__c != null
             AND CALENDAR_YEAR(Invoice_Date__c) = :year
         GROUP BY CALENDAR_MONTH(Invoice_Date__c)
@@ -195,7 +196,7 @@ public static Map<String, List<Decimal>> getMonthlyIncomeExpense(Integer year) {
         SELECT CALENDAR_MONTH(Bill_Date__c) month, SUM(Total_Amount__c) total
         FROM Bill__c
         WHERE Status__c = 'Paid'
-            AND Company__c = :org.Id
+            AND Company__c = :organisationId
             AND Bill_Date__c != null
             AND CALENDAR_YEAR(Bill_Date__c) = :year
         GROUP BY CALENDAR_MONTH(Bill_Date__c)
@@ -249,9 +250,9 @@ public static Map<String, List<Decimal>> getMonthlyIncomeExpense(Integer year) {
 }
 
 @AuraEnabled(cacheable=true)
-public static Map<String, List<Decimal>> getMonthlyIncomeExpenseForFiscalYear(Date fiscalStartDate) {
-    Account org = UtilClass.getOrganisationByLogin_Employee();
-    System.debug('🔍 Organisation: ' + org);
+public static Map<String, List<Decimal>> getMonthlyIncomeExpenseForFiscalYear(Date fiscalStartDate, Id organisationId) {
+    
+    System.debug('🔍 Organisation: ' + organisationId);
     System.debug('📅 Fiscal Start Date: ' + fiscalStartDate);
 
     Date fiscalEndDate = fiscalStartDate.addMonths(12).addDays(-1);
@@ -262,7 +263,7 @@ public static Map<String, List<Decimal>> getMonthlyIncomeExpenseForFiscalYear(Da
         SELECT CALENDAR_MONTH(Invoice_Date__c) month, SUM(Sub_Total_Amount__c) total
         FROM Invoice__c
         WHERE Paid__c = true
-            AND Company__c = :org.Id
+            AND Company__c = :organisationId
             AND Invoice_Date__c >= :fiscalStartDate
             AND Invoice_Date__c <= :fiscalEndDate
         GROUP BY CALENDAR_MONTH(Invoice_Date__c)
@@ -273,7 +274,7 @@ public static Map<String, List<Decimal>> getMonthlyIncomeExpenseForFiscalYear(Da
         SELECT CALENDAR_MONTH(Bill_Date__c) month, SUM(Total_Amount__c) total
         FROM Bill__c
         WHERE Status__c = 'Paid'
-            AND Company__c = :org.Id
+            AND Company__c = :organisationId
             AND Bill_Date__c >= :fiscalStartDate
             AND Bill_Date__c <= :fiscalEndDate
         GROUP BY CALENDAR_MONTH(Bill_Date__c)
@@ -327,14 +328,14 @@ public static Map<String, List<Decimal>> getMonthlyIncomeExpenseForFiscalYear(Da
 
 
 @AuraEnabled(cacheable=true)
-public static Map<String, List<Object>> getChartOfAccountsByType(String recordType) {
-    Account org = UtilClass.getOrganisationByLogin_Employee();
+public static Map<String, List<Object>> getChartOfAccountsByType(String recordType, Id organisationId) {
+    
 
     List<Chart_of_Accounts__c> coaList = [
         SELECT Name, Total_Debit__c, Total_Credit__c
         FROM Chart_of_Accounts__c
         WHERE RecordType.Name = :recordType
-            AND Company__c = :org.Id
+            AND Company__c = :organisationId
             AND (Total_Debit__c > 5000 OR Total_Credit__c > 5000)
     ];
 
@@ -355,7 +356,7 @@ public static Map<String, List<Object>> getChartOfAccountsByType(String recordTy
 
 
 @AuraEnabled(cacheable=true)
-public static Map<String, Object> getCustomerInvoiceSummary(String type) {
+public static Map<String, Object> getCustomerInvoiceSummary(String type, Id organisationId) {
     System.debug('--- Method Entry: getCustomerInvoiceSummary ---');
     System.debug('Type: ' + type);
 
@@ -365,8 +366,8 @@ public static Map<String, Object> getCustomerInvoiceSummary(String type) {
     if (type == 'Overdue') {
         List<Invoice__c> overdueInvoices = [
             SELECT Id, Name, Account__r.Name, Account__c, Sub_Total_Amount__c, Status__c
-            FROM Invoice__c
-            WHERE Status__c = 'Overdue'
+            FROM Invoice__c 
+            WHERE Status__c = 'Overdue' AND Company__c = :organisationId
         ];
 
         System.debug('Overdue Invoices Count: ' + overdueInvoices.size());
@@ -387,7 +388,7 @@ public static Map<String, Object> getCustomerInvoiceSummary(String type) {
         List<Bill__c> unpaidBills = [
             SELECT Id, Name, Vendor__r.Name, Total_Amount__c, Due_Date__c, Status__c
             FROM Bill__c
-            WHERE Status__c != 'Paid' AND Due_Date__c < :today 
+            WHERE Status__c != 'Paid' AND Due_Date__c < :today AND Company__c = :organisationId
         ];
 
         System.debug('Unpaid Bills Count: ' + unpaidBills.size());
@@ -436,13 +437,13 @@ public class BillDetail {
 }
 
     @AuraEnabled(cacheable=true)
-    public static Object getGroupedInvoiceBillDetails(String type) {
+    public static Object getGroupedInvoiceBillDetails(String type, Id organisationId) {
         if (type == 'Overdue') {
             Map<String, List<InvoiceBillDetail>> groupedInvoices = new Map<String, List<InvoiceBillDetail>>();
             List<Invoice__c> invoices = [
                 SELECT Id, Name, Account__r.Name, Account__c, Sub_Total_Amount__c
                 FROM Invoice__c
-                WHERE Status__c = 'Overdue'
+                WHERE Status__c = 'Overdue' AND Company__c = :organisationId
             ];
 
             for (Invoice__c inv : invoices) {
@@ -460,7 +461,7 @@ public class BillDetail {
             List<Bill__c> bills = [
                 SELECT Id, Name, Vendor__r.Name, Vendor__c, Total_Amount__c
                 FROM Bill__c
-                WHERE Status__c != 'Paid' AND Due_Date__c < :today
+                WHERE Status__c != 'Paid' AND Due_Date__c < :today AND Company__c = :organisationId
             ];
 
             for (Bill__c bill : bills) {			String vendor = bill.Vendor__r?.Name != null ? bill.Vendor__r.Name : 'Unknown';			Decimal amount = bill.Total_Amount__c != null ? bill.Total_Amount__c : 0;     String billName = bill.Name != null ? bill.Name : 'Unknown Bill';
@@ -483,8 +484,8 @@ public class BillDetail {
 
 
     @AuraEnabled(cacheable=true)
-public static Map<String, Map<String, List<Decimal>>> getMonthlyIncomeExpensenew(Date fromDate, Date toDate) {
-    Account org = UtilClass.getOrganisationByLogin_Employee();
+public static Map<String, Map<String, List<Decimal>>> getMonthlyIncomeExpensenew(Date fromDate, Date toDate, Id organisationId) {
+    
 
     List<Decimal> paidIncome = new List<Decimal>(new Decimal[12]);
     List<Decimal> unpaidIncome = new List<Decimal>(new Decimal[12]);
@@ -495,7 +496,7 @@ public static Map<String, Map<String, List<Decimal>>> getMonthlyIncomeExpensenew
     List<AggregateResult> paidInvoiceResults = [
         SELECT CALENDAR_MONTH(Invoice_Date__c) month, SUM(Sub_Total_Amount__c) total
         FROM Invoice__c
-        WHERE Company__c = :org.Id
+        WHERE Company__c = :organisationId
             AND Paid__c = true
             AND Invoice_Date__c != null
             AND Invoice_Date__c >= :fromDate
@@ -507,7 +508,7 @@ public static Map<String, Map<String, List<Decimal>>> getMonthlyIncomeExpensenew
     List<AggregateResult> unpaidInvoiceResults = [
         SELECT CALENDAR_MONTH(Invoice_Date__c) month, SUM(Sub_Total_Amount__c) total
         FROM Invoice__c
-        WHERE Company__c = :org.Id
+        WHERE Company__c = :organisationId
             AND Paid__c = false
             AND Invoice_Date__c != null
             AND Invoice_Date__c >= :fromDate
@@ -519,7 +520,7 @@ public static Map<String, Map<String, List<Decimal>>> getMonthlyIncomeExpensenew
     List<AggregateResult> paidBillResults = [
         SELECT CALENDAR_MONTH(Bill_Date__c) month, SUM(Total_Amount__c) total
         FROM Bill__c
-        WHERE Company__c = :org.Id
+        WHERE Company__c = :organisationId
             AND Status__c = 'Paid'
             AND Bill_Date__c != null
             AND Bill_Date__c >= :fromDate
@@ -531,7 +532,7 @@ public static Map<String, Map<String, List<Decimal>>> getMonthlyIncomeExpensenew
     List<AggregateResult> unpaidBillResults = [
         SELECT CALENDAR_MONTH(Bill_Date__c) month, SUM(Total_Amount__c) total
         FROM Bill__c
-        WHERE Company__c = :org.Id
+        WHERE Company__c = :organisationId
             AND Status__c != 'Paid'
             AND Bill_Date__c != null
             AND Bill_Date__c >= :fromDate
@@ -543,7 +544,7 @@ public static Map<String, Map<String, List<Decimal>>> getMonthlyIncomeExpensenew
     List<AggregateResult> paidMyExpenseResults = [
         SELECT CALENDAR_MONTH(Date__c) month, SUM(Amount__c) total
         FROM Expense__c
-       // WHERE Company__c = :org.Id
+       // WHERE Company__c = :organisationId
             WHERE Paid__c = true
             AND Date__c >= :fromDate
             AND Date__c <= :toDate
@@ -554,7 +555,7 @@ public static Map<String, Map<String, List<Decimal>>> getMonthlyIncomeExpensenew
     List<AggregateResult> unpaidMyExpenseResults = [
         SELECT CALENDAR_MONTH(Date__c) month, SUM(Amount__c) total
         FROM Expense__c
-       // WHERE Company__c = :org.Id
+       // WHERE Company__c = :organisationId
             WHERE Paid__c = false
             AND Date__c >= :fromDate
             AND Date__c <= :toDate
@@ -609,15 +610,15 @@ public static Map<String, Map<String, List<Decimal>>> getMonthlyIncomeExpensenew
 
 
 @AuraEnabled(cacheable=true)
-public static Map<String, Decimal> getOverallIncomeAndExpenseTotals() {
-    Account org = UtilClass.getOrganisationByLogin_Employee();
-    System.debug('🏢 Organisation: ' + org.Name);
+public static Map<String, Decimal> getOverallIncomeAndExpenseTotals(Id organisationId) {
+    
+    System.debug('🏢 Organisation: ' + organisationId);
 
     // ✅ Get Total Income (all Invoices with valid dates)
     AggregateResult incomeResult = [
         SELECT SUM(Sub_Total_Amount__c) total
         FROM Invoice__c
-        WHERE Company__c = :org.Id
+        WHERE Company__c = :organisationId
             AND Invoice_Date__c != null
     ];
 
@@ -625,7 +626,7 @@ public static Map<String, Decimal> getOverallIncomeAndExpenseTotals() {
     AggregateResult billExpenseResult = [
         SELECT SUM(Total_Amount__c) total
         FROM Bill__c
-        WHERE Company__c = :org.Id
+        WHERE Company__c = :organisationId
             AND Bill_Date__c != null
     ];
 
@@ -633,7 +634,7 @@ public static Map<String, Decimal> getOverallIncomeAndExpenseTotals() {
     AggregateResult myExpenseResult = [
         SELECT SUM(Amount__c) total
         FROM Expense__c
-       // WHERE Company__c = :org.Id
+       // WHERE Company__c = :organisationId
             WHERE Date__c != null
     ];
 
@@ -671,15 +672,15 @@ public class ExpenseBreakdown {
 }
 
 @AuraEnabled(cacheable=true)
-public static ExpenseBreakdown getOverallExpenseBreakdown() {
+public static ExpenseBreakdown getOverallExpenseBreakdown(Id organisationId) {
     ExpenseBreakdown amt = new ExpenseBreakdown();
-    Account org = UtilClass.getOrganisationByLogin_Employee();
+    
 
     // ✅ Existing: Grouped expense types from Bill object
     for (AggregateResult ar : [
         SELECT RecordType.Name name, SUM(Total_Amount__c) total
         FROM Bill__c
-        WHERE Company__c = :org.Id 
+        WHERE Company__c = :organisationId
               AND Bill_Date__c != null
               AND RecordType.Name IN ('Expense Bill', 'PO Bill', 'Advance to Vendor')
         GROUP BY RecordType.Name
@@ -693,7 +694,7 @@ public static ExpenseBreakdown getOverallExpenseBreakdown() {
     AggregateResult myExpenseResult = [
         SELECT SUM(Amount__c) total
         FROM Expense__c
-       // WHERE Company__c = :org.Id 
+       // WHERE Company__c = :organisationId 
               WHERE Date__c != null
     ];
     amt.totalMyExpense = (Decimal)(myExpenseResult.get('total') ?? 0);
@@ -716,12 +717,12 @@ public static ExpenseBreakdown getOverallExpenseBreakdown() {
 // public static ExpenseBreakdown getFilteredExpenseBreakdown(Date fromDate, Date toDate) {
 //     ExpenseBreakdown breakdown = new ExpenseBreakdown();
 
-//     Account org = UtilClass.getOrganisationByLogin_Employee();
+//     
 
 //     for (AggregateResult ar : [
 //         SELECT RecordType.Name name, SUM(Total_Amount__c) total
 //         FROM Bill__c
-//         WHERE Company__c = :org.Id
+//         WHERE Company__c = :organisationId
 //             AND Bill_Date__c >= :fromDate
 //             AND Bill_Date__c <= :toDate
 //             AND RecordType.Name IN ('Expense Bill', 'PO Bill', 'Advance to Vendor')
@@ -740,15 +741,15 @@ public static ExpenseBreakdown getOverallExpenseBreakdown() {
 
 
 @AuraEnabled(cacheable=true)
-public static ExpenseBreakdown getFilteredExpenseBreakdown(Date fromDate, Date toDate) {
+public static ExpenseBreakdown getFilteredExpenseBreakdown(Date fromDate, Date toDate, Id organisationId) {
     ExpenseBreakdown breakdown = new ExpenseBreakdown();
-    Account org = UtilClass.getOrganisationByLogin_Employee();
+    
 
     // 🔹 Bills Breakdown
     for (AggregateResult ar : [
         SELECT RecordType.Name name, SUM(Total_Amount__c) total
         FROM Bill__c
-        WHERE Company__c = :org.Id
+        WHERE Company__c = :organisationId
             AND Bill_Date__c >= :fromDate
             AND Bill_Date__c <= :toDate
             AND RecordType.Name IN ('Expense Bill', 'PO Bill', 'Advance to Vendor')
@@ -779,9 +780,9 @@ public static ExpenseBreakdown getFilteredExpenseBreakdown(Date fromDate, Date t
 
 
 @AuraEnabled(cacheable=true)
-public static List<Map<String, Object>> getChartOfAccountTotals() {
-    Account org = UtilClass.getOrganisationByLogin_Employee(); // Get current org
-    System.debug('🏢 Organisation: ' + org.Name);
+public static List<Map<String, Object>> getChartOfAccountTotals(Id organisationId ) {
+     // Get current org
+    System.debug('🏢 Organisation: ' +organisationId);
 
     // Grouping by Chart of Account
     Map<String, Map<String, Object>> coaMap = new Map<String, Map<String, Object>>();
@@ -792,7 +793,7 @@ public static List<Map<String, Object>> getChartOfAccountTotals() {
                (SELECT Id, Name, Chart_of_Account__r.Name 
                 FROM Budget_Account__r)
         FROM Budget_Plan__c
-        WHERE Organisation__c = :org.Id
+        WHERE Organisation__c = :organisationId
     ];
 
     for (Budget_Plan__c plan : plans) {
@@ -816,7 +817,7 @@ public static List<Map<String, Object>> getChartOfAccountTotals() {
 
 
 @AuraEnabled(cacheable=true)
-public static Map<String, Object> getChartOfAccountGrandTotal() {				List<Map<String, Object>> chartData = getChartOfAccountTotals(); // call the original function
+public static Map<String, Object> getChartOfAccountGrandTotal( Id organisationId) {				List<Map<String, Object>> chartData = getChartOfAccountTotals( organisationId); // call the original function
 
     Decimal totalApproved = 0;			Decimal totalConsumed = 0;			Decimal totalRemaining = 0;			Decimal totalCommitted = 0;
 
@@ -838,7 +839,7 @@ public static Map<String, Object> getChartOfAccountGrandTotal() {				List<Map<St
 
 @AuraEnabled(cacheable=true)
 public static List<ProjectBudgetWrapper> getProjectBudgetsByChartOfAccount(Id chartOfAccountId) {
-    Account org = UtilClass.getOrganisationByLogin_Employee();
+    
     Map<Id, ProjectBudgetWrapper> projectData = new Map<Id, ProjectBudgetWrapper>();
 
     List<Budget_Account__c> accounts = [
@@ -850,7 +851,7 @@ public static List<ProjectBudgetWrapper> getProjectBudgetsByChartOfAccount(Id ch
                Budget_Plan__r.Committed__c
         FROM Budget_Account__c
         WHERE Chart_of_Account__c = :chartOfAccountId
-        //AND Budget_Plan__r.Company__c= :org.Id
+        //AND Budget_Plan__r.Company__c= :organisationId
      
     ];
     System.debug('📊 Total Budget Accounts for Chart of Account ' + chartOfAccountId + ': ' + accounts.size());
@@ -886,7 +887,7 @@ public class ProjectBudgetWrapper {
 }
 
   @AuraEnabled(cacheable=true)
-    public static List<IdNameWrapper> getProjectsByChartOfAccount(Id chartOfAccountId) {
+    public static List<IdNameWrapper> getProjectsByChartOfAccount(Id chartOfAccountId, Id organisationId) {
         Set<Id> projectIds = new Set<Id>();
         List<IdNameWrapper> projects = new List<IdNameWrapper>();
 
@@ -894,7 +895,7 @@ public class ProjectBudgetWrapper {
             SELECT Project__c, Project__r.Name
             FROM Budget_Account__c
             WHERE Chart_of_Account__c = :chartOfAccountId
-            AND Project__c != null
+            AND Project__c != null AND Company__c =: organisationId
         ]) {            if (!projectIds.contains(acc.Project__c)) {       projectIds.add(acc.Project__c);          projects.add(new IdNameWrapper(acc.Project__c, acc.Project__r.Name));
             }
         }
@@ -902,7 +903,7 @@ public class ProjectBudgetWrapper {
     }
 
     @AuraEnabled(cacheable=true)
-    public static ProjectBudgetWrapper getSingleProjectBudget(Id chartOfAccountId, Id projectId) {
+    public static ProjectBudgetWrapper getSingleProjectBudget(Id chartOfAccountId, Id projectId, Id organisationId) {
         Decimal total = 0, consumed = 0, remaining = 0, committed = 0;
 
         for (Budget_Account__c acc : [
@@ -913,7 +914,7 @@ public class ProjectBudgetWrapper {
             FROM Budget_Account__c
             WHERE Chart_of_Account__c = :chartOfAccountId
             AND Project__c = :projectId
-            AND Budget_Plan__c != null
+            AND Budget_Plan__c != null AND Company__c =: organisationId
         ]) {           total     += acc.Budget_Plan__r.Total_Budget_Amount__c   != null ? acc.Budget_Plan__r.Total_Budget_Amount__c   : 0;       consumed  += acc.Budget_Plan__r.Consumed_Amount__c       != null ? acc.Budget_Plan__r.Consumed_Amount__c       : 0;       remaining += acc.Budget_Plan__r.Remaining_Amount__c      != null ? acc.Budget_Plan__r.Remaining_Amount__c      : 0;    committed += acc.Budget_Plan__r.Committed__c             != null ? acc.Budget_Plan__r.Committed__c             : 0;
         }
 
@@ -947,18 +948,18 @@ public class ProjectBudgetWrapper {
 
 
 @AuraEnabled(cacheable=true)
-public static List<Id> getChartOfAccountsWithBudgetAccounts() {
-    Account org = UtilClass.getOrganisationByLogin_Employee();
+public static List<Id> getChartOfAccountsWithBudgetAccounts(Id organisationId) {
+    
     
     Set<Id> chartOfAccountIds = new Set<Id>();
 
     List<Budget_Account__c> budgetAccounts = [
         SELECT Chart_of_Account__c
         FROM Budget_Account__c
-        WHERE Budget_Plan__r.Organisation__c = :org.Id
+        WHERE Budget_Plan__r.Organisation__c = :organisationId
         AND Chart_of_Account__c != null
         AND Project__c != null
-        AND Budget_Plan__c != null
+        AND Budget_Plan__c != null AND Company__c =: organisationId
     ];
 
     for (Budget_Account__c acc : budgetAccounts) {
@@ -992,8 +993,8 @@ private static List<Decimal> predictFuture(List<Decimal> values, Integer steps) 
 }
 
 @AuraEnabled(cacheable=true)
-public static Map<String, Object> getYearlyIncomeAndExpenseWithPrediction() {
-    Account org = UtilClass.getOrganisationByLogin_Employee();
+public static Map<String, Object> getYearlyIncomeAndExpenseWithPrediction(Id organisationId) {
+    
     Integer currentYear = Date.today().year();
     Integer startYear = currentYear - 5;
     Integer endYear = currentYear;
@@ -1009,7 +1010,7 @@ public static Map<String, Object> getYearlyIncomeAndExpenseWithPrediction() {
     List<AggregateResult> incomeResults = [
         SELECT CALENDAR_YEAR(Invoice_Date__c) yr, SUM(Sub_Total_Amount__c) amt
         FROM Invoice__c
-        WHERE Company__c = :org.Id
+        WHERE Company__c = :organisationId
         AND Invoice_Date__c != null
         GROUP BY CALENDAR_YEAR(Invoice_Date__c)
     ];
@@ -1022,7 +1023,7 @@ public static Map<String, Object> getYearlyIncomeAndExpenseWithPrediction() {
     List<AggregateResult> expenseResults = [
         SELECT CALENDAR_YEAR(Bill_Date__c) yr, SUM(Total_Amount__c) amt
         FROM Bill__c
-        WHERE Company__c = :org.Id
+        WHERE Company__c = :organisationId
         AND Bill_Date__c != null
         GROUP BY CALENDAR_YEAR(Bill_Date__c)
     ];
@@ -1063,8 +1064,8 @@ public static Map<String, Object> getYearlyIncomeAndExpenseWithPrediction() {
 
 
 @AuraEnabled(cacheable=true)
-public static Map<String, Object> getMonthlyIncomeExpenseWithPrediction() {
-    Account org = UtilClass.getOrganisationByLogin_Employee();
+public static Map<String, Object> getMonthlyIncomeExpenseWithPrediction(Id organisationId) {
+    
     Integer currentYear = Date.today().year();
     Integer currentMonth = Date.today().month();
 
@@ -1085,7 +1086,7 @@ public static Map<String, Object> getMonthlyIncomeExpenseWithPrediction() {
     for (AggregateResult ar : [
         SELECT CALENDAR_MONTH(Invoice_Date__c) month, SUM(Sub_Total_Amount__c) total
         FROM Invoice__c
-        WHERE Paid__c = true AND Company__c = :org.Id AND
+        WHERE Paid__c = true AND Company__c = :organisationId AND
               Invoice_Date__c != null AND CALENDAR_YEAR(Invoice_Date__c) = :currentYear
         GROUP BY CALENDAR_MONTH(Invoice_Date__c)
     ]) {			Integer m = (Integer) ar.get('month');			income[m - 1] = (Decimal) ar.get('total');
@@ -1094,7 +1095,7 @@ public static Map<String, Object> getMonthlyIncomeExpenseWithPrediction() {
     for (AggregateResult ar : [
         SELECT CALENDAR_MONTH(Bill_Date__c) month, SUM(Total_Amount__c) total
         FROM Bill__c
-        WHERE Status__c = 'Paid' AND Company__c = :org.Id AND
+        WHERE Status__c = 'Paid' AND Company__c = :organisationId AND
               Bill_Date__c != null AND CALENDAR_YEAR(Bill_Date__c) = :currentYear
         GROUP BY CALENDAR_MONTH(Bill_Date__c)
     ]) {			Integer m = (Integer) ar.get('month');				expense[m - 1] = (Decimal) ar.get('total');
@@ -1125,7 +1126,7 @@ public static Map<String, Object> getMonthlyIncomeExpenseWithPrediction() {
     for (AggregateResult ar : [
         SELECT CALENDAR_YEAR(Invoice_Date__c) yr, CALENDAR_MONTH(Invoice_Date__c) mon, SUM(Sub_Total_Amount__c) total
         FROM Invoice__c
-        WHERE Paid__c = true AND Company__c = :org.Id AND
+        WHERE Paid__c = true AND Company__c = :organisationId AND
               Invoice_Date__c >= :startDate AND Invoice_Date__c <= :endDate
         GROUP BY CALENDAR_YEAR(Invoice_Date__c), CALENDAR_MONTH(Invoice_Date__c)
     ]) {			incomeHistory.get((Integer) ar.get('mon')).add((Decimal) ar.get('total'));
@@ -1135,7 +1136,7 @@ public static Map<String, Object> getMonthlyIncomeExpenseWithPrediction() {
     for (AggregateResult ar : [
         SELECT CALENDAR_YEAR(Bill_Date__c) yr, CALENDAR_MONTH(Bill_Date__c) mon, SUM(Total_Amount__c) total
         FROM Bill__c
-        WHERE Status__c = 'Paid' AND Company__c = :org.Id AND
+        WHERE Status__c = 'Paid' AND Company__c = :organisationId AND
               Bill_Date__c >= :startDate AND Bill_Date__c <= :endDate
         GROUP BY CALENDAR_YEAR(Bill_Date__c), CALENDAR_MONTH(Bill_Date__c)
     ]) {			expenseHistory.get((Integer) ar.get('mon')).add((Decimal) ar.get('total'));
@@ -1219,8 +1220,8 @@ for (Integer i = 0; i < 12; i++) {
 
 
     @AuraEnabled
-public static Map<String, Object> simulateForecastWithInputs(Map<String, Object> simulatedValues) {
-    Account org = UtilClass.getOrganisationByLogin_Employee();
+public static Map<String, Object> simulateForecastWithInputs(Map<String, Object> simulatedValues, Id organisationId) {
+    
     Integer currentYear = Date.today().year();
     Integer currentMonth = Date.today().month();
 
@@ -1242,7 +1243,7 @@ public static Map<String, Object> simulateForecastWithInputs(Map<String, Object>
     for (AggregateResult ar : [
         SELECT CALENDAR_MONTH(Invoice_Date__c) month, SUM(Sub_Total_Amount__c) total
         FROM Invoice__c
-        WHERE Paid__c = true AND Company__c = :org.Id AND
+        WHERE Paid__c = true AND Company__c = :organisationId AND
               Invoice_Date__c != null AND CALENDAR_YEAR(Invoice_Date__c) = :currentYear
         GROUP BY CALENDAR_MONTH(Invoice_Date__c)
     ]) {		Integer m = (Integer) ar.get('month');		income[m - 1] = (Decimal) ar.get('total');
@@ -1254,7 +1255,7 @@ public static Map<String, Object> simulateForecastWithInputs(Map<String, Object>
     for (AggregateResult ar : [
         SELECT CALENDAR_MONTH(Bill_Date__c) month, SUM(Total_Amount__c) total
         FROM Bill__c
-        WHERE Status__c = 'Paid' AND Company__c = :org.Id AND
+        WHERE Status__c = 'Paid' AND Company__c = :organisationId AND
               Bill_Date__c != null AND CALENDAR_YEAR(Bill_Date__c) = :currentYear
         GROUP BY CALENDAR_MONTH(Bill_Date__c)
     ]) {		Integer m = (Integer) ar.get('month');			expense[m - 1] = (Decimal) ar.get('total');
@@ -1294,7 +1295,7 @@ public static Map<String, Object> simulateForecastWithInputs(Map<String, Object>
 
     // Fetch historical data for the last 3 years
     System.debug('📊 Fetching historical data for the last 3 years...');
-    System.debug('📊 Organisation ID: ' + org.Id);
+    System.debug('📊 Organisation ID: ' + organisationId);
     System.debug('📊 Start Date: ' + startDate);
     System.debug('📊 End Date: ' + endDate);
 
@@ -1302,7 +1303,7 @@ public static Map<String, Object> simulateForecastWithInputs(Map<String, Object>
     for (AggregateResult ar : [
         SELECT CALENDAR_YEAR(Invoice_Date__c) yr, CALENDAR_MONTH(Invoice_Date__c) mon, SUM(Sub_Total_Amount__c) total
         FROM Invoice__c
-        WHERE Paid__c = true AND Company__c = :org.Id AND
+        WHERE Paid__c = true AND Company__c = :organisationId AND
               Invoice_Date__c >= :startDate AND Invoice_Date__c <= :endDate
         GROUP BY CALENDAR_YEAR(Invoice_Date__c), CALENDAR_MONTH(Invoice_Date__c)
     ]) {		Integer month = (Integer) ar.get('mon');			if (!incomeHistory.containsKey(month)) {			incomeHistory.put(month, new List<Decimal>());
@@ -1313,7 +1314,7 @@ public static Map<String, Object> simulateForecastWithInputs(Map<String, Object>
     for (AggregateResult ar : [
         SELECT CALENDAR_YEAR(Bill_Date__c) yr, CALENDAR_MONTH(Bill_Date__c) mon, SUM(Total_Amount__c) total
         FROM Bill__c
-        WHERE Status__c = 'Paid' AND Company__c = :org.Id AND
+        WHERE Status__c = 'Paid' AND Company__c = :organisationId AND
               Bill_Date__c >= :startDate AND Bill_Date__c <= :endDate
         GROUP BY CALENDAR_YEAR(Bill_Date__c), CALENDAR_MONTH(Bill_Date__c)
     ]) {			Integer month = (Integer) ar.get('mon');			if (!expenseHistory.containsKey(month)) {			expenseHistory.put(month, new List<Decimal>());
@@ -1530,8 +1531,8 @@ private static String getMonthLabel(Integer month) {
 
 
 @AuraEnabled(cacheable=true)
-public static Map<String, List<Decimal>> getMonthlyExpensesOnly(Integer year) {
-    Account org = UtilClass.getOrganisationByLogin_Employee();
+public static Map<String, List<Decimal>> getMonthlyExpensesOnly(Integer year, Id organisationId) {
+    
     if (year == null) {
         year = Date.today().year(); 
     }
@@ -1541,7 +1542,7 @@ public static Map<String, List<Decimal>> getMonthlyExpensesOnly(Integer year) {
         SELECT CALENDAR_MONTH(Bill_Date__c) month, SUM(Total_Amount__c) total
         FROM Bill__c
         WHERE Status__c = 'Paid'
-            AND Company__c = :org.Id
+            AND Company__c = :organisationId
             AND Bill_Date__c != null
             AND CALENDAR_YEAR(Bill_Date__c) = :year
         GROUP BY CALENDAR_MONTH(Bill_Date__c)
@@ -1595,7 +1596,7 @@ public static Map<String, List<Decimal>> getMonthlyExpensesOnly(Integer year) {
     }
 
     @AuraEnabled(cacheable=true)
-    public static ProjectBudgetWrapperSimulated getSingleProjectBudgetSimulated(Id projectId) { 
+    public static ProjectBudgetWrapperSimulated getSingleProjectBudgetSimulated(Id projectId, Id organisationId) { 
         Decimal total = 0, consumed = 0, remaining = 0, committed = 0;
 
         for (Budget_Account__c acc : [
@@ -1606,7 +1607,7 @@ public static Map<String, List<Decimal>> getMonthlyExpensesOnly(Integer year) {
             FROM Budget_Account__c
             WHERE Chart_of_Account__c != null 
             AND Project__c = :projectId
-            AND Budget_Plan__c != null
+            AND Budget_Plan__c != null AND Company__c =: organisationId
         ]) {		total     += acc.Budget_Plan__r.Total_Budget_Amount__c != null ? acc.Budget_Plan__r.Total_Budget_Amount__c : 0;			consumed  += acc.Budget_Plan__r.Consumed_Amount__c     != null ? acc.Budget_Plan__r.Consumed_Amount__c     : 0;				remaining += acc.Budget_Plan__r.Remaining_Amount__c    != null ? acc.Budget_Plan__r.Remaining_Amount__c    : 0;				committed += acc.Budget_Plan__r.Committed__c           != null ? acc.Budget_Plan__r.Committed__c           : 0;
         }
 
@@ -1614,7 +1615,7 @@ public static Map<String, List<Decimal>> getMonthlyExpensesOnly(Integer year) {
     }
 
 @AuraEnabled(cacheable=true)
-public static String getProjectIDs() {
+public static String getProjectIDs(Id organisationId) {
     List<Id> projectIds = new List<Id>();
     for (Budget_Account__c acc : [
         SELECT Id, Project__c,
@@ -1623,7 +1624,7 @@ public static String getProjectIDs() {
         FROM Budget_Account__c
         WHERE Chart_of_Account__c != null 
         AND Project__c != null
-        AND Budget_Plan__c != null
+        AND Budget_Plan__c != null  AND Company__c =: organisationId
     ]) {			projectIds.add(acc.Project__c);
     }
     return JSON.serialize(projectIds);

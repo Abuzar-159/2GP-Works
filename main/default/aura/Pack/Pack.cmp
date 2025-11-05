@@ -1,0 +1,833 @@
+<aura:component Controller="OutboundLogisticsLightning"
+  implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction"
+  access="global">
+
+  <head>
+    <ltng:require
+      styles="{!join(',',$Resource.PickPackShipResources + '/assets/styles/erp_mark7_bootstrap.css', $Resource.PickPackShipResources + '/assets/styles/main-scrollers.css')}" />
+    <ltng:require
+      styles="{!join(',',$Resource.Order_Console + '/assets/styles/custom.css', $Resource.Order_Console + '/assets/styles/font-awesome.css')}" />
+    <ltng:require
+      styles="{!join(',',$Resource.SLDS2134 + '/assets/styles/salesforce-lightning-design-system-vf.css')}" />
+    <ltng:require scripts="/resource/jQuery/js/jquery_3.5.0.min.js" afterScriptsLoaded="{!c.focusTOscan}" />
+    <!--ltng:require scripts="/resource/bootStraps/js/bootstrap.min.js" afterScriptsLoaded="{!c.setScriptLoaded}"/-->
+    <ltng:require styles="/resource/CMP_CSS/CSS/Pack.css" />
+    <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css" />
+    <ltng:require styles="/resource/bootStraps/css/bootstrap-4.1.css" />
+    <ltng:require styles="/resource/ProjectWorkbench/css/main-style.css" />
+  </head>
+  <aura:attribute name="selectedPackIds" type="String[]" default="[]" />
+  <aura:attribute name="showUPSRestAPIcomp" type="Boolean" default="false" />
+  <aura:attribute name="showFedexRestAPIcomp" type="Boolean" default="false" />
+  <aura:attribute name="showUSPSRestAPIcomp" type="Boolean" default="false" />
+  <aura:attribute name="showFreighViewcomp" type="Boolean" default="false" />
+  <aura:attribute name="showCPRestAPIcomp" type="Boolean" default="false" />
+  <aura:attribute name="enableUPSRestAPI" type="Boolean" default="false" />
+  <aura:attribute name="showSendleAPI" type="Boolean" default="false" />
+  <aura:attribute name="showPurolatorAPI" type="Boolean" default="false" />
+  <aura:attribute name="Scanflow" type="Boolean" default="false" />
+  <aura:attribute name="currentEmployee" type="Employees__c" default="{sobjectType : 'Employees__c','Name': ''}" />
+  <aura:attribute name="logisticIds" type="String" access="global" />
+  <aura:attribute name="Container" type="object" />
+  <aura:attribute name="SiteName" type="object" />
+  <aura:attribute name="ChannelName" type="String" />
+  <aura:attribute name="ChannelId" type="String" />
+  <aura:attribute name="Logistics" type="object" />
+  <aura:attribute name="selectedSite" type="String" default="" />
+  <aura:attribute name="searchText" type="String" default="" />
+  <aura:attribute name="show" type="String" default="25" />
+  <aura:attribute name="showShipAllbtton" type="Boolean" default="false" />
+  <aura:attribute name="checkAll" type="Boolean" default="false" />
+  <aura:attribute name="fromedit" type="Boolean" default="false" />
+  <aura:attribute name="checkAll2" type="Boolean" default="false" />
+  <aura:attribute name="PreventChange" type="Boolean" default="false" />
+  <aura:attribute name="exceptionError" type="String" default="" />
+  <aura:attribute name="showBatch" type="Boolean" default="false" />
+  <aura:attribute name="showSN" type="Boolean" default="false" />
+  <aura:attribute name="showShipComponent" type="Boolean" default="false" />
+  <aura:attribute name="Redirect" type="String" default="" />
+  <aura:attribute name="declareaccess" type="Boolean" default="false" />
+  <aura:attribute name="SSTypeAccess" type="Boolean" default="false" />
+  <aura:attribute name="lineItemWrapperList" type="object" />
+  <aura:attribute name="packageWrapperList" type="object" />
+  <aura:attribute name="Package2Create" type="Package__c" default="{sobjectType : 'Package__c','Name': ''}" />
+  <aura:attribute name="errorMsg2" type="String" default="" />
+  <aura:attribute name="Customers" type="object" />
+  <aura:attribute name="Customer" type="String" default="" />
+  <aura:attribute name="pkgTypeValue" type="String" default="" />
+  <aura:attribute name="createPack" type="Boolean" default="false" />
+  <aura:attribute name="isAwaiting" type="Boolean" default="false" />
+  <aura:attribute name="CustomerPresent" type="Boolean" default="false" />
+  <aura:attribute name="WeightUnit" type="object" />
+  <aura:attribute name="Dimension" type="object" />
+  <aura:attribute name="PackageType" type="object" />
+  <aura:attribute name="ShipmentType" type="object" default="UPS" />
+  <aura:attribute name="scanValue" type="String" default='' />
+  <aura:attribute name="WeightStr" type="String" default='' />
+  <aura:attribute name="Shiptype" type="String" default='' />
+
+  <!-- For Shipment & package Dependent Picklists -->
+  <aura:attribute name="objDetail" type="string" default="Package__c" />
+  <aura:attribute name="controllingFieldAPI" type="string" default="Shipment_Type__c"
+    description="store field API name of Controller field" />
+  <aura:attribute name="dependingFieldAPI" type="string" default="Package_Type__c"
+    description="store field API name of dependent field" />
+  <aura:attribute name="listDependingValues" type="list" description="to store dependent field values" />
+  <aura:attribute name="listControllingValues" type="String" default=""
+    description="to store controller field values" />
+  <aura:attribute name="bDisabledDependentFld" type="boolean" default="false" />
+  <aura:attribute name="depnedentFieldMap" type="object"
+    description="map to store dependent values with controlling value" />
+  <aura:attribute name="showchecklistvalue" type="boolean" default="false" />
+  <aura:attribute name="ControllingValue" type="String" default="" description="to store controller field values" />
+
+  <aura:handler name="init" value="{!this}" action="{!c.getAllDetails}" />
+  <aura:method name="Back2Outbound" action="{!c.Back2Outbound}"></aura:method>
+  <aura:method name="createPicks" action="{!c.createPicks}"></aura:method>
+  <aura:method name="createPacks" action="{!c.createPacks}"></aura:method>
+  <aura:method name="updatePack" action="{!c.updatePack}"></aura:method>
+  <aura:method name="createShips" action="{!c.createShips}"></aura:method>
+  <aura:handler name="change" value="{!v.scanValue}" action="{!c.verifyScanCode}" />
+  <aura:handler name="change" value="{!v.Package2Create.Logistic__c}" action="{!c.fetchSOLIIs}" />
+  <aura:handler name="change" value="{!v.Package2Create.Shipment_Type__c}" action="{!c.parentFieldChange}" />
+  <aura:attribute name="disablePackName" type="boolean" default="false" />
+  <aura:attribute name="disablePackDeclaredValue" type="boolean" default="false" />
+  <aura:attribute name="allowZerodeclaredValue" type="boolean" default="false" />
+  <aura:attribute name="disableShipmentType" type="boolean" default="false" />
+
+  <aura:attribute name="ReplacePackListOrgURL" type="boolean" default="false" />
+  <aura:attribute name="ShowLangOptionForPackList" type="Boolean" default="false" />
+  <aura:attribute name="ShowLangOptionForPackListModal" type="Boolean" default="false" />
+  <aura:attribute name="Langoptions" type="List" default="[
+                                                            {'label': 'English', 'value': 'English'},
+                                                            {'label': 'French', 'value': 'French'}
+                                                            ]" />
+  <aura:attribute name="SelectedLang" type="String" default="English" />
+  <aura:attribute name="pkIds" type="String" default="" />
+  <aura:attribute name="enableFedexRestAPI" type="Boolean" default="false" />
+<!--new-->
+  <aura:attribute name="showFreightViewComp" type="Boolean" default="false"/>
+  <body aura:id="body" class="Pack-newClass1">
+    <div class="erp_mark7 epr_Mark7" aura:id="packscan">
+      <span class="Pack-newClass2">
+        <lightning:spinner variant="brand" size="large"
+          alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin"
+          class="mainSpinClass" />
+      </span>
+      <div class="cpq theme-bg">
+        <div class="container-fluid">
+          <div class="row">
+            <div class="col-12">
+              <div class="page-title-box">
+                <div class="page-title-right">
+                  <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item">
+                      <div class="slds-grid">
+                        <div
+                          class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small maqheadernavbuttons Pack-newClass7">
+                          <div class="slds-m-right--xx-small slds-truncate2"> <i
+                              class="fa fa-arrow-right Pack-newClass8"></i>&nbsp;
+                            <lightning:formattedUrl label="{!v.ChannelName}" value="{!'/'+v.ChannelId}"
+                              target="_blank" />
+                          </div>
+                          <div class="slds-m-right--xx-small slds-truncate2"> <i
+                              class="fa fa-filter Pack-newClass8"></i>&nbsp;
+                            <lightning:formattedUrl label="{!v.SiteName}" value="{!'/'+v.selectedSite}"
+                              target="_blank" />
+                          </div>
+                        </div>
+                        <aura:if isTrue="{!and(v.isAwaiting, v.lineItemWrapperList.length > 0)}">
+                          <aura:if isTrue="{!!v.showShipComponent}">
+                            <lightning:button variant="brand" iconName="utility:rows"
+                              class="slds-button slds-button--brand2 mobiledisplaynone slds-truncate2"
+                              iconPosition="left" label="{!$Label.c.Packing_Labels}"
+                              onclick="{!c.createPackingLabels}" /> <!--class="mobiledisplaynone slds-truncate2"-->
+                            <lightning:button variant="brand" iconName="utility:rows"
+                              class="slds-button slds-button--brand2 mobiledisplaynone slds-truncate2"
+                              iconPosition="left" label="{!$Label.c.Packing_Lists}" onclick="{!c.createPackingSlips}" />
+                          </aura:if>
+                        </aura:if>
+                      </div>
+                      <div class="slds-p-left--small Pick-newClass7 ">
+
+                      </div>
+
+
+                    </li>
+
+                  </ol>
+
+                </div>
+                <h4 class="page-title card-pricing headermt">
+
+                  <i class="card-pricing-icon slds-icon-standard-budget-allocation" style="background: #4b90f8;"><img
+                      src="/resource/SLDS2134/assets/icons/custom/stock_disp.png"
+                      width="58" /></i>&nbsp;{!$Label.c.Outbound_logistics}&nbsp;
+                  <lightning:buttonIcon size="medium" iconName="utility:refresh" variant="bare"
+                    onclick="{!c.Back2Outbound }" alternativeText="{!$Label.c.Refresh_Outbound_logistics}"
+                    title="Refresh" />
+                </h4>
+                <div class="slds-grid slds-wrap">
+                  <aura:iteration var="so" indexVar="Counter" items="{!v.Logistics}">
+                    <div class="slds-truncate" title="SLN" id="{!so.Name}">
+                      <span onclick="{!c.StillToFulfill}" data-target="{!so.Id}">
+
+                        <lightning:formattedText value="{!so.Name}" class="Pack-newClass10" />
+                      </span>
+                      <aura:if isTrue="{!(v.Logistics.length-1 > Counter)}">,&nbsp;</aura:if>
+                    </div>
+                  </aura:iteration>
+                </div>
+              </div>
+            </div>
+          </div>
+
+
+        </div>
+      </div>
+      <div class="slds-page-header slds-page-header--object-home Pack-newClass3 slds-hide" role="banner">
+        <div class="slds-grid">
+          <div class="slds-col slds-has-flexi-truncate">
+            <div class="slds-media slds-no-space slds-grow">
+              <div class="slds-media__figure">
+                <span class="slds-icon_container">
+                  <span aria-hidden="true" class="slds-icon slds-icon-action-back  slds-icon--large Pack-newClass5">
+                    <img src="/resource/SLDS2134/assets/icons/custom/stock_disp.png" width="58" />
+                  </span>
+                </span>
+              </div>
+              <div class="slds-media__bod Pack-newClass4">
+                <nav class="slds-context-bar__secondary" role="navigation">
+                  <ul class="slds-grid">
+                    <h1 class="slds-page-header__title slds-truncate Pack-newClass6" title="Outbound Logistics">
+                      {!$Label.c.Outbound_logistics}</h1>
+                    <lightning:buttonIcon iconName="utility:refresh" variant="bare" onclick="{!c.Back2Outbound }"
+                      alternativeText="{!$Label.c.Refresh_Outbound_logistics}" title="Refresh" />
+
+                  </ul>
+                </nav>
+
+              </div>
+
+            </div>
+
+          </div>
+          <div
+            class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small maqheadernavbuttons Pack-newClass7">
+            <div class="slds-m-right--xx-small slds-truncate2"> <i class="fa fa-arrow-right Pack-newClass8"></i>&nbsp;
+              <lightning:formattedUrl label="{!v.ChannelName}" value="{!'/'+v.ChannelId}" target="_blank" />
+            </div>
+            <div class="slds-m-right--xx-small slds-truncate2"> <i class="fa fa-filter Pack-newClass8"></i>&nbsp;
+              <lightning:formattedUrl label="{!v.SiteName}" value="{!'/'+v.selectedSite}" target="_blank" />
+            </div>
+          </div>
+          <aura:if isTrue="{!and(v.isAwaiting, v.lineItemWrapperList.length > 0)}">
+            <aura:if isTrue="{!!v.showShipComponent}">
+              <lightning:button variant="brand" iconName="utility:rows"
+                class="slds-button slds-button--brand2 mobiledisplaynone slds-truncate2" iconPosition="left"
+                label="{!$Label.c.Packing_Labels}" onclick="{!c.createPackingLabels}" />
+              <!--class="mobiledisplaynone slds-truncate2"-->
+              <lightning:button variant="brand" iconName="utility:rows"
+                class="slds-button slds-button--brand2 mobiledisplaynone slds-truncate2" iconPosition="left"
+                label="{!$Label.c.Packing_Lists}" onclick="{!c.createPackingSlips}" />
+            </aura:if>
+          </aura:if>
+        </div>
+        <div class="slds-p-left--small">
+          <aura:iteration var="so" indexVar="Counter" items="{!v.Logistics}">
+            <div class="slds-truncate" title="SLN" id="{!so.Name}">
+              <span onclick="{!c.StillToFulfill}" data-target="{!so.Id}">
+
+                <lightning:formattedText value="{!so.Name}" class="Pack-newClass10" />
+              </span>
+              <aura:if isTrue="{!(v.Logistics.length-1 > Counter)}">,&nbsp;</aura:if>
+            </div>
+          </aura:iteration>
+        </div>
+      </div>
+
+      <div class="epr_Mark7 erp_mark7 Pack-newClass1 maqsood">
+        <div class="row">
+          <div class="col-12">
+            <div class="card mb-0">
+              <div class="card-body p-1">
+                <div class="panel-collapse">
+                  <div class="panel-body Pack-newClass11">
+                    <!-- Nav tabs -->
+                    <ul class="nav nav-tabs " role="tablist">
+                      <li class="nav-item">
+                        <!-- /apex/OutboundLogisticsLC?core.apexpages.devmode.url=1       /lightning/n/Logistics_Outbound -->
+                        <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab"
+                          onclick="{!c.Back2Outbound}">
+                          <i class="fa fa-list Pack-newClass12"
+                            aria-hidden="true"></i>&nbsp;{!$Label.c.List_Outbound_logistics}</a>
+                      </li>
+                      <li class="nav-item">
+                        <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab"
+                          onclick="{!c.createPicks}">
+                          <i class="fa fa-truck Pack-newClass12"
+                            aria-hidden="true"></i>&nbsp;{!$Label.c.Pick_Outbound_logistics}</a>
+
+                      </li>
+                      <li class="{!if(v.showShipComponent,'nav-item','nav-item active')}">
+                        <a class="nav-link Pack-newClass13" data-toggle="tab" href="javascript:void(0);" role="tab"
+                          onclick="{!c.createPacks}">
+                          <i class="fa fa-archive Pack-newClass12"
+                            aria-hidden="true"></i>&nbsp;{!$Label.c.Pack_Outbound_logistics} </a>
+                      </li>
+                      <li
+                        class="{!if(v.showShipComponent,'nav-item mobiledisplaynone mobiledisplaynone-landscape active','nav-item mobiledisplaynone mobiledisplaynone-landscape')}">
+                        <a class="nav-link Pack-newClass13" data-toggle="tab" href="javascript:void(0);" role="tab"
+                          onclick="{!c.createShips}">
+                          <i class="fa fa-plane Pack-newClass12" aria-hidden="true"></i>
+                          &nbsp;{!$Label.c.Ship_Outbound_logistics} </a>
+                      </li>
+
+                    </ul>
+
+                  </div>
+                </div>
+
+                <div
+                  class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'slds-notify_container slds-is-fixed Pack-newClass15','slds-notify_container slds-is-fixed Pack-newClass14')}">
+                  <div class="slds-notify slds-notify_toast slds-theme_error Pack-newClass16" role="status">
+                    <span class="slds-assistive-text">{!$Label.c.error}</span>
+                    <span
+                      class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                      <lightning:icon iconName="utility:error" variant="inverse" size="x-small"
+                        alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                    </span>
+                    <div class="slds-notify__content">
+                      <h2 class="slds-text-heading_x-small Pack-newClass17">{!v.exceptionError}
+                      </h2>
+                    </div>
+                    <div class="slds-notify__close Pack-newClass18">
+                      <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close"
+                        onclick="{!c.closeError}">
+                        <lightning:icon iconName="utility:close" variant="inverse" size="x-small"
+                          alternativeText="{!$Label.c.Close_ProjectScheduler}" title="close" />
+                        <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <aura:if isTrue="{!!v.showShipComponent}">
+                  <aura:if isTrue="{!v.isAwaiting}">
+                    <table class="table table-bordered  slds-no-row-hover">
+                      <thead>
+                        <tr class="slds-text-heading--label">
+                          <th class="slds-is-sortable" scope="col">
+                            <span class="slds-truncate">{!$Label.c.AddSubscription_Action}</span>
+                          </th>
+                          <th scope="col" class="slds-is-sortable">
+                            <span class="slds-truncate">{!$Label.c.PackName}</span>
+                          </th>
+                          <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape">
+                            <span class="slds-truncate">{!$Label.c.PackOrder}</span>
+                          </th>
+                          <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape">
+                            <span class="slds-truncate">{!$Label.c.CreateAddress_Customer}</span>
+                          </th>
+                          <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape">
+                            <span class="slds-truncate">{!$Label.c.Acc_Recev_Status_Entered}</span>
+                          </th>
+                          <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape">
+                            <span class="slds-truncate">{!$Label.c.ContractConsole_Type}</span>
+                          </th>
+                          <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape">
+                            <span class="slds-truncate">{!$Label.c.Pack_Ship_Type}</span>
+                          </th>
+                          <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape">
+                            <span class="slds-truncate">{!$Label.c.ShipmentManagement_Package_Line_Item_Shipment}</span>
+                          </th>
+                          <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape">
+                            <span class="slds-truncate">Action</span>
+                          </th>
+                          <th scope="col" class="slds-is-sortable">
+                            &nbsp;
+                          </th>
+                          <th scope="col" class="slds-is-sortable">
+                            <lightning:input type="checkbox" onchange="{!c.checkAll}" checked="{!v.checkAll}" />
+                          </th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        <aura:iteration var="packs" indexVar="soliCounter" items="{!v.lineItemWrapperList}">
+                          <tr class="slds-hint-parent">
+                            <td class="" data-label="Action">
+                              <lightning:button aura:id="assignButton" class="neutralC"  title="Edit" name="{!packs.pack.Id}"
+                                onclick="{!c.editPack}">
+                                <img src="/resource/SCM/SCM/Images/slds_edit.png" class="Pack-newClass19" />
+                              </lightning:button>
+                              <lightning:button aura:id="assignButton" class="neutralC" title="Delete" name="{!packs.pack.Id}"
+                                onclick="{!c.deletePack}"> <a title="Delete">
+                                  <img src="/resource/SCM/SCM/Images/slds_delete.png" class="Pack-newClass20" />
+                                </a>
+                              </lightning:button>
+                            </td>
+                            <td class="greyheadlabel slds-truncate3">
+                              <lightning:formattedUrl label="{!packs.pack.Name__c}" value="{!'/'+packs.pack.Id}"
+                                target="_blank" />
+                            </td>
+                            <td class="greyheadlabel mobiledisplaynone mobiledisplaynone-landscape slds-truncate3">
+                              <lightning:formattedUrl label="{!packs.pack.Logistic__r.Name}"
+                                value="{!'/'+packs.pack.Logistic__c}" target="_blank" />
+                            </td>
+                            <td class="greyheadlabel mobiledisplaynone mobiledisplaynone-landscape slds-truncate3">
+                              <aura:if isTrue="{!packs.pack.Logistic__r.Account__c != undefined}">
+                                <lightning:formattedUrl label="{!packs.pack.Logistic__r.Account__r.Name}"
+                                  value="{!'/'+packs.pack.Logistic__r.Account__c}" target="_blank" />
+                              </aura:if>
+                            </td>
+                            <td class="greyheadlabel mobiledisplaynone mobiledisplaynone-landscape slds-truncate3">
+                              <lightning:formattedText value="{!packs.pack.Status__c}" />
+                            </td>
+                            <td class="greyheadlabel mobiledisplaynone mobiledisplaynone-landscape slds-truncate3">
+                              <lightning:formattedText value="{!packs.pack.Package_Type__c}" />
+                            </td>
+                            <td class="greyheadlabel mobiledisplaynone mobiledisplaynone-landscape slds-truncate3">
+                              <lightning:formattedText value="{!packs.pack.Shipment_Type__c}" />
+                            </td>
+                            <td class="greyheadlabel mobiledisplaynone mobiledisplaynone-landscape slds-truncate3">
+                              <aura:if isTrue="{!packs.pack.Shipment__r.Id != undefined}">
+                                <lightning:formattedUrl label="{!packs.pack.Shipment__r.Name}"
+                                  value="{!'/'+packs.pack.Shipment__r.Id}" target="_blank" />
+                              </aura:if>
+                            </td>
+                            <td class="greyheadlabel">
+                              <div class="slds-grid">
+                                <!--<aura:if isTrue="{!and(packs.pack.Shipment__r.Name == undefined)}" >-->
+                                <div class="slds-col">
+                                  <i class="fa fa-bars Pack-newClass21" aria-hidden="true"></i>&nbsp;
+                                  <a href="" data-index="{!soliCounter}" onclick="{!c.createSinglePackingLabel}"
+                                    class="maqship">{!$Label.c.Label}</a>
+                                </div>
+                                <div class="slds-col">
+                                  <i class="fa fa-bars Pack-newClass21" aria-hidden="true"></i>&nbsp;
+                                  <a href="" data-index="{!soliCounter}" onclick="{!c.createSinglePackingSlip}"
+                                    class="maqship">{!$Label.c.List_Outbound_logistics}</a>
+                                </div>
+                                <!--</aura:if>-->
+
+                                <aura:if
+                                  isTrue="{!or(
+                                        AND(
+                                            packs.pack.Shipment__r.Name == null,
+                                            packs.pack.Logistic__r.Ready_To_Ship__c
+                                        ),
+                                        packs.pack.Status__c == 'Cancelled'
+                                    )}">
+                                  <div class="slds-col Pack-newClass22">
+                                    <div class="slds-grid">
+                                      <i class="fa fa-plane Pack-newClass21" aria-hidden="true"></i>&nbsp;
+                                      <a href="" data-index="{!soliCounter}" onclick="{!c.createsingleShipment}"
+                                        class="maqship">{!$Label.c.Ship_Outbound_logistics}</a>
+                                    </div>
+                                  </div>
+                                </aura:if>
+
+                                <aura:if
+                                 isTrue="{!AND(
+                                        OR(
+                                            packs.pack.Shipment__r.Name != null,
+                                            NOT(packs.pack.Logistic__r.Ready_To_Ship__c)
+                                        ),
+                                        packs.pack.Status__c != 'Cancelled'
+                                    )}"
+                                    >
+                                  <div class="slds-col Pack-newClass22">
+                                    <div class="slds-grid">
+                                      
+                                      <i aria-hidden="true"
+                                        class="{!if(packs.pack.Shipment__r.Name == undefined,'fa fa-plane Pack-newClass23','fa fa-plane Pack-newClass21')}"></i>&nbsp;
+                                      <lightning:formattedText value="{!$Label.c.SHIP}" class="maqshipText" />
+                                    </div>
+                                  </div>
+                                </aura:if>
+                              </div>
+                            </td>
+                            <td class="greyheadlabel">
+                              <lightning:input type="checkbox" checked="{!packs.sel}" onchange="{!c.showship}" />
+                            </td>
+                          </tr>
+                        </aura:iteration>
+                      </tbody>
+                    </table>
+                  </aura:if>
+
+                  <aura:if isTrue="{!(v.showShipAllbtton)}">
+                    <div class="Pick-newClass27" onclick="{!c.createShipment}">
+                      <a href="javascript:void(0);" class="slds-button slds-button--brand2 Pick-newClass26">
+                        {!$Label.c.SHIP}
+                      </a>
+                    </div>
+                  </aura:if>
+
+                  <aura:if isTrue="{!v.createPack}">
+                    <div class="epr_Mark7 padding-t-5 Pack-newClass1" id="pickList">
+                      <div class="slds-grid slds-wrap">
+                        <div class="col-md-2 slds-p-top--xx-small">
+                          <p class="greyhead Pack-newClass25">{!$Label.c.Name_ManageLeave}</p>
+                          <div class="slds-form-element">
+                            <div class="slds-form-element__control">
+                              <lightning:input type="text" variant="label-hidden" value="{!v.Package2Create.Name__c}"
+                                placeholder="{!$Label.c.PackName}" disabled="{!v.disablePackName}" />
+                            </div>
+                          </div>
+                        </div>
+                        <div class="col-md-2 slds-p-top--xx-small">
+                          <p class="greyhead Pack-newClass25">{!$Label.c.PO_Shipment_Type}<span
+                              class="Pack-newClass23">*</span></p>
+                          <div class="slds-form-element__control">
+
+                            <lightning:select value="{!v.Package2Create.Shipment_Type__c}" variant="label-hidden"
+                              class="display-lable" onchange="{!c.parentFieldChange}" name="parentField"
+                              aura:id="parentField" disabled="{!v.disableShipmentType}" label="Shipment Type">
+                              <aura:iteration items="{!v.listControllingValues}" var="value">
+                                <option value="{!value}" selected="{!equals(v.Package2Create.Shipment_Type__c,value)}">
+                                  {!value}</option>
+                                <!--<option text="{!option.label}" value="{!option.value}" selected="{!equals(v.Package2Create.Shipment_Type__c, option.value)}"/>-->
+                              </aura:iteration>
+                            </lightning:select>
+                          </div>
+                        </div>
+                        <div class="col-md-2 slds-p-top--xx-small">
+                          <p class="greyhead Pack-newClass25">{!$Label.c.UPS_Package_Type}<span
+                              class="Pack-newClass23">*</span></p>
+                          <div class="slds-form-element__control">
+
+                            <lightning:select name="childField" value="{!v.Package2Create.Package_Type__c}"
+                              variant="label-hidden" class="display-lable" disabled="{!v.bDisabledDependentFld}"
+                              onchange="{!c.populatePkgDetail}" label="Package Type">
+                              <aura:iteration items="{!v.listDependingValues}" var="value">
+                                <option value="{!value}">{!value}</option>
+                                <!--<option text="{!option.label}" value="{!option.value}" selected="{!equals(v.Package2Create.Package_Type__c, option.value)}"/>-->
+                              </aura:iteration>
+                            </lightning:select>
+                          </div>
+                        </div>
+
+                        <div class="col-md-2 slds-p-top--xx-small mobiledisplaynone mobiledisplaynone-landscape">
+                          <p class="greyhead Pack-newClass25"> {!$Label.c.Pack_Logistic} </p>
+                          <div class="slds-form-element__control">
+                            <c:CustomInputLookUp objectAPIName="Logistic__c" aura:id="sl" IconName="standard:macros"
+                              selectedRecordId="{!v.Package2Create.Logistic__c}" />
+                          </div>
+                        </div>
+
+                        <aura:if isTrue="{!v.SSTypeAccess}">
+                          <div class="col-md-2 slds-p-top--xx-small mobiledisplaynone mobiledisplaynone-landscape">
+                            <p class="greyhead Pack-newClass25 slds-truncate"
+                              title="{!$Label.c.Pack_Shipment_Preference_Speed}">
+                              {!$Label.c.Pack_Shipment_Preference_Speed} </p>
+                            <div class="slds-form-element__control">
+                              <lightning:input type="text" variant="label-hidden"
+                                value="{!v.Package2Create.Shipment_Service_Type__c}"
+                                placeholder="{!$Label.c.Pack_Shipment_Preference_Speed}" disabled="true" />
+                            </div>
+                          </div>
+                        </aura:if>
+                        <aura:if isTrue="{!v.declareaccess}">
+                          <div class="col-md-2 slds-p-top--xx-small mobiledisplaynone mobiledisplaynone-landscape">
+                            <p class="greyhead Pack-newClass25">{!$Label.c.Pack_Declared_Value}
+                              <aura:if isTrue="{!!v.allowZerodeclaredValue}"> <span class="Pack-newClass23">*</span>
+                              </aura:if>
+                            </p>
+
+                            <div class="slds-form-element__control">
+                              <lightning:input type="number" variant="label-hidden"
+                                value="{!v.Package2Create.Declared_Value__c}"
+                                placeholder="{!$Label.c.Package_Insured_Value}" step="0.01"
+                                disabled="{!v.disablePackDeclaredValue}" />
+                            </div>
+                          </div>
+                        </aura:if>
+                        <div class="col-md-2 slds-p-top--xx-small mobiledisplaynone mobiledisplaynone-landscape">
+                          <p class="greyhead Pack-newClass25">{!$Label.c.ShipmentManagement_Package_Length}<span
+                              class="Pack-newClass23">*</span></p>
+                          <div class="slds-form-element__control">
+                            <lightning:input type="number" variant="label-hidden" value="{!v.Package2Create.Length__c}"
+                              placeholder="{!$Label.c.Package_Length}" />
+                          </div>
+                        </div>
+                        <div class="col-md-2 slds-p-top--xx-small mobiledisplaynone mobiledisplaynone-landscape">
+                          <p class="greyhead Pack-newClass25"> {!$Label.c.ShipmentManagement_Package_Width} <span
+                              class="Pack-newClass23">*</span> </p>
+                          <div class="slds-form-element__control">
+                            <lightning:input type="number" variant="label-hidden" value="{!v.Package2Create.Width__c}"
+                              placeholder="{!$Label.c.Package_Width}" />
+                          </div>
+                        </div>
+                        <div class="col-md-2 slds-p-top--xx-small mobiledisplaynone mobiledisplaynone-landscape">
+                          <p class="greyhead Pack-newClass25">{!$Label.c.Height_Pack}<span
+                              class="Pack-newClass23">*</span></p>
+                          <div class="slds-form-element__control">
+                            <lightning:input type="number" variant="label-hidden" value="{!v.Package2Create.Height__c}"
+                              placeholder="{!$Label.c.Package_Height}" />
+                          </div>
+                        </div>
+                        <div class="col-md-2 slds-p-top--xx-small mobiledisplaynone mobiledisplaynone-landscape">
+                          <p class="greyhead Pack-newClass25">{!$Label.c.Dimension} <span
+                              class="Pack-newClass23">*</span> </p>
+                          <div class="slds-form-element">
+                            <lightning:select value="{!v.Package2Create.Dimension__c}" variant="label-hidden"
+                              class="display-lable" label="Dimension">
+                              <aura:iteration items="{!v.Dimension}" var="option">
+                                <option text="{!option.label}" value="{!option.value}"
+                                  selected="{!equals(v.Package2Create.Dimension__c, option.value)}" />
+                              </aura:iteration>
+                            </lightning:select>
+                          </div>
+                        </div>
+                        <div class="col-md-2 slds-p-top--xx-small">
+                          <p class="greyhead Pack-newClass25">{!$Label.c.PackageSlip_List_Weight} <span
+                              class="Pack-newClass23">*</span></p>
+                          <div class="slds-form-element__control">
+                            <lightning:input type="number" variant="label-hidden" value="{!v.Package2Create.Weight__c}"
+                              aura:id="wtl" placeholder="{!$Label.c.Package_Weight}" />
+                          </div>
+                        </div>
+                        <div class="col-md-2 slds-p-top--xx-small mobiledisplaynone mobiledisplaynone-landscape">
+                          <p class="greyhead Pack-newClass25">{!$Label.c.ShipmentManagement_Package_Weight_Unit} <span
+                              class="Pack-newClass23">*</span> </p>
+                          <div class="slds-form-element">
+                            <lightning:select value="{!v.Package2Create.Weight_Unit__c}" variant="label-hidden"
+                              class="display-lable" label="Weight Unit">
+                              <aura:iteration items="{!v.WeightUnit}" var="option">
+                                <option text="{!option.label}" value="{!option.value}"
+                                  selected="{!equals(v.Package2Create.Weight_Unit__c, option.value)}" />
+                              </aura:iteration>
+                            </lightning:select>
+                          </div>
+                        </div>
+                        <div class="col-md-2 slds-p-top--xx-small mobiledisplaynone mobiledisplaynone-landscape">
+                          <p class="greyhead Pack-newClass25"> {!$Label.c.Pack_PO_Number} </p>
+                          <div class="slds-form-element__control">
+                            <lightning:input type="text" variant="label-hidden"
+                              value="{!v.Package2Create.PO_Reference__c}" placeholder="{!$Label.c.Pack_PO_Number}" />
+                          </div>
+                        </div>
+                        <div class="col-md-2 slds-p-top--xx-small mobiledisplaynone mobiledisplaynone-landscape">
+                          <p class="greyhead Pack-newClass25">{!$Label.c.Pack_Deposit_Tag}</p>
+                          <div class="slds-form-element__control">
+                            <lightning:input type="text" variant="label-hidden"
+                              value="{!v.Package2Create.Deposit_Tag__c}" placeholder="{!$Label.c.Pack_Deposit_Tag}" />
+                          </div>
+                        </div>
+
+                        <div class="col-md-2 slds-p-top--xx-small">
+                          <div class="slds-form-element__control">
+                            <lightning:textarea aura:id="description" name="Description"
+                              value="{!v.Package2Create.Description__c}" placeholder="{!$Label.c.Pack_Description}"
+                              label="{!$Label.c.Pack_Description}" maxlength="32768"
+                              messageWhenTooLong="A maximum of 32768 characters are allowed." />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </aura:if>
+
+                  <table border="0" width="100%" cellpadding="1" cellspacing="0"
+                    class="{!if(and(v.errorMsg2 != undefined, v.errorMsg2 != ''), 'Pack-newClass25', 'Pack-newClass26')}">
+                    <tr>
+                      <td align="center" valign="middle">
+                        <output value="{!v.errorMsg2}" id="errmsgO" class="Pack-newClass27" />
+                      </td>
+                    </tr>
+                  </table>
+
+                  <aura:if isTrue="{!v.createPack}">
+                    <div class="container-fluid p-0">
+                      <div class="maqsood erp_Mark7">
+                        <div class="card-box shadow-sm p-2 border-1 m-t-40">
+                          <div class="dropdown float-right">
+                            <aura:if isTrue="{!v.CustomerPresent}">
+                              <div class="slds-grid floatright">
+                                <span
+                                  class="slds-p-right_small slds-p-top_xx-small"><strong>{!$Label.c.CreateAddress_Customer}</strong>
+                                </span>
+                                <lightning:select value="{!v.Customer}" onchange="{!c.getAllCustomerDetails}"
+                                  variant="label-hidden" class="display-lable width200-pack" label="Customer">
+                                  <aura:iteration items="{!v.Customers}" var="option">
+                                    <option text="{!option.label}" value="{!option.value}"
+                                      selected="{!equals(v.Customer, option.value)}" />
+                                  </aura:iteration>
+                                </lightning:select>
+                              </div>
+                            </aura:if>
+                          </div>
+
+                          <h5 class="card-title mb-2">{!$Label.c.Pack_Package_Lists}</h5>
+
+                          <div>
+                            <div class="slds-card__body slds-m-bottom--large">
+                              <table class="table table--bordered  slds-no-row-hover ">
+                                <thead>
+                                  <tr>
+                                    <aura:if isTrue="{!if(v.Package2Create.Id != undefined,false,true)}">
+                                      <th class="slds-is-sortable" scope="col">
+                                        <lightning:input type="checkbox" onchange="{!c.checkAll2}"
+                                          checked="{!v.checkAll2}" />
+                                      </th>
+                                    </aura:if>
+                                    <th class="slds-text-heading--label  mobiledisplaynone mobiledisplaynone-landscape"
+                                      scope="col">{!$Label.c.LINE_ITEM_Pack}</th>
+                                    <th class="slds-text-heading--label " scope="col">
+                                      {!$Label.c.AddSubscription_Product}</th>
+                                    <th class="slds-text-heading--label mobiledisplaynone mobiledisplaynone-landscape"
+                                      scope="col">{!$Label.c.AddSubscription_Code}</th>
+                                    <th class="slds-text-heading--label mobiledisplaynone mobiledisplaynone-landscape"
+                                      scope="col">{!$Label.c.Order_RMA}</th>
+                                    <th class="slds-text-heading--label mobiledisplaynone mobiledisplaynone-landscape"
+                                      scope="col">{!$Label.c.CreateAddress_Customer}</th>
+                                    <th class="slds-text-heading--label " scope="col">{!$Label.c.Pack_Picked}</th>
+                                    <th class="slds-text-heading--label " scope="col">{!$Label.c.Packed}</th>
+                                  </tr>
+                                </thead>
+
+                                <tbody>
+                                  <aura:iteration var="soli" indexVar="maincount" items="{!v.packageWrapperList}">
+                                    <tr class="slds-hint-parent">
+                                      <aura:if isTrue="{!if(v.Package2Create.Id != undefined,false,true)}">
+                                        <td>
+                                          <lightning:input type="checkbox" checked="{!soli.pkgSelected}"
+                                            onchange="{!c.processDetails}" /> <!-- added by shaguftha on 26/10/23 -->
+                                        </td>
+                                      </aura:if>
+                                      <td class="mobiledisplaynone mobiledisplaynone-landscape slds-truncate3"
+                                        data-label="Line Item">
+                                        <lightning:formattedUrl target="_blank" value="{!'/'+soli.loli.Id}"
+                                          label="{!soli.loli.Name}" />
+                                      </td>
+                                      <td class=" slds-truncate3" data-label="Product">
+                                        <aura:if isTrue="{!if(soli.mrp.MRP_Product__c != undefined,false,true)}">
+                                          <lightning:formattedUrl target="_blank" value="{!'/'+soli.loli.Product__c}"
+                                            label="{!soli.loli.Product__r.Name}" />
+                                        </aura:if>
+                                        <aura:if isTrue="{!if(soli.mrp.MRP_Product__c != null,true,false)}">
+                                          <lightning:formattedUrl target="_blank" value="{!'/'+soli.mrp.MRP_Product__c}"
+                                            label="{!soli.mrp.MRP_Product__r.Name}" />
+                                        </aura:if>
+                                        <aura:if isTrue="{!if(soli.loli.Fixed_Asset__c != null,true,false)}">
+                                          <lightning:formattedUrl target="_blank"
+                                            value="{!'/'+soli.loli.Fixed_Asset__c}"
+                                            label="{!soli.loli.Fixed_Asset__r.Name}" />
+                                        </aura:if>
+                                      </td>
+                                      <td class=" mobiledisplaynone mobiledisplaynone-landscape slds-truncate3"
+                                        data-label="Line Item">
+                                        <aura:if isTrue="{!if(soli.mrp.MRP_Product__c != null,false,true)}">
+                                          <lightning:formattedText value="{!soli.loli.Product__r.ProductCode}" />
+                                        </aura:if>
+                                        <aura:if isTrue="{!if(soli.mrp.MRP_Product__c != null,true,false)}">
+                                          <lightning:formattedText value="{!soli.mrp.MRP_Product__r.ProductCode}" />
+                                        </aura:if>
+                                      </td>
+                                      <td class=" mobiledisplaynone mobiledisplaynone-landscape slds-truncate3"
+                                        data-label="Line Item">
+                                        <lightning:formattedRichText value="{!soli.loli.Logistic__r.Order__c}" />
+                                      </td>
+                                      <td class=" mobiledisplaynone mobiledisplaynone-landscape slds-truncate3"
+                                        data-label="Customer">
+                                        <aura:if isTrue="{!soli.loli.Logistic__r.Account__c != undefined}">
+                                          <lightning:formattedUrl target="_blank"
+                                            value="{!'/'+soli.loli.Logistic__r.Account__c}"
+                                            label="{!soli.loli.Logistic__r.Account__r.Name}" />
+                                        </aura:if>
+                                      </td>
+                                      <td class="slds-truncate3" data-label="Picked">
+                                        <lightning:formattedNumber value="{!soli.qtyToPick}" />
+                                      </td>
+                                      <td data-label="Packed">
+                                        <lightning:input type="text" variant="label-hidden" value="{!soli.qtyToPack}"
+                                          oncommit="{!c.processDetails}" />
+                                      </td>
+
+                                    </tr>
+                                  </aura:iteration>
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="slds-p-top--small"></div>
+
+                      <div class="slds-docked-form-footer">
+                        <div class="col-md-12 Pack-newClass32">
+                          <lightning:button variant="brand" label="{!$Label.c.ContractConsole_Save}"
+                            onclick="{!c.updatePack}" class="width12" />
+                              <lightning:button variant="brand-outline" label="Cancel"
+                            onclick="{!c.cancelPack}" class="width12" />
+                        </div>
+                      </div>
+
+                    </div>
+                  </aura:if>
+                </aura:if>
+
+                   <aura:if isTrue="{!v.showShipComponent}">
+                  <aura:if isTrue="{!v.showUPSRestAPIcomp}">
+
+                    <!--<c:uPSRest packageIds="{!v.selectedPackIds}"></c:uPSRest>-->
+                    <aura:set attribute="else">
+
+                      <body aura:id="mybody" class="Pack-newClass1"></body>
+                    </aura:set>
+                  </aura:if>
+
+                </aura:if>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+        <aura:if isTrue="{!v.showShipComponent}">
+            <aura:if isTrue="{!v.showUPSRestAPIcomp}">
+                <c:uPSRest packageIds="{!v.selectedPackIds}"></c:uPSRest>
+            </aura:if>
+            <aura:if isTrue="{!v.showFedexRestAPIcomp}">
+                <c:fedexRestAPI packageIds="{!v.selectedPackIds}"></c:fedexRestAPI>
+            </aura:if>
+            <aura:if isTrue="{!v.showUSPSRestAPIcomp}">
+                <c:uSPS PackageIDs="{!v.selectedPackIds}"></c:uSPS>
+            </aura:if>
+            <aura:if isTrue="{!v.showFreightViewComp}">
+                <c:freightview packageIds="{!v.selectedPackIds}" />
+            </aura:if>
+             <aura:if isTrue="{!v.showCPRestAPIcomp}">
+                <c:canadapost PackageIDs="{!v.selectedPackIds}"></c:canadapost>
+            </aura:if>
+            <!-- <aura:if isTrue="{!v.showSendleAPI}">
+                <c:sendle packageIds="{!v.selectedPackIds}"></c:sendle>
+            </aura:if> -->
+            <aura:if isTrue="{!v.showPurolatorAPI}">
+                <c:purolatorAPI packageIds="{!v.selectedPackIds}"></c:purolatorAPI>
+            </aura:if>
+
+        </aura:if>
+
+
+
+      <aura:if isTrue="{!v.ShowLangOptionForPackListModal}">
+        <section role="dialog" tabindex="-1" aria-modal="true" aria-label="Meaningful description of the modal content"
+          class="slds-modal slds-fade-in-open">
+          <div class="slds-modal__container">
+            <div class="slds-modal__content slds-p-around_medium slds-modal__content_headless" id="modal-content-id-1">
+              <lightning:radioGroup name="radioGroup" label="Select Language" options="{! v.Langoptions }"
+                value="{! v.SelectedLang }" type="radio" />
+            </div>
+            <div class="slds-modal__footer">
+              <lightning:button label="Cancel" onclick="{!c.goBackPackList}" />
+              <lightning:button variant="brand" label="Next" onclick="{!c.PackListNext}" />
+            </div>
+          </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+      </aura:if>
+    </div>
+  </body>
+</aura:component>
