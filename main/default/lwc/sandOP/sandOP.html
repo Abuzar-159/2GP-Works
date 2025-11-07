@@ -1,0 +1,226 @@
+<template>
+    <div class="sop-container">
+        <!-- Header -->
+        <!--div class="slds-page-header" style="background: rgb(255, 255, 255); border-bottom: 1px solid rgb(201, 201, 201);">
+            <div class="slds-page-header__row">
+                <div class="slds-page-header__col-title">
+                    <div class="slds-media">
+                        <div class="slds-media__figure">
+                            <img src={logoUrl} alt="Logo" class="logo slds-m-right_small" />
+                        </div>
+                        <div class="slds-media__body">
+                            <div class="slds-page-header__name">
+                                <div class="slds-page-header__name-title">
+                                    <h1>
+                                        <span class="slds-page-header__title slds-truncate slds-p-top_small">
+                                            Sales and Operation Planning
+                                        </span>
+                                    </h1>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-page-header__col-actions">
+                    <div class="slds-page-header__controls">
+                        <div class="slds-page-header__control">
+                            <ul class="slds-button-group-list">
+                                <li>
+                                    <label class="slds-form-element__label" for="combobox-id-1">
+                                        <b>Organisation</b>
+                                    </label>
+                                    <c-custom-input-lookup-l-w-c obj-name="Account" search-placeholder="Search.."
+                                        icon-name="standard:account" selected-value={DefaultOrganisation.Id}
+                                        selected-name={DefaultOrganisation.Name}
+                                        onlookupselected={handleOrganisationSelect} is-value-selected=true>
+                                    </c-custom-input-lookup-l-w-c>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div-->
+
+        <!-- Body: Vertical Tabs + Content -->
+        <div class="slds-grid">
+            <!-- Vertical Tabs -->
+            <div class="slds-size_1-of-6 slds-p-around_medium ">
+                <div class={demandTabClass} data-tab="demand" onclick={handleMainTabClick}>
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size_2-of-12">
+                            <lightning-icon icon-name='standard:work_plan_template_entry' alternative-text='work_plan_template_entry' size='medium' title='work_plan_template_entry'></lightning-icon>
+                        </div>
+                        <div class="slds-col slds-p-left_small hide-on-mobile">
+                            Demand Planning & Forecasting
+                        </div>
+                    </div>
+                </div>
+                <div class={supplyTabClass} data-tab="supply" onclick={handleMainTabClick}>
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size_3-of-12">
+                            <lightning-icon icon-name='standard:planogram' alternative-text='planogram' size='medium' title='planogram'></lightning-icon>                        </div>
+                        <div class="slds-col slds-p-top_xx-small hide-on-mobile">
+                            Supply Planning
+                        </div>
+                    </div>
+                </div>
+                <div class={inventoryTabClass} data-tab="inventory" onclick={handleMainTabClick}>
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size_3-of-12">
+                           <lightning-icon icon-name='standard:asset_hierarchy' alternative-text='asset_hierarchy' size='medium' title='asset_hierarchy'></lightning-icon>
+                        </div>
+                        <div class="slds-col slds-p-top_x-small hide-on-mobile">
+                            Inventory
+                        </div>
+                    </div>
+
+
+                </div>
+                <!--div class={productionTabClass} data-tab="production" onclick={handleMainTabClick}>
+
+                    <div class="slds-grid">
+                        <div class="slds-col">
+                            <lightning-icon icon-name="utility:collection_alt" size="small"
+                                class="slds-m-right_small"></lightning-icon>
+
+                        </div>
+                        <div class="slds-col">
+                            Production & Capacity Planning
+                        </div>
+                    </div>
+
+                </div-->
+                <div class={financeTabClass} data-tab="finance" onclick={handleMainTabClick}>
+                    <div class="slds-grid">
+                        <div class="slds-col">
+                            <lightning-icon icon-name='standard:document_reference' alternative-text='document_reference' size='medium' title='document_reference'></lightning-icon>
+                        </div>
+                        <div class="slds-col slds-p-left_small hide-on-mobile">
+                           Financial Planning & Reconciliation
+                        </div>
+                    </div>
+                </div>
+                <div class={subscriptionTabClass} data-tab="subscription" onclick={handleMainTabClick}>
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size_3-of-12">
+                            <lightning-icon icon-name='standard:digital_verification_config_group' alternative-text='digital_verification_config_group' size='medium' title='digital_verification_config_group'></lightning-icon>
+                        </div>
+                        <div class="slds-col slds-p-top_x-small hide-on-mobile">
+                            Subscription Management & Analytics
+                        </div>
+                    </div>
+                </div>
+                <div class={riskAndReturnTabClass} data-tab="riskAndReturn" onclick={handleMainTabClick}>
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size_3-of-12">
+                            <lightning-icon icon-name='standard:return_order' alternative-text='return_order' size='medium' title='return_order'></lightning-icon>
+                        </div>
+                        <div class="slds-col slds-p-top_x-small hide-on-mobile">
+                            Return Analysis
+                        </div>
+                    </div>
+                </div>
+                <!-- <div class={executiveTabClass} data-tab="executive" onclick={handleMainTabClick}>
+                    <div class="slds-grid">
+                        <div class="slds-col">
+                            <lightning-icon icon-name="utility:contract_doc" size="small"
+                                class="slds-m-right_small"></lightning-icon>
+                        </div>
+                        <div class="slds-col">
+                            Executive-Level Consensus Planning
+                        </div>
+                    </div>
+
+                </div> -->
+            </div>
+
+            <!-- Tab Content -->
+            <div class="slds-size_5-of-6 slds-p-left_medium slds-p-right_medium slds-p-bottom_medium" style="background: #f5f5f9;">
+                <article class="slds-card slds-m-top_small">
+                    <div class="slds-card__header slds-grid ">
+                        <header class="slds-media slds-media_center slds-has-flexi-truncate">
+                            <div class="slds-media__figure">
+                              
+                            </div>
+                            <div class="slds-media__body">
+                                <div class="slds-grid slds-wrap">
+                                <div class="slds-page-header__name-title">
+                                    <h1>
+                                        <span class="slds-page-header__title slds-truncate slds-p-right_small slds-p-top_xx-small">
+                                            S&OP
+                                        </span>
+                                    </h1>
+                                </div>
+                                
+                            </div>
+                            </div>
+                        </header>
+                        <div class="slds-page-header__col-actions">
+                            <div class="slds-page-header__controls">
+                                <div class="slds-page-header__control">
+                                    
+                                        <div class="slds-grid">
+                                            <label class="slds-form-element__label" for="combobox-id-1">
+                                                <b>Company</b>
+                                            </label>
+                                            <div style="width:200px;">
+                                            <c-custom-input-lookup-l-w-c obj-name="Account" search-placeholder="Search.."
+                                                icon-name="standard:account" selected-value={DefaultOrganisation.Id}
+                                                selected-name={DefaultOrganisation.Name}
+                                                onlookupselected={handleOrganisationSelect} is-value-selected=true
+                                                    onremove={handleOrganisationRemoved}  
+                                                >
+                                            </c-custom-input-lookup-l-w-c>
+                                            </div>
+                                        </div>
+                                    </div>
+                               
+                               
+                            </div>
+                        </div>
+                    </div>
+                </article>
+                <template if:true={isDataLoaded}>
+                    <template if:true={isDemandTabOpen}>
+                        <c-demand-planning organisation-id={DefaultOrganisation.Id}
+                        show-chart={showChart}
+                            is-demand-tab-open={isDemandTabOpen}></c-demand-planning>
+
+                    </template>
+                    <template if:true={isSupplyTabOpen}>
+                        <c-supplyandproduction organisation-id={DefaultOrganisation.Id}
+                        show-chart={showChart}
+                        ></c-supplyandproduction>
+                    </template>
+                    <template if:true={isInventoryTabOpen}>
+                        <c-demand-planning organisation-id={DefaultOrganisation.Id}
+                        show-chart={showChart}
+                            is-inventory-tab-open={isInventoryTabOpen}></c-demand-planning>
+                    </template>
+                    <!-- <template if:true={isProductionTabOpen}>
+                        <c-demand-planning organisation-id={DefaultOrganisation.Id}></c-demand-planning>
+                    </template> -->
+                    <template if:true={isFinanceTabOpen}>
+                        <c-financial-planning organisation-id={DefaultOrganisation.Id}
+                        show-chart={showChart}
+                        ></c-financial-planning>
+                    </template>
+                    <template if:true={isSubscriptionTabOpen}>
+                        <c-subscription-planning organisation-id={DefaultOrganisation.Id}
+                        show-chart={showChart}></c-subscription-planning>
+                    </template>
+                    <template if:true={isRiskAndReturnTabOpen}>
+                        <c-demand-planning organisation-id={DefaultOrganisation.Id} is-risk-and-return-tab-open={isRiskAndReturnTabOpen}
+                        show-chart={showChart}
+                        ></c-demand-planning>
+                    </template>
+                    
+                    <!-- <template if:true={isExecutiveTabOpen}>
+                        <c-financial-planning organisation-id={DefaultOrganisation.Id}></c-financial-planning>
+                    </template> -->
+                </template>
+            </div>
+        </div>
+    </div>
+</template>

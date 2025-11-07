@@ -1,0 +1,17 @@
+.page-layout {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.slds-card {
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.slds-card__header-title {
+  font-weight: 600;
+}
+
+lightning-button {
+  width: 100%;
+}

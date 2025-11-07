@@ -1,0 +1,165 @@
+.sop-container {
+    display: flex;
+    flex-direction: column;
+    background: #ffffff;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* Header styles */
+.header {
+    background: #ffffff;
+    border-bottom: 1px solid #ddd;
+    flex: 0 0 auto;
+}
+
+.logo {
+    width: 50px;
+    height: 50px;
+}
+
+.title-section .main-title {
+    font-size: 1.4rem;
+    margin: 0;
+    color: #16325c;
+}
+
+.title-section .sub-title {
+    font-size: 0.85rem;
+    color: #5e5e5e;
+    margin: 0;
+}
+
+/* Tabs layout */
+.horizontal-tabs {
+    display: flex;
+    border-bottom: 1px solid #ddd;
+    background: #ffffff;
+    flex: 0 0 auto;
+    padding: 0.75rem 1rem;
+}
+
+/* Main tabs */
+.main-tab {
+    padding: 12px 16px;
+    margin-right: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    background-color: #f3f3f3;
+    border-bottom: 3px solid transparent;
+    transition: background-color 0.2s ease-in-out;
+    border-radius: 4px 4px 0 0;
+    color: #1a1a1a;
+}
+
+.main-tab:hover {
+    background-color: #7fb9ef;
+     transform: scale(1.3); /* Adjust scale as needed */
+}
+
+.main-tab.active-tab {
+    background-color: #2837a7; /* Green background for active */
+    
+    border-color: #1d4e7f;
+    
+}
+
+/* Sub-tabs (if any) */
+.sub-tab {
+    cursor: pointer;
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 4px;
+    background: #f4f6f9;
+    transition: background 0.2s;
+    font-size: 0.9rem;
+}
+
+.sub-tab:hover {
+    background-color: #e0e5ee;
+}
+
+/* Main content area */
+.content-panel {
+    flex: 1 1 auto;
+    overflow: auto;
+    padding: 1rem;
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+}
+
+.content-box {
+    background: #f8f8f8;
+    padding: 1.5rem;
+    border-radius: 8px;
+    width: 100%;
+}
+
+
+.section-heading {
+    
+    color: #2a2a2a;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.content-placeholder {
+    font-size: 1rem;
+    color: #666;
+}
+
+
+/* Remove outline from tabs */
+.main-tab:focus,
+.main-tab:active,
+.sub-tab:focus,
+.sub-tab:active {
+    outline: none;
+    box-shadow: none;
+}
+
+
+/* Remove outline or box-shadow from main container and content panel */
+.sop-container,
+.content-panel {
+    outline: none;
+}
+
+.sop-container:focus,
+.content-panel:focus {
+    outline: none;
+    box-shadow: none;
+}
+
+.tab-item {
+    padding: 1rem;
+    cursor: pointer;
+    border-left: 4px solid transparent;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    transition: background 0.2s ease-in-out;
+}
+.tab-item:hover {
+    background-color: #DEE2FF;
+    color: black;
+    border-radius:6px;
+    transform: scale(1.15);
+     transition: transform 0.3s ease-in-out;
+}
+.active-tab {
+    background-color: #DEE2FF;
+    color: black;
+    font-weight: 600;
+    border-radius:6px;
+     
+    
+}
+@media only screen and (max-width: 767px) {
+  .hide-on-mobile {
+    display: none !important;
+  }
+}

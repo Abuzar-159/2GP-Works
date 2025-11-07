@@ -1,0 +1,9 @@
+.dummyClass{color:black;}
+.cursor-pointer{
+    cursor:pointer;
+}
+
+.maqsood ul:not(.list-unstyled) {
+    margin: 5px;
+    padding: 10px;
+}

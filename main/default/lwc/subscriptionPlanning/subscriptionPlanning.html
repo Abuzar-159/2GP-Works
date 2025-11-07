@@ -1,0 +1,156 @@
+<template>
+     <div class="horizontal-tabs">
+
+          <div class={subscriptionAnalytics} onclick={selectSubscriptionAnalytics}> <lightning-icon
+                        icon-name='standard:customer_lifecycle_analytics'
+                        alternative-text='customer_lifecycle_analytics' size='small'
+                        title='customer_lifecycle_analytics'></lightning-icon> Product Subscription Analytics
+                </div>
+                  <div class={subscriptionManagement} onclick={selectSubscriptionManagement}> <lightning-icon
+                        icon-name='standard:customer_lifecycle_analytics'
+                        alternative-text='customer_lifecycle_analytics' size='small'
+                        title='customer_lifecycle_analytics'></lightning-icon> Product Subscription Management
+                </div>
+                
+                <div class={productsOrderSummary} onclick={selectProductsOrderSummary}><lightning-icon
+                        icon-name='standard:code_set_bundle' alternative-text='code_set_bundle' size='small'
+                        title='code_set_bundle'></lightning-icon> Products Order Details
+                </div>
+                <div class={subscribedProducts} onclick={selectSubscribedProducts}><lightning-icon icon-name='standard:code_set'
+                        alternative-text='code_set' size='small' title='code_set'></lightning-icon> Subscribed Products
+                    <!--Finance Overview & Credit/Debit Flow-->
+                </div>
+              
+                 
+                
+            </div>
+
+
+           <template if:true={isSubscribedProducts}>
+               <div class="slds-grid slds-wrap slds-m-bottom_medium slds-align_absolute-center">
+                    <div class="slds-col slds-size_2-of-3">
+                        <div class="section-heading">Subscribed Products</div>
+                        <div class="description">List of all active product subscriptions.</div>
+                    </div>
+                    <div class="slds-col slds-size_1-of-3 slds-align_absolute-center slds-text-align_right">
+                        <lightning-button label="Create Product"
+                                        icon-name="utility:add"
+                                        variant="brand"
+                                        onclick={handleCreateProduct}
+                                        class="slds-m-left_auto"></lightning-button>
+                    </div>
+                </div>
+                <template if:true={products}>
+                    <div class="slds-grid slds-wrap">
+                        <template for:each={products} for:item="product">
+                            <div key={product.Id} class="slds-col slds-size_1-of-3 slds-p-around_medium">
+                                <div class="product-card slds-box slds-theme_default slds-p-around_none">
+                                    <div class="product-image-container">
+                                        <img src={product.Picture__c} alt={product.Name} class="product-image" />
+                                    </div>
+                                    <div class="product-name slds-p-around_small slds-text-heading_small">
+                                        {product.Name}
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </template>
+
+                <template if:true={error}>
+                    <p class="slds-text-color_error slds-p-around_medium">⚠ Error loading products: {error.message}</p>
+                </template>
+            </template>
+
+
+
+
+            <template if:true={isProductsOrderSummary}>
+
+               <template if:true={orderItems}>
+                <div class="section-heading">Products Order Summary</div>
+                <div class="description">Detailed overview of all subscribed order items.</div>
+
+                <div class="slds-grid slds-wrap">
+                    <template for:each={orderItems} for:item="item">
+                        <div key={item.Id} class="slds-col slds-size_1-of-3 slds-p-around_medium">
+                            <div class="custom-card slds-box slds-theme_default slds-p-around_medium slds-m-bottom_medium">
+                                <div class="header slds-m-bottom_medium">
+                                    <span class="slds-badge slds-theme_info slds-m-right_x-small">Subscribed</span>
+                                    <h2 class="slds-text-heading_medium">{item.Product2.Name}</h2>
+                                    <p class="slds-text-body_small slds-text-color_weak">Order: {item.Order.Name}</p>
+                                </div>
+
+                                <div class="section slds-m-bottom_small">
+                                    <p><strong>Unit Price:</strong> {item.UnitPrice}</p>
+                                    <p><strong>Quantity:</strong> {item.Quantity}</p>
+                                </div>
+
+                                <div class="section slds-m-bottom_small totals-section">
+                                    <p><strong>Net Price:</strong> {item.Net_Price__c}</p>
+                                    <p><strong>Tax:</strong> {item.Total_Tax__c}</p>
+                                    <p class="total-amount"><strong>Total:</strong> {item.All_Total_Price__c}</p>
+                                </div>
+
+                                <div class="section slds-text-body_small slds-text-color_weak">
+                                    <p><strong>Start Date:</strong> {item.ServiceDate}</p>
+                                    <p><strong>End Date:</strong> {item.EndDate}</p>
+                                    <p><strong>Month Duration:</strong> {item.Month_Duration__c}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </template>
+
+
+                <template if:true={error}>
+                    <p class="slds-text-color_error">Error: {error.message}</p>
+                </template>
+            </template>
+
+            
+
+     <template if:true={isSubscriptionAnalytics}>
+    <lightning-card>
+        <div class="slds-grid slds-p-around_small slds-align-top slds-wrap">
+            <div class="slds-col slds-size_1-of-1 slds-grid slds-align-top">
+                <lightning-icon 
+                    icon-name="utility:chart" 
+                    alternative-text="Subscription Analytics" 
+                    size="small" 
+                    class="slds-m-right_small slds-m-top_xx-small">
+                </lightning-icon>
+                <div>
+                    <div class="slds-text-heading_small slds-text-color_default">
+                        Product Subscription Analytics
+                    </div>
+                    <div class="slds-text-body_small slds-text-color_weak">
+                        View insights and analytics for your product subscriptions.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="slds-p-around_medium">
+            <div class="slds-grid slds-wrap slds-gutters">
+                <div class="slds-col slds-size_1-of-2">
+                    <canvas class="top-products-chart"></canvas>
+                </div>
+                <div class="slds-col slds-size_1-of-2">
+                    <canvas class="subscription-chart"></canvas>
+                </div>
+            </div>
+        </div>
+    </lightning-card>
+</template>
+
+
+
+
+            <template if:true={isSubscriptionManagement}>
+                <div class="section-heading">Product Subscription Management</div>
+                <div class="description">Manage your product subscriptions here.</div>
+            </template>
+
+</template>

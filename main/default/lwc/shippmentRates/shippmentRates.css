@@ -1,0 +1,409 @@
+/*
+ * Custom styles for the shipping service selector component.
+ */
+
+.ui-container {
+    background-color: #f7f9fb; /* Light background for the overall component */
+    min-height: 100vh;
+}
+
+.header-section {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e5e5;
+    padding-bottom: 10px;
+    position: sticky; /* Sticky header for better UX, optional */
+    top: 0;
+    z-index: 10;
+}
+
+/* --- Left Column: Shipping Options --- */
+
+/* Carrier Chips (Filters) */
+.filter-carrier-container {
+    display: flex;
+    align-items: center;
+}
+
+.carrier-chips {
+    display: flex;
+    margin-left: 10px;
+}
+
+.carrier-chip {
+    padding: 4px 12px;
+    margin-right: 8px;
+    border-radius: 20px;
+    cursor: pointer;
+    border: 1px solid #d8dee6;
+    background-color: #ffffff;
+    transition: all 0.2s;
+    font-size: 0.75rem; /* Smaller font size for chips */
+    font-weight: 500;
+}
+
+.carrier-chip .carrier-label {
+    opacity: 0.5; /* Default inactive state */
+}
+
+/* Active Carrier Chips */
+.carrier-chip.fedex-active,
+.carrier-chip.ups-active,
+.carrier-chip.dhl-active,
+.carrier-chip.usps-active {
+    background-color: #0070d2; /* SLDS Brand Blue */
+    border-color: #0070d2;
+}
+
+.carrier-chip.fedex-active .carrier-label,
+.carrier-chip.ups-active .carrier-label,
+.carrier-chip.dhl-active .carrier-label,
+.carrier-chip.usps-active .carrier-label {
+    color: #ffffff;
+    opacity: 1;
+}
+
+/* Service Card Base */
+.service-card {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 8px;
+    border: 1px solid #d8dee6;
+    transition: border 0.1s ease-in-out;
+}
+
+.service-card:hover {
+    border-color: #0070d2;
+    cursor: pointer;
+}
+
+/* Selected Service Card */
+.service-card.selected-service-card {
+    border-color: #0070d2;
+    box-shadow: 0 0 0 2px #0070d2; /* Blue ring effect */
+}
+
+/* Dot Selector */
+.dot-selector {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid #0070d2;
+    position: relative;
+    background-color: #ffffff;
+}
+
+.selected-service-card .dot-selector::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background-color: #0070d2;
+}
+
+.alternative-dot {
+    border-color: #d8dee6; /* Grey dot for unselected */
+}
+
+/* Tag Labels (e.g., Most affordable) */
+.tag-label {
+    font-size: 0.75rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-right: 8px;
+    font-weight: 500;
+}
+
+.most-affordable {
+    background-color: #d7e4f4; /* Light Blue */
+    color: #0070d2; /* Darker Blue */
+}
+
+.reliable-delivery {
+    background-color: #e6f6e6; /* Light Green */
+    color: #04844b; /* Darker Green */
+}
+
+.priority-shipping, .tracking-included {
+    background-color: #f6f6f6; /* Light Grey */
+    color: #706e6b; /* Text Grey */
+}
+
+/* --- Right Column: Summary --- */
+
+.summary-column {
+    position: sticky;
+    top: 100px; /* Adjust based on header height */
+    align-self: flex-start; /* Keeps the card at the top */
+}
+
+.summary-card {
+    background-color: #ffffff;
+    border-radius: 8px;
+    padding: 30px;
+}
+
+.separator {
+    height: 1px;
+    background-color: #e5e5e5;
+}
+
+/* Selected Service Summary Box */
+.selected-service-summary {
+    background-color: #eff6ff;
+    border-radius: 6px;
+    border: 1px solid #bbd7fb;
+}
+
+/* Action Buttons */
+.ready-to-ship-btn {
+    width: 100%;
+    font-weight: bold;
+    padding: 10px;
+    height: auto; /* Override default button height */
+}
+
+.back-to-form-btn {
+    width: 100%;
+    border: none;
+    background: transparent;
+    text-decoration: underline;
+    text-align: center;
+    padding: 5px;
+}
+
+/* SLDS overrides for buttons */
+.slds-button_icon-border-filled {
+    background-color: #ffffff;
+    border-color: #d8dee6;
+    color: #706e6b;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 1024px) {
+    .summary-column {
+        position: static;
+        margin-top: 30px;
+    }
+}
+/*
+ * Custom styles for the shipping service selector component.
+ */
+
+/* ... (Existing CSS for ui-container, header-section, carrier-chips etc. remain) ... */
+
+/* Header-specific styles */
+.header-section {
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e5e5;
+    padding-bottom: 10px;
+    position: sticky; /* Sticky header for better UX, optional */
+    top: 0;
+    z-index: 10;
+}
+.sort-by-price-control {
+    display: flex;
+    align-items: center;
+    padding: 6px 12px;
+    border: 1px solid #d8dee6;
+    border-radius: 20px; /* Pill shape */
+    background-color: #ffffff;
+    cursor: pointer;
+    font-size: 0.8125rem; /* Matches slds-text-body_small */
+    color: #000000;
+    font-weight: 500;
+}
+
+.sort-by-price-control lightning-icon {
+    /* Adjust icon color and margin */
+    fill: currentColor; 
+    margin-left: 4px;
+    height: 12px;
+    width: 12px;
+}
+/* Weight Badge in Header */
+.weight-badge {
+    display: flex; /* Use flexbox for icon and text alignment */
+    align-items: center;
+    background-color: #f3f2f2; /* Light grey background */
+    border-radius: 20px; /* Pill shape */
+    padding: 4px 12px; /* Padding inside the badge */
+    font-size: 0.8125rem; /* Matches slds-text-body_small */
+    color: #706e6b; /* Text color for the badge */
+    font-weight: 500;
+}
+
+.weight-badge lightning-icon {
+    fill: currentColor; /* Inherit color from parent */
+    width: 16px; /* Adjust icon size */
+    height: 16px;
+    margin-right: 6px; /* Space between icon and text */
+}
+
+.weight-badge .slds-text-heading_small {
+    font-weight: 600; /* Make the '5 lbs' slightly bolder */
+    color: #3e3e3c; /* A bit darker for prominence */
+}
+/* Carrier Chips Container */
+.filter-carrier-container {
+    display: flex;
+    align-items: center;
+}
+
+.carrier-chips {
+    display: flex;
+    margin-left: 10px;
+}
+
+/* Custom Chip Styling for the slds-checkbox_faux element */
+.carrier-chip {
+    /* Styles for pill look, regardless of active state */
+    display: flex; 
+    align-items: center;
+    padding: 4px 12px;
+    margin-right: 8px; /* Spacing between chips */
+    border-radius: 20px;
+    cursor: pointer;
+    border: 1px solid #d8dee6;
+    background-color: #ffffff;
+    transition: all 0.2s;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+/* Inactive State Color */
+.carrier-chip:not(.active) {
+    color: #706e6b; /* Default text color (grey) */
+    opacity: 1; 
+}
+
+/* Active State Color (Matches original screenshot) */
+.carrier-chip.active {
+    background-color: #0070d2; /* SLDS Brand Blue */
+    border-color: #0070d2;
+    color: #ffffff; /* White text for active chips */
+    opacity: 1;
+}
+
+
+.slds-checkbox_toggle .slds-checkbox_faux {
+   
+    margin: 0; 
+    padding: 0;
+    border: none; 
+    background: transparent;
+    line-height: normal;
+    height: auto;
+}
+
+
+.slds-checkbox_toggle .slds-checkbox_faux::after {
+    display: none;
+}
+/* Custom styles for the isolated dropdown menu */
+.dropdown-menu-only {
+   
+    visibility: visible;
+    opacity: 1;
+   
+    box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1); 
+}
+
+
+.dropdown-menu-only .dropdown-option-text {
+   
+    font-size: 0.8125rem; 
+    color: #3e3e3c; 
+}
+
+
+.dropdown-menu-only .slds-icon-utility-check {
+    fill: #0070d2; 
+    width: 1rem;
+    height: 1rem;
+}
+
+
+.dropdown-menu-only .slds-is-selected {
+    background-color: #f3f2f2; 
+}
+.carrier-logo {
+    max-width: 80px; /* Standard size for main cards */
+    max-height: 50px;
+    height: auto;
+    object-fit: contain; /* Ensures logo fits without stretching */
+    display: block;
+}
+
+/* Smaller logo size for nested child cards */
+.carrier-logo.small {
+    max-width: 30px;
+}
+
+/* Base styles for dot selector and rotation (kept from previous steps) */
+.dot-selector {
+    width: 1rem;
+    height: 1rem;
+    border: 1px solid #c9c9c9;
+    border-radius: 50%;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.dot-selector.selected {
+    border-color: #0176d3;
+}
+
+.dot-selector.selected::after {
+    content: '';
+    width: 0.5rem;
+    height: 0.5rem;
+    background: #0176d3;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.rotate-up {
+    transform: rotate(180deg);
+    transition: transform 0.2s ease-in-out;
+}
+.slds-button_stretch {
+    width: 100% !important;
+}
+.sort-control-wrapper {
+    /* Existing Styles */
+    position: relative;
+    display: inline-flex; /* CHANGE: Use flex to align items */
+    align-items: center; /* CHANGE: Vertically center the text and icon */
+    
+    border: 1px solid #ddd;
+    border-radius: 9999px; /* Pill Shape */
+    padding: 8px 16px; 
+    background-color: white;
+    font-family: inherit;
+    font-size: .85rem;
+    font-weight: normal;
+    cursor: pointer;
+    /* Remove any existing padding/margin that interferes with flex alignment */
+}
+
+/* Ensure the transparent select box covers the icon too */
+.styled-select {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    padding: 8px 16px;
+}
