@@ -13,7 +13,7 @@ export default class SandOP extends LightningElement {
     // Main tabs
     @track isDemandTabOpen = true;
     @track isSupplyTabOpen = false;
-    @track isInventoryTabOpen = false;
+    @track isInventoryTabOpen = false;   
     @track isProductionTabOpen = false;
     @track isFinanceTabOpen = false;
     @track isExecutiveTabOpen = false;
