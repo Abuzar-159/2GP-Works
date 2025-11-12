@@ -1,0 +1,232 @@
+.THIS .border-1{
+    border:1px solid #ddd;
+}
+.THIS .width30{
+    width:30%;
+}
+.THIS p15{
+    padding:15px;font-size:14px;
+}
+.THIS .balian{
+    text-align:center;padding:10px;
+}
+.THIS .slds-card__header-title-extra{
+    font-size: 14px;color:#2196f3; 
+}
+.THIS .height500{
+    height:500px;
+}
+.THIS .width200{
+    width:200px;
+}
+
+.THIS .productname-truncate{
+    max-width:140px;color:#0070d2;cursor:pointer;white-space: normal;
+}
+.THIS .modalheightextras{
+    min-height:200px;max-height:450px;
+}
+.THIS .quote-main{
+    margin-bottom:0;display:flex;
+}
+.THIS .slds-card-extra{ 
+    background-color: #FFF;margin: 20px;border: 1px solid #f7f7f7; min-height: 410px;padding: 5px;
+}
+.THIS .slds-bg{
+    background-color: #fff;min-height: 593px;
+}
+.THIS p15{
+    padding:15px;font-size:14px;
+}
+.THIS .batchPos{
+    position: relative;right: 20px;
+}
+.THIS .mainskU{
+    display: inline-flex;width:100%;float:left;
+}
+.THIS .pwhID{
+    width:100%; height:auto;border-radius: 10px;
+}
+.THIS .pwh40{
+    width:40px; height:40px;
+}
+.THIS text-right{
+    text-align:right;
+}
+.THIS .pwh28{
+    width:28px;border-radius: 10px;height:28px;
+}
+.THIS .wh40{
+    width:40px !important;
+    height:40px !important;
+}
+.THIS .productname{
+    color:#0070d2;cursor:pointer;white-space: normal;
+    
+}
+.THIS .cursor-pointer{
+    cursor:pointer;
+}
+.THIS .width99{
+    width: 99%;
+}
+.THIS .width30{
+    width:30%;
+}
+.THIS .height375{
+    height: 375px;
+}
+.THIS .height223{
+    height:223px;
+}
+.THIS .height340{
+    height:340px;
+}
+.THIS .height342{
+		height: 342px;    
+        overflow-x: hidden;
+}
+.THIS .height45{
+   height: 45px; overflow-x: hidden;
+}
+.THIS .pb-5{
+    padding-bottom: 5px;
+}
+.THIS .text-center{
+    text-align:center;
+}
+.THIS .min-discount{
+    position: relative;top: 7px;left: 0px;
+}
+.THIS .max-width140{
+    max-width:140px;
+}
+.THIS .max-width140-2{
+    max-width:140px;color:#0070d2;cursor:pointer;
+}
+.THIS .mt-20{
+    margin-top:20px;
+}
+.THIS .p4{
+    padding:4px;
+}
+.THIS .pl-0{
+    padding-left:0px;
+}
+
+.THIS .p10{
+    padding: 10px;
+}
+.THIS .pr-10{
+     padding-right: 10px;
+}
+.THIS .pr20{
+    padding-right:20px;
+}
+.THIS .slds-text-heading_x-small{
+    margin-bottom:0px;
+    font-size:13px;
+    margin-right:30px;
+    color:#fff;
+}
+.THIS .displayblock{
+    display:block;
+}
+.THIS .displaynone{
+    display:none;
+}
+.THIS .displaynone1{
+    display:;
+}
+.THIS .slds-notify__close{
+    top:.25rem;
+}
+
+.THIS .slds-notify__close{
+    top:.25rem;
+}
+.THIS .slds-text-heading_x-small-extras{
+	margin-bottom:0px;font-size:13px;margin-right:30px;    
+}
+.THIS .slds-page-header{
+       background-color: #f3f3f3;
+    border: 0;
+}
+.THIS .slds-form-element__label{
+    font-weight:700;
+}
+
+.THIS .scroll-bar-wrap {
+	width: 100%;
+	position: relative;
+}
+
+.THIS .scroll-box {
+	width: 100%;
+	overflow-y: scroll;
+}
+
+.THIS .scroll-box::-webkit-scrollbar {
+	width: .6em;
+}
+
+.THIS .scroll-box::-webkit-scrollbar,
+.THIS .scroll-box::-webkit-scrollbar-thumb {
+	overflow: visible;
+	border-radius: 4px;
+}
+
+.THIS .scroll-box::-webkit-scrollbar-thumb {
+	background: rgba(0, 0, 0, .2); 
+}
+
+.THIS .opacity3{
+        background: rgb(249 249 250 / 64%) !important;
+}
+
+
+
+/* MAGIC HAPPENS HERE */
+
+.THIS .scroll-bar-wrap:hover .cover-bar {
+	opacity: 0 !important;
+	-webkit-transition: all .5s;
+}
+.THIS .custom-textarea{
+    border:1px solid #ddd;
+    width:100%;
+    border-radius:3px;
+}
+.THIS .nolble .slds-form-element__label:empty {
+    margin: 0;
+    display: none;
+}
+.THIS .nolble .slds-form-element__label {
+    margin: 0;
+    display: none;
+}
+.THIS .hasError{
+	border-color: rgb(194, 57, 52) !important;
+	box-shadow: rgb(194, 57, 52) 0 0 0 1px inset !important; 
+}
+.THIS .hasError1 input{
+    border-color: rgb(194, 57, 52) !important;
+	box-shadow: rgb(194, 57, 52) 0 0 0 1px inset !important;
+}
+
+.THIS .no-display .slds-form-element__label:empty{
+    display: none !important;
+}
+
+.THIS .no-display1 .slds-form-element__label{
+    display: none !important;
+}
+.THIS .inputWidth{
+    width: 70px;
+}
+.THIS .inputWidth1{
+    width: 60px;
+}
+.THIS .inputWidth3{
+    width: 110px;
+}

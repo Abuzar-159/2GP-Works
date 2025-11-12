@@ -1,0 +1,1306 @@
+<template>
+    <div class="ECPQ  cpqtheme cpq">
+
+        <template if:true={visible}>
+            <div class="slds-notify_container slds-is-fixed">
+                <div class="slds-notify slds-notify_toast slds-theme_success" role="success">
+                    <span class="slds-assistive-text">success</span>
+                    <span
+                        class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-middle"
+                        title="Description of icon when needed">
+                        <!-- <lightning-icon icon-name='utility:check' alternative-text='check' size='medium' title='check'></lightning-icon> -->
+                        <lightning-icon icon-name='utility:check' alternative-text='check' variant='inverse'
+                            size='small' title='check'></lightning-icon>
+                    </span>
+                    <div class="slds-notify__content">
+                        <span class="slds-text-heading_small ">Quote Save Successfully</span>
+                    </div>
+                    <div class="slds-notify__close">
+                        <lightning-icon icon-name='utility:close' alternative-text='close' variant='inverse'
+                            size='small' title='close' class="" onclick={closeToast}></lightning-icon>
+                        <span class="slds-assistive-text">Close</span>
+                    </div>
+                </div>
+            </div>
+
+        </template>
+        <template if:true={spinner}>
+            <lightning-spinner variant="brand" size="large"
+                alternative-text="Please wait while loading..."></lightning-spinner>
+        </template>
+
+        <div if:true={errorvisible}> <!--class="yourDiv"-->
+            <div class="slds-notify_container slds-is-fixed">
+                <div class="slds-notify slds-notify_toast slds-theme_error" role="status">
+                    <span class="slds-assistive-text">warning</span>
+                    <span
+                        class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-middle"
+                        title="Close">
+                        <lightning-icon icon-name="utility:error" alternative-text="Close" size="x-small" variant="bare"
+                            onclick={closeerror}></lightning-icon>
+                    </span>
+                    <div class="slds-notify__content">
+                        <span class="slds-text-heading_small color-white m-0">{Error_message}</span>
+                    </div>
+                    <div class="slds-notify__close">
+                        <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close">
+                            <lightning-icon icon-name="utility:close" alternative-text="Close" size="x-small"
+                                class="clickableIcon" variant="bare" onclick={closeerror}></lightning-icon>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+        <div if:true={isErrorList}> <!--class="yourDiv"-->
+            <div class="slds-notify_container slds-is-fixed">
+                <div class="slds-notify slds-notify_toast slds-theme_error" role="status">
+                    <span class="slds-assistive-text">warning</span>
+                    <span
+                        class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top"
+                        title="Close">
+                        <lightning-icon icon-name="utility:error" alternative-text="Close" size="x-small" variant="bare"
+                            onclick={closeErrorList}></lightning-icon>
+                    </span>
+                    <div class="slds-notify__content">
+                        <template for:each={errorList} for:item="error" for:index='ind' key={error}>
+                            <p class="slds-text-heading_small color-white mb-0" key={error}>{error}</p>
+                        </template>
+                    </div>
+                    <div class="slds-notify__close">
+                        <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close">
+                            <lightning-icon icon-name="utility:close" alternative-text="Close" size="x-small"
+                                class="clickableIcon" variant="bare" onclick={closeErrorList}></lightning-icon>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+        <template if:true={isCloneConfirmation}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open" aria-modal="true"
+                aria-describedby="modal-content-id-1">
+                <div class="slds-modal__container">
+                    <div class="slds-modal__content slds-p-around_medium text-center">
+                        <h3>Do you want to clone this Quote?</h3>
+                    </div>
+                    <footer class="slds-modal__footer text-center pt-2 pb-2">
+                        <lightning-button label={Nolabel} variant="neutral"
+                            onclick={closeCloneConfirmation}></lightning-button>
+                        <lightning-button variant="brand" label={YesLabel} onclick={cloneQuote}
+                            class="slds-m-left_x-small"></lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+        <template if:true={isMainPage}>
+            <div class="slim-mainpanel">
+                <div class="container-fluid bg-white">
+                    <div class="slim-pageheader">
+                        <ol class="breadcrumb slim-breadcrumb">
+                            <li if:true={quote.opportunities__c}><c-input-lookup obj-name="Opportunity"
+                                    icon-name="standard:opportunity" selected-record-id={quote.opportunities__c}
+                                    hide-remove="true" style="right:12px;"> </c-input-lookup> </li>
+                            <li if:true={showCloneIcon}><lightning-button icon-name="utility:form" variant="Neutral"
+                                    label={QtBtnLbl} class="slds-m-left_xx-small clickableIcon slds-m-right_small"
+                                    onclick={OpenQuoteDoc}></lightning-button></li>
+                            <li class="breadcrumb-item active" aria-current="page"> <lightning-button-icon
+                                    if:true={showCloneIcon} icon-name="action:clone" variant="brand"
+                                    alternative-text="Clone Quote" title="Clone Quote"
+                                    class="slds-m-left_xx-small clickableIcon slds-m-right_small"
+                                    onclick={openCloneConfirmation}></lightning-button-icon></li>
+                            <li if:true={showCloneIcon}><lightning-button-icon icon-name="utility:refresh"
+                                    alternative-text="Refresh Order" title="Fetch latest Quote data"
+                                    class="slds-m-left_xx-small clickableIcon slds-m-right_small"
+                                    onclick={RefreshQuote}></lightning-button-icon></li>
+                        </ol>
+                        <h6 class="slim-pagetitle slds-grid">
+                            &nbsp;{QLILabel}</h6>
+
+                    </div>
+
+                </div>
+                <div>
+                    
+                        <div class="slds-grid slds-wrap">
+
+                            <div class="col-md-4 pr-1 pl-1">
+
+                                <div class="cardmr p-3 mt-2 mb-1" >
+                                    <h6 class="slim-card-title tx-info">{QuoteLabel}</h6>
+                                    <div class="slds-grid slds-wrap">
+
+
+                                        <template if:true={quote.Id}>
+                                            <div
+                                                class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                                <c-input-lookup reset={resetQuote} obj-name="Quotes__c"
+                                                    icon-name="standard:quotes" selected-record-id={quote.Id}
+                                                    label-name={QuoteLabel} onlookupselected={quoteSelection}
+                                                    onremove={quoteRemove} hide-remove={isHide}> </c-input-lookup>
+                                            </div>
+                                        </template>
+                                        <template if:false={quote.Id}>
+                                            <template if:true={showQuote}>
+                                                <div
+                                                    class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                                    <c-input-lookup reset={resetQuote} obj-name="Quotes__c"
+                                                        icon-name="standard:quotes" selected-record-id={quote.Id}
+                                                        label-name={QuoteLabel} onlookupselected={quoteSelection}
+                                                        onremove={quoteRemove} hide-remove={isHide}> </c-input-lookup>
+                                                </div>
+                                            </template>
+                                        </template>
+
+                                        <!-- <template if:false={showQuote}>
+                                                <c-input-lookup reset={resetQuote} obj-name="Quotes__c" icon-name="standard:quotes" selected-record-id={quote.Id} label-name={QuoteLabel} onlookupselected={quoteSelection} onremove={quoteRemove} hide-remove={isHide}> </c-input-lookup>
+                                            </template> -->
+
+                                        <div
+                                            class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                            <div class="quote-main">
+                                                <label class="slds-form-element__label">{Quote_NameLabel}</label>
+                                            </div>
+                                            <template if:true={showQuote}><lightning-input value={quote.Name}
+                                                    placeholder={Quote_Name_placeholderLable} variant="label-hidden"
+                                                    maxlength="75" oncommit={nameHandle}></lightning-input></template>
+                                            <template if:false={showQuote}><lightning-input value={quote.Name}
+                                                    placeholder={Quote_Name_placeholderLable} variant="label-hidden"
+                                                    maxlength="75" oncommit={nameHandle}
+                                                    disabled="true"></lightning-input></template>
+                                        </div>
+
+                                        <div
+                                            class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                            <label class="slds-form-element__label">{Request_DateLabel}<label
+                                                    class="colorred">*</label></label>
+                                            <lightning-input type="date" value={quote.Request_Date__c}
+                                                variant="label-hidden" class={dateError}
+                                                onchange={requestedDateSelection} data-id="qtReqDate"></lightning-input>
+                                        </div>
+                                        <div
+                                            class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                            <label class="slds-form-element__label">{StatusLabel}<label
+                                                    class="colorred">*</label></label>
+                                            <lightning-combobox variant="label-hidden" value={quote.Status__c}
+                                                placeholder="Select Status..." options={quoteStatus}
+                                                onchange={statusSelection} data-id="qtStatus"></lightning-combobox>
+                                        </div>
+
+                                        <!--WHOLE QUOTE DISCOUNT-->
+                                        <div if:true={applywholeQuoteDiscount}
+                                            class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                            <label class="slds-form-element__label">DISCOUNT %</label>
+                                            <lightning-input type="number" variant="label-hidden"
+                                                onchange={handleDiscountQuote} maxlength="15" value={discountPercent}
+                                                disabled={isOrderActivated} step=".01"></lightning-input>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 pr-1 pl-1">
+                                <div class="cardmr p-3 mt-2 mb-1" >
+                                    <h6 class="slim-card-title tx-info">{customerLabel}</h6>
+                                    <div class="slds-grid slds-wrap">
+                                        <div
+                                            class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                            <c-input-lookup obj-name="Account" icon-name="standard:account"
+                                                required="true" selected-record-id={quote.Customer__c}
+                                                label-name={Customer_lookupLabel} qry={accountQuery}
+                                                onlookupselected={accountSelection} onremove={accountRemove}
+                                                data-id="qtCustomer"></c-input-lookup>
+                                        </div>
+                                        <div
+                                            class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                            <c-input-lookup obj-name="Contact" icon-name="standard:contact"
+                                                required="true" selected-record-id={quote.Contact__c}
+                                                label-name={Contact_lookUpLabel} qry={contactQuery}
+                                                onlookupselected={contactSelection} onremove={contactRemove}
+                                                data-id="qtContact"></c-input-lookup>
+                                        </div>
+                                        <div
+                                            class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                            <c-input-lookup obj-name="Profiling__c" icon-name="standard:people"
+                                                required="true" selected-record-id={quote.Order_Profile__c}
+                                                label-name={Customer_Profile_lookUpLabel} 
+                                                onlookupselected={profileSelection} onremove={profileRemove}
+                                                data-id="qtProfile" qry={orderProfileQuery}></c-input-lookup><!--qry={orderProfileQuery}-->
+                                        </div>
+                                        <div
+                                            class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                            <c-input-lookup obj-name="Employees__c" icon-name="utility:user"
+                                                selected-record-id={quote.Employee__c} label-name={Employee_LookUpLabel}
+                                                required="true" onlookupselected={employeeSelection}
+                                                onremove={employeeRemove} data-id="qtEmployee"></c-input-lookup>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4  pl-1 pr-1">
+                                <div class="cardmr p-3 mt-2 mb-1" >
+                                    <h6 class="slim-card-title tx-info">{addressLabel}</h6>
+                                    <div class="slds-grid slds-wrap">
+                                        <div
+                                            class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                            <c-input-lookup obj-name="Address__c" icon-name="standard:address"
+                                                selected-record-id={quote.Bill_To_Address__c}
+                                                label-name={Bill_To_Address_LookUpLabel} required="true"
+                                                qry={billToAddQuery} onlookupselected={billToSelection}
+                                                onremove={billToRemove} data-id="qtBillToAdd"></c-input-lookup>
+                                        </div>
+                                        <div
+                                            class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                            <c-input-lookup obj-name="Address__c" icon-name="standard:address"
+                                                selected-record-id={quote.Ship_To_Address__c}
+                                                label-name={Ship_To_Address_LookUpLabel} required="true"
+                                                qry={shipToAddQuery} onlookupselected={shipToSelection}
+                                                onremove={shipToRemove} data-id="qtShipToAdd"></c-input-lookup>
+                                        </div>
+                                        <div
+                                            class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                            <label class="slds-form-element__label">{Currency_PicklistLabel}<label
+                                                    class="colorred">*</label></label>
+                                            <lightning-combobox variant="label-hidden" value={quote.CurrencyIsoCode}
+                                                placeholder="Select Currency..." options={allCurrencies}
+                                                onchange={currencySelection} data-id="qtCurrency"></lightning-combobox>
+                                        </div>
+                                        <div
+                                            class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                            <label class="slds-form-element__label">{Description1Label}</label>
+                                            <lightning-textarea value={quote.Description__c} variant="label-hidden" placeholder="Description"
+                                                maxlength="1000" onblur={handleQuoteDescription}
+                                                style="height: 56px;"></lightning-textarea>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="cardmr p-0 mt-2">
+                            <div class="scroll-bar-wrap ">
+                                <div class="scroll-box  tblpdb">
+                                    <table class="slds-table slds-table-striped slds-table_fixed-layout slds-no-row-hover">
+                                        <thead>
+                                            <tr class="slds-text-title--caps">
+                                                <th bgcolor="#f3f3f3">
+                                                    <lightning-button class="border-grey" disabled={addButtonDisable}
+                                                        label={newbutton} variant="neutral" icon-name="utility:add"
+                                                        onclick={showAddProductsPageNormal}></lightning-button>
+                                                </th>
+
+                                                <th bgcolor="#f3f3f3" >
+                                                    <div class="slds-truncate" title={CODE1Labels}>{CODE1Labels}</div>
+                                                </th>
+                                                <th bgcolor="#f3f3f3">
+                                                    <div class="slds-truncate" title={PRODUCTLabels}>{PRODUCTLabels}
+                                                    </div>
+                                                </th>
+
+                                                <th bgcolor="#f3f3f3">
+                                                    <div class="slds-truncate" title={PRICELabels}>{PRICELabels}</div>
+                                                </th>
+                                                <th bgcolor="#f3f3f3">
+                                                    <div class="slds-truncate" title={QUANTITYLabels}>{QUANTITYLabels}
+                                                    </div>
+                                                </th>
+                                                <th bgcolor="#f3f3f3">
+                                                    <div class="slds-truncate" title={DISCOUNT_PLANLabels}>DISCOUNT PLAN
+                                                    </div>
+                                                </th>
+                                                <th if:true={ApplyDiscountTaxOnWholeQuote} bgcolor="#f3f3f3"
+                                                    width="13%">
+                                                    <div class="slds-truncate" title={DISCOUNT_UNITLabels}>
+                                                        {DISCOUNT_UNITLabels}</div>
+                                                </th>
+                                                <th if:true={ApplyDiscountTaxOnWholeQuote} bgcolor="#f3f3f3">
+                                                    <div class="slds-truncate" title={TAXLabels}>{TAXLabels}</div>
+                                                </th>
+                                                <th if:true={ApplyDiscountTaxOnWholeQuote} bgcolor="#f3f3f3">
+                                                    <div class="slds-truncate" title={NETLabels}>{NETLabels}</div>
+                                                </th>
+                                                <th bgcolor="#f3f3f3">
+                                                    <div class="slds-truncate" title={GROSSLabels}>{GROSSLabels}</div>
+                                                </th>
+                                                <th bgcolor="#f3f3f3" width="12%">
+                                                    <div class="slds-truncate" title={DESCRIPTION2Labels}>
+                                                        {DESCRIPTION2Labels}</div>
+                                                </th>
+                                                <th if:true={showOptions} bgcolor="#f3f3f3" width="9%">
+                                                    <div class="slds-truncate" title={ACTIONS}>Actions</div>
+                                                </th>
+                                                <!-- <th if:true={MarkFOCQuote} bgcolor="#f3f3f3" width="4%">
+                                                    <div class="slds-truncate" title="Mark As Free Of Charge">FOC</div> 
+                                                </th> -->
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template if:true={selectedProducts} for:each={selectedProducts}
+                                                for:item="spro" for:index="count">
+                                                <tr key={spro.keyValue} if:false={spro.isSubProd} class="cursor-pointer"
+                                                    draggable="true" ondragstart={handleDrag} ondrop={handleDrop}
+                                                    ondragover={allowDrop} data-index={count}>
+                                                    <td class="options">
+                                                        <div class="slds-grid">
+                                                           
+                                                                <div class="slds-col col-3 pl-1 pt-1">
+                                                                     <!--<span if:true={spro.enable}>
+                                                                    <lightning-icon icon-name='utility:chevronright'
+                                                                        class="white-bg clickableIcon pt-1"
+                                                                        onclick={ChevroIcontoggle} size="x-small"
+                                                                        data-index={count}></lightning-icon>
+                                                                    
+
+                                                                
+                                                            </span>--><!-- <div if:true={spro.SubBatch} class="badge badge-success ml-3">Subscribed</div> -->
+                                                            </div>
+                                                            <div class="slds-col slds-text-align_center">
+                                                                <lightning-icon class="cursor-pointer"
+                                                                    icon-name="action:delete"
+                                                                    alternative-text="Remove Item" data-index={count}
+                                                                    data-id={spro.Id} size="xx-small"
+                                                                    onclick={openDeleteModal}></lightning-icon>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="slds-truncate">
+                                                            <lightning-formatted-text if:true={spro.pbe.Product2}
+                                                                title="Product Code"
+                                                                value={spro.pbe.Product2.ProductCode}></lightning-formatted-text>
+                                                            <!-- &nbsp;<lightning-icon if:true={spro.showQtlnconfigBtn}
+                                                                icon-name="utility:preview" alternative-text="Preview"
+                                                                size="x-small" data-index={count} data-id={spro.Id}
+                                                                onclick={openviewconfig}
+                                                                title='View Configuration'></lightning-icon> -->
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="slds-truncate">
+                                                            <lightning-formatted-url value={spro.pbe.Product2.nameUrl}
+                                                                label={spro.pbe.Product2.Name}
+                                                                target="_blank"></lightning-formatted-url> &nbsp;
+                                                            <lightning-icon if:true={spro.SubBatch}
+                                                                icon-name='utility:success' alternative-text='preview'
+                                                                size='x-small' title='Subscribed Item'
+                                                                variant="success"></lightning-icon>
+                                                        </div>
+                                                    </td>
+
+                                                    <td>
+                                                        <lightning-input type="number" variant="label-hidden"
+                                                            formatter="currency" oncommit={handleUnitPriceSel}
+                                                            value={spro.pbe.UnitPrice} class={spro.pbe.UnitPriceClass}
+                                                            data-index={count} maxlength="15"
+                                                            step=".01"></lightning-input>
+                                                    </td>
+                                                    <td>
+                                                        <lightning-input type="number" variant="label-hidden"
+                                                            value={spro.quantity} oncommit={handleQuantitySel}
+                                                            data-index={count} class={spro.quantityClass} maxlength="8"
+                                                            step=".01"></lightning-input>
+                                                    </td>
+                                                    <td>
+                                                        <div>
+                                                            <lightning-combobox class='no-input-lable'
+                                                                value={spro.discountPlan}
+                                                                options={spro.CurrentDiscounts} data-index={index}
+                                                                onchange={applyDiscount}
+                                                                data-prodid={spro.pbe.Product2.Id}></lightning-combobox><!-- onchange={applyDiscountSel} -->
+                                                        </div>
+                                                    </td>
+                                                    <td if:true={ApplyDiscountTaxOnWholeQuote}>
+                                                        <div class="slds-grid">
+                                                            <lightning-input type="number" variant="label-hidden"
+                                                                value={spro.discountPercent}
+                                                                oncommit={handleDiscountSel} data-index={count}
+                                                                class={spro.discountClass}
+                                                                maxlength="15"></lightning-input>
+                                                            <div class="min-discount">
+                                                                <div if:true={spro.isPercent}>
+                                                                    [{spro.minDiscount}-{spro.maxDiscount}] %
+                                                                </div>
+                                                                <div if:false={spro.isPercent}>
+                                                                    [<lightning-formatted-number
+                                                                        value={spro.minDiscount} format-style="currency"
+                                                                        minimum-fraction-digits="0"
+                                                                        currency-code={quoteCurrency}></lightning-formatted-number>&nbsp;-&nbsp;<lightning-formatted-number
+                                                                        value={spro.maxDiscount} format-style="currency"
+                                                                        minimum-fraction-digits="0"
+                                                                        currency-code={quoteCurrency}></lightning-formatted-number>]
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                    </td>
+                                                    <td if:true={ApplyDiscountTaxOnWholeQuote}>
+                                                       
+                                                        <div class="slds-truncate slds-p-top_xx-small">
+                                                            <lightning-formatted-number value={spro.totalTaxAmount}
+                                                                format-style="currency"
+                                                                currency-code={quoteCurrency}></lightning-formatted-number>
+                                                        </div>
+                                                    </td>
+
+                                                    <td if:true={ApplyDiscountTaxOnWholeQuote}>
+                                                       
+                                                        <div class="slds-truncate slds-p-top_xx-small">
+                                                            <lightning-formatted-number value={spro.NetAmount}
+                                                                format-style="currency" maximum-fraction-digits="3"
+                                                                currency-code={quoteCurrency}
+                                                                currency-display-as="symbol"></lightning-formatted-number>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div class="slds-truncate slds-p-top_xx-small">
+                                                            <lightning-formatted-number value={spro.GrossAmount}
+                                                                format-style="currency" maximum-fraction-digits="3"
+                                                                currency-code={quoteCurrency}
+                                                                currency-display-as="symbol"></lightning-formatted-number>
+                                                        </div>
+                                                    </td>
+                                                    <td class="table-td">
+
+                                                        <lightning-textarea value={spro.pbe.Product2.Description}
+                                                            data-index={count} onblur={handleDescriptionSel}
+                                                            class="nolble mtm17"
+                                                            variant="label-hidden" placeholder="Description"></lightning-textarea>
+
+                                                    </td>
+
+                                                    <td if:true={showOptions}>
+
+                                                        <span class="slds-m-left_medium form-inline action-span">
+                                                            <lightning-input type="checkbox" variant="label-hidden"
+                                                                checked={spro.Optional_Item__c} onchange={onCheck}
+                                                                data-index={count} title="Mark as optional Item"
+                                                                class="cursor-pointer"></lightning-input>Optional
+                                                        </span>
+                                                        <span if:true={MarkFOCQuote}
+                                                            class="slds-m-left_medium form-inline action-span">
+                                                            <lightning-input type="checkbox" variant="label-hidden"
+                                                                checked={spro.FreeOfCharge__c} onchange={onCheckFOC}
+                                                                data-index={count} title="Mark as Free Of Charge"
+                                                                class="cursor-pointer"></lightning-input> FOC
+                                                        </span>
+
+                                                    </td>
+                                                    <!--td if:true={MarkFOCQuote}>
+                                                       <div class="">
+                                                        <span if:true={MarkFOCQuote} class="slds-m-left_medium">
+                                                            <lightning-input type="checkbox" variant="label-hidden" checked={spro.FreeOfCharge__c} onchange={onCheckFOC} data-index={count} title="Mark as Free Of Charge" class="cursor-pointer"></lightning-input> FOC
+                                                        </span>
+                                                    </div>
+                                                    </td-->
+                                                </tr>
+                                             <!--   commented by Saqlain because added one new latest code for IsSubscribed 
+                                                   <tr if:true={spro.IsSubscribed} key={spro.keyValue}>
+                                                    <td colspan="7">
+                                                        <div class="slds-grid slds-grid_align-center slds-wrap">
+                                                            <div
+                                                                class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_2-of-12 slds-p-bottom_small slds-p-top_small">
+                                                                <div><label>Subscription Plan</label></div>
+                                                                <c-input-lookup
+                                                                    obj-name="Product_Subscription_Plan_Allocation__c"
+                                                                    icon-name="custom:custom14"
+                                                                    search-placeholder="Search..."
+                                                                    onlookupselected={selecetedPlan}
+                                                                    onremove={removeplan}
+                                                                    selected-record-id={spro.PlanId} data-index={count}
+                                                                    data-id={spro.Id} qry={prodSubplan}
+                                                                    onclick={getrelatedplans}></c-input-lookup>
+                                                            </div>
+                                                            <div
+                                                                class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_2-of-12 slds-p-bottom_small slds-p-top_small slds-m-left_medium">
+                                                                <div><label>Duration in Month</label></div>
+                                                                <lightning-input type="number" variant="label-hidden"
+                                                                    value={spro.Plan_Duration} data-index={count}
+                                                                    maxlength="15" step=".01"
+                                                                    disabled="true"></lightning-input>
+                                                            </div>
+                                                            <div
+                                                                class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_2-of-12 slds-p-bottom_small slds-p-top_small slds-m-left_medium">
+                                                                <div><label>Order Frequency</label></div>
+                                                                <lightning-input type="text" variant="label-hidden"
+                                                                    value={spro.Order_frequency} data-index={count}
+                                                                    disabled="true"></lightning-input>
+                                                            </div>
+                                                            <div
+                                                                class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_2-of-12 slds-p-bottom_small slds-p-top_small slds-m-left_medium">
+                                                                <div><label>Start Date</label></div>
+                                                                <lightning-input type="Date" value={spro.startDate}
+                                                                    onchange={handleStartDateSel} data-index={count}
+                                                                    variant="label-hidden"
+                                                                    class="bgcontrol-input"></lightning-input>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>   -->
+
+                                            <!--Added this new latest code , Saqlain khan  -->
+                                                 <tr if:true={spro.IsSubscribed} key={spro.keyValue}>
+                                                    <td colspan="10">
+                                                        <div class="slds-grid slds-grid_align-center slds-wrap">
+                                                            <div
+                                                                class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_2-of-12 slds-p-bottom_small slds-p-top_small slds-m-left_medium">
+                                                                <div><label>Start Date</label></div>
+                                                                <lightning-input type="Date" value={spro.startDate}
+                                                                    onchange={handleStartDateSel} data-index={count}
+                                                                    disabled={isOrderActivated} variant="label-hidden"
+                                                                    class="bgcontrol-input"></lightning-input>
+                                                            </div>
+
+                                                            <div
+                                                                class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_2-of-12 slds-p-bottom_small slds-p-top_small slds-m-left_medium">
+                                                                <div><label>End Date </label></div>
+                                                                <!--c-input-lookup obj-name="Product_Subscription_Plan_Allocation__c" icon-name="custom:custom14" search-placeholder="Search..." onlookupselected={selecetedPlan} onremove={removeplan} selected-record-id={spro.PlanId} data-index={count} data-id={spro.Id} qry={spro.qryFilter}></c-input-lookup-->
+                                                                <lightning-input type="Date" value={spro.endDate}
+                                                                    onchange={handleEndDateSel} data-index={count}
+                                                                    disabled={isOrderActivated} variant="label-hidden"
+                                                                    class="bgcontrol-input"></lightning-input>
+                                                            </div>
+
+                                                            <div
+                                                                class="slds-col slds-size_1-of-1 slds-medium-size_4-of-12 slds-large-size_2-of-12 slds-p-bottom_small slds-p-top_small slds-m-left_medium">
+                                                                <div><label>Duration: </label></div>
+                                                                <div class="slds-p-top_x-small">
+                                                                    <span>{spro.Year} Years : </span> <span>{spro.Months}
+                                                                    Months : </span> <span>{spro.Days} Days </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+
+                                            </template>
+                                            <!-- <template if:false={isSelectedProducts}>                                            
+                                                <tr>
+                                                    <td colspan="11">
+                                                        <div>Quote Line not found</div>
+                                                    </td>
+                                                </tr> 
+                                            </template> -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-docked-form-footer">
+                            <lightning-button if:false={OppId} label={resetbutton} variant="neutral"
+                                onclick={resetAll}></lightning-button> &nbsp;
+                            <lightning-button if:true={OppId} label="Back" variant="neutral"
+                                onclick={BacktoOpp}></lightning-button> &nbsp;
+                            <lightning-button label={savebutton} variant="brand" onclick={saveQuoteAndLine}
+                                disabled={disableSaveButton}></lightning-button>&nbsp;
+                            <span if:false={HidePnLBtn}><lightning-button if:true={isShowPandL}
+                                    label={Calculate_P_Llabel} onclick={PandLView} variant="success"
+                                    icon-name="utility:freeze_column"
+                                    disabled={isSelectedProducts}></lightning-button></span>
+                        </div>
+
+                    
+                </div>
+            </div>
+        </template>
+
+        <!--Delete Order Item start-->
+        <template if:true={deleteConfirmation}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open" aria-modal="true"
+                aria-describedby="modal-content-id-1">
+                <div class="slds-modal__container">
+                    <div class="slds-modal__content slds-p-around_medium text-center">
+                        <h3>{Delete_Confirm_MsgLabel}</h3>
+                        <!--<lightning-icon icon-name="standard:recycle_bin" alternative-text="Delete Icon"></lightning-icon>-->
+                    </div>
+                    <footer class="slds-modal__footer text-center">
+                        <lightning-button label={CancelbuttonLabel} variant="neutral"
+                            onclick={closeDeleteModal}></lightning-button>
+                        <lightning-button variant="destructive" label={DeletebuttonLabel} title="Delete"
+                            onclick={removeLineItem} class="slds-m-left_x-small"></lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+        <template if:true={isListOfProdPg}>
+            <div class="container-fluid bg-white">
+                <div class="slim-pageheader">
+                    <ol class="breadcrumb slim-breadcrumb">
+
+                        <li class="breadcrumb-item slds-p-left_small">
+
+                            <div class="WCCPM12">
+                                <a class={DefaultListView} title="List view" data-tab="List" href="javascript:void(0);"
+                                    onclick={ShowListView}>
+                                    <i class="fa fa-list"></i>
+                                </a>
+                                <a class={DefaultGridView} title="Grid View" data-tab="Grid" href="javascript:void(0);"
+                                    onclick={ShowGridView}>
+                                    <i class="fa fa-th-large"></i>
+                                </a>
+                            </div>
+
+                        </li>
+                    </ol>
+
+                    <div class="slds-grid slds-wrap">
+                        <div class="slds-col slds-size_1-of-1 slds-large-size_12-of-12 ">
+                            <h6 class="slim-pagetitle slds-grid">
+                                &nbsp;{ADD_PRODUCTSLabel}</h6>
+
+                            <div class="slds-form-element ">
+                                <!--<label class="slds-form-element__label" for="name">{SearchName}</label>-->
+                                <div class="slds-form-element__control pt-2">
+                                    <div class="slds-grid">
+                                        <lightning-input type="text" label={productsearchLabel} value={searchItem}
+                                            oncommit={fetchProducts} class="width227"
+                                            placeholder={searchplaceholder}></lightning-input><!--onchange={assignSearchValue}-->
+                                        &nbsp;&nbsp;
+                                        <span if:false={ShowFamily}><lightning-combobox label={Family}
+                                                value={prodFamily} placeholder="Select Family..."
+                                                options={prodFamilyList} onchange={setProductFamily}
+                                                class="width227"></lightning-combobox></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!--div class="card-box paddinbtm ml-2 mr-2 shadow-sm"></div-->
+            <template if:true={Default_LisView}>
+                <table class="table table-striped slds-table_fixed-layout">
+                    <thead>
+                        <tr class="slds-text-title-caps">
+                            <th bgcolor="#f3f3f3" width="5%">
+
+                            </th>
+                            <th bgcolor="#f3f3f3" width="10%">
+
+                            </th>
+                            <th bgcolor="#f3f3f3" width="20%">
+                                <div class="slds-truncate" title={PRODUCTLabels}>{PRODUCTLabels}</div>
+                            </th>
+                            <th bgcolor="#f3f3f3" width="10%">
+                                <div class="slds-truncate" title={ProdCode}>{ProdCode}</div>
+                            </th>
+                            <th bgcolor="#f3f3f3" width="12%">
+                                <div class="slds-truncate" title={Price_UnitLabel}>{Price_UnitLabel}</div>
+                            </th>
+                            <th bgcolor="#f3f3f3" width="10%">
+                                <div class="slds-truncate" title={QUANTITYLabels}>{QUANTITYLabels}</div>
+                            </th>
+                            <th bgcolor="#f3f3f3" width="15%">
+                                <div class="slds-truncate" title={DISCOUNT_PLANLabels}>DISCOUNT PLAN</div>
+                            </th>
+                            <th if:false={ApplyDiscountTaxOnWholeQuote} bgcolor="#f3f3f3" width="13%">
+                                <div class="slds-truncate" title={DISCOUNT_UNITLabels}>{DISCOUNT_UNITLabels}</div>
+                            </th>
+                            <th bgcolor="#f3f3f3" width="18%">
+                                <div class="slds-truncate" title={DESCRIPTION2Labels}>{DESCRIPTION2Labels}</div>
+                            </th>
+
+                            <th bgcolor="#f3f3f3" if:false={ShowUOM} width="10%">
+                                <div class="slds-truncate" title={ProdUom}>{ProdUom}</div>
+                            </th>
+
+                            <th bgcolor="#f3f3f3" if:false={hideStockTableHeading} width="10%">
+                                <div class="slds-truncate" title={STOCKLabel}>STOCK</div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <template if:true={listOfProducts} for:each={listOfProducts} for:item="prod" for:index="index">
+
+                            <tr key={prod.pbe.Product2.Id} class="trbgColor2">
+                                <td scope="row" class="slds-text-align--right table-td">
+                                    <div class="slds-form-element">
+                                        <div class="slds-form-element__control">
+                                            <lightning-input type="checkbox" variant="label-hidden"
+                                                checked={prod.checkSelected} onchange={handleCheckbox}
+                                                data-index={index}
+                                                class="prodselect"></lightning-input><!-- onchange={checkboxSelect}-->
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <td class="table-td">
+                                    <div class="slds-truncate slds-line-clamp_medium">
+                                        <div class="slds-grid">
+                                        <!-- <lightning-formatted-url value={prod.pbe.Product2.nameUrl} data-index={index} label={prod.pbe.Product2.Name} target="_blank"></lightning-formatted-url> -->
+                                        &nbsp;<img if:true={prod.pbe.Product2.Picture__c}
+                                            src={prod.pbe.Product2.Picture__c} class="pwh40" />
+                                            <span class="slds-p-right_small">
+                                        &nbsp;<lightning-icon if:true={prod.pbe.Product2.Configure__c}
+                                            icon-name="utility:settings" alternative-text="Configure Product"
+                                            size="xx-small"></lightning-icon>
+                                            </span>
+                                        <span if:true={prod.pbe.Product2.Is_Subscribe__c} class="ribbon2 new"
+                                            data-aura-rendered-by="63:196;a">Subscribe</span>
+                                        <!--<span if:true={prod.pbe.Product2.Is_Subscribe__c} class="badge badge-success">Subscribe</span>-->
+                                     
+                                    <a if:true={prod.isSelConfiguration} onmouseover={showToolTip}
+                                        onmouseout={HideToolTip}><lightning-icon icon-name="utility:info"
+                                            alternative-text="Configuration icon" size='x-small'></lightning-icon>
+                                    </a>
+                                    <div if:true={prod.isSelConfiguration}>
+                                        <div if:true={tooltip}
+                                            class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left "
+                                            role="tooltip" style="position:relative; left: 0; top: 0px;">
+                                            <div class="slds-popover__body">
+                                                <template for:each={prod.selConfiguration} for:item="sc">
+                                                    <div key={sc}>{sc}</div>
+                                                </template>
+                                            </div>
+                                        </div>
+                                    </div>
+                                       </div>
+                                    </div>
+                                </td>
+                                <td class="table-td">
+
+                                    <div class="slds-truncate slds-line-clamp_medium">
+                                        <lightning-formatted-url value={prod.pbe.Product2.nameUrl} data-index={index}
+                                            label={prod.pbe.Product2.Name} target="_blank"></lightning-formatted-url>
+                                    </div>
+                                </td>
+                                <td class="table-td">
+                                    <div class="slds-truncate">
+                                        <lightning-formatted-text
+                                            value={prod.pbe.Product2.ProductCode}></lightning-formatted-text>
+                                    </div>
+                                </td>
+
+
+
+                                <td if:true={isSubscriptionProd} class="table-td">
+                                    <lightning-input type="Date" value={prod.startDate} onchange={handleEndDate}
+                                        data-index={index} class={prod.UnitPriceClass}></lightning-input>
+                                    <!-- <lightning-formatted-text value={prod.startDate} ></lightning-formatted-text> -->
+                                </td>
+                                <td if:true={isSubscriptionProd} class="table-td">
+                                    <lightning-formatted-text value={prod.endDate}></lightning-formatted-text>
+                                </td>
+
+                                <td class="table-td">
+                                    <div><lightning-input type="number" formatter="currency" value={prod.pbe.UnitPrice}
+                                            step=".01" oncommit={handleUnitPrice} data-index={index}
+                                            class={prod.UnitPriceClass} variant="label-hidden"></lightning-input> </div>
+                                </td>
+                                <td class="table-td">
+                                    <lightning-input type="number" value={prod.quantity} oncommit={handleQuantity}
+                                        data-index={index} data-prodid={prod.pbe.Product2.Id} step=".01" maxlength="8"
+                                        variant="label-hidden" class={prod.quantityClass}></lightning-input>
+                                </td>
+                                <td>
+                                    <div>
+                                        <lightning-combobox class='no-input-lable' value={prod.discountPlan}
+                                            options={prod.CurrentDiscounts} data-index={index} onchange={applyDiscount}
+                                            data-prodid={prod.pbe.Product2.Id}></lightning-combobox>
+                                    </div>
+                                </td>
+                                <td if:false={ApplyDiscountTaxOnWholeQuote} class="table-td">
+                                    <div class="slds-grid">
+                                        <lightning-input type="number" value={prod.discountPercent}
+                                            oncommit={handleDiscount} data-index={index} variant="label-hidden"
+                                            class={prod.discountClass}></lightning-input><!-- class="{!pro.discountPercent == '' ? 'hasError1 inputWidth1 no-display':'inputWidth1 no-display'}"-->
+                                        <div class="min-discount">
+                                            <div if:true={prod.isPercent}>[{prod.minDiscount}-{prod.maxDiscount}]%</div>
+                                            <div if:false={prod.isPercent}>
+                                                [<lightning-formatted-number value={prod.minDiscount}
+                                                    format-style="currency" minimum-fraction-digits="0"
+                                                    currency-code={orderCurrency}
+                                                    currency-display-as="symbol"></lightning-formatted-number>-<lightning-formatted-number
+                                                    value={prod.maxDiscount} format-style="currency"
+                                                    minimum-fraction-digits="0" currency-code={orderCurrency}
+                                                    currency-display-as="symbol"></lightning-formatted-number>]
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="table-td">
+
+                                    <lightning-textarea value={prod.pbe.Product2.Description} data-index={index}
+                                        onchange={handleDescriptionPSS} class="nolble mtm17"
+                                        variant="label-hidden" placeholder="Description"></lightning-textarea>
+
+                                </td>
+                                <td if:false={ShowUOM} class="table-td">
+                                    <lightning-formatted-text
+                                        value={prod.pbe.Product2.QuantityUnitOfMeasure}></lightning-formatted-text>
+                                </td>
+
+                                <td if:false={ShowStock} class="table-td">
+                                    <div if:true={prod.pbe.Product2.Track_Inventory__c} class={prod.Stock_Class}>
+                                        {prod.stock}
+                                    </div>
+                                    <!-- <div if:true={prod.isLicense} class={prod.Stock_Class}>
+                                    <span if:true={prod.msg}>Available Licenses : &nbsp;&nbsp;</span>{prod.License}
+                                </div> -->
+                                </td>
+                            </tr>
+                        </template>
+
+                        <!--template if:false={islistOfProdAvbl}>                            
+                        <tr>
+                            <td colspan="10">
+                                <div class="alert alert-warning d-flex align-items-center" role="alert">
+                                    <i class="mdi mdi-alert-circle-check icon-size-warning mr-2"></i>
+                                    <div>Product Not Available</div>
+                                </div>
+                            </td>
+                        </tr>
+                    </template-->
+                    </tbody>
+                </table>
+            </template>
+            <template if:true={Grid_view}>
+                <div class="maq mt-2 p-2">
+                    <div class="slds-grid slds-wrap pb-5">
+                        <template if:true={listOfProducts} for:each={listOfProducts} for:item="prod" for:index="index">
+                            <div key={prod.pbe.Product2.Id}
+                                class=" slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small">
+                                <ul>
+                                    <li>
+                                        <div class="card">
+                                            <!-- <img src="https://i.imgur.com/oYiTqum.jpg" class="card__image" alt="" /> -->
+                                            <!--img if:true={prod.pbe.Product2.Picture__c}
+                                                src={prod.pbe.Product2.Picture__c} class="card__image" /-->
+
+                                            <!--div class="card__overlay "-->
+                                                <div class="slds-grid p-2"> <!-- card__header-->
+                                                    <!--svg class="card__arc" xmlns="http://www.w3.org/2000/svg">
+                                                        <path />
+                                                    </svg-->
+
+                                                    <!-- <img class="card__thumb" src="https://i.imgur.com/7D7I6dI.png" alt="" /> -->
+                                                    <div class="slds-form-element col-2">
+                                                        <div class="slds-form-element__control "> <!-- card__thumb -->
+                                                            <lightning-input type="checkbox" variant="label-hidden"
+                                                                checked={prod.checkSelected} onchange={handleCheckbox}
+                                                                data-index={index}></lightning-input><!-- onchange={checkboxSelect}-->
+                                                        </div>
+                                                    </div>
+                                                    <div class="card__header-text col-10 pl-0 slds-truncate">
+                                                        <h3 class="card__title"><lightning-formatted-url
+                                                                value={prod.pbe.Product2.nameUrl} data-index={index}
+                                                                label={prod.pbe.Product2.Name}
+                                                                target="_blank"></lightning-formatted-url></h3>
+                                                        <span
+                                                            class="card__status float-right">&nbsp;&nbsp;&nbsp;<lightning-icon
+                                                                if:true={prod.pbe.Product2.Configure__c}
+                                                                icon-name="utility:settings"
+                                                                alternative-text="Configure Product"
+                                                                size="small"></lightning-icon></span>
+                                                        <div class="slds-grid">
+                                                            <div class="col-6 pl-0">
+                                                                <span>{PRICELabels} : <lightning-formatted-number
+                                                                        value={prod.pbe.UnitPrice}
+                                                                        format-style="currency"></lightning-formatted-number>
+                                                                </span>
+                                                                <div class={prod.Stock_Class}
+                                                                    if:true={prod.pbe.Product2.Track_Inventory__c}>
+                                                                    {prod.stock}
+                                                                </div>
+                                                            </div>
+                                                            <div class="col-6">
+                                                                <div if:true={isSubscriptionProd}>
+                                                                    <div class="subscribe-pill">
+                                                                        {SubscribeLabel}
+                                                                    </div>
+
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- <p class="card__description">Lorem ipsum dolor sit amet consectetur adipisicing elit. Asperiores, blanditiis?</p> -->
+                                                <div class="slds-grid">
+                                                    <div class="col-4">
+                                                        <div class="slds-truncate">
+                                                            <strong>{ProductCodeLabel}:</strong><br />
+                                                            <lightning-formatted-text
+                                                                value={prod.pbe.Product2.ProductCode}></lightning-formatted-text>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-8">
+                                                        <div if:false={isSubscriptionProd}>
+                                                            <lightning-formatted-text
+                                                                value={prod.pbe.Product2.QuantityUnitOfMeasure}></lightning-formatted-text>
+                                                        </div>
+                                                        <div if:true={isSubscriptionProd}>
+                                                            <lightning-formatted-text
+                                                                value={prod.startDate}></lightning-formatted-text>
+                                                        </div>
+                                                        <div if:true={isSubscriptionProd}>
+                                                            <lightning-formatted-text
+                                                                value={prod.endDate}></lightning-formatted-text>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+
+                                                <a if:true={prod.isSelConfiguration} onmouseover={showToolTip}
+                                                    onmouseout={HideToolTip}><lightning-icon icon-name="utility:info"
+                                                        alternative-text="Configuration icon"
+                                                        size='x-small'></lightning-icon>
+                                                </a>
+                                                <div if:true={prod.isSelConfiguration}>
+                                                    <div if:true={tooltip}
+                                                        class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left "
+                                                        role="tooltip" style="position:relative; left: 0; top: 0px;">
+                                                        <div class="slds-popover__body">
+                                                            <template for:each={prod.selConfiguration} for:item="sc">
+                                                                <div key={sc}>{sc}</div>
+                                                            </template>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+
+                                                <div class="slds-grid slds-wrap">
+                                                    <div class="col-6">
+                                                        <div>
+                                                            <strong>{PRICELabels}:</strong>
+                                                            <div><lightning-input type="number" formatter="currency"
+                                                                    value={prod.pbe.UnitPrice} step=".01"
+                                                                    oncommit={handleUnitPrice} data-index={index}
+                                                                    class={prod.UnitPriceClass}
+                                                                    variant="label-hidden"></lightning-input> </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <div>
+                                                            <strong>{QUANTITYLabels}:</strong>
+                                                            <lightning-input type="number" value={prod.quantity}
+                                                                oncommit={handleQuantity} data-index={index}
+                                                                data-prodid={prod.pbe.Product2.Id} step=".01"
+                                                                variant="label-hidden"
+                                                                class={prod.quantityClass}></lightning-input>
+                                                        </div>
+                                                    </div>
+                                                    <div if:false={ApplyDiscountTaxOnWholeQuote} class="col-6">
+                                                        <strong>{DiscountLabel}:</strong><br />
+                                                        <lightning-input type="number" value={prod.discountPercent}
+                                                            oncommit={handleDiscount} data-index={index}
+                                                            variant="label-hidden"
+                                                            class={prod.discountClass}></lightning-input><!-- class="{!pro.discountPercent == '' ? 'hasError1 inputWidth1 no-display':'inputWidth1 no-display'}"-->
+                                                        <div class="min-discount">
+                                                            <div if:true={prod.isPercent}>
+                                                                [{prod.minDiscount}-{prod.maxDiscount}]%</div>
+                                                            <div if:false={prod.isPercent}>
+                                                                [<lightning-formatted-number value={prod.minDiscount}
+                                                                    format-style="currency" minimum-fraction-digits="0"
+                                                                    currency-code={orderCurrency}
+                                                                    currency-display-as="symbol"></lightning-formatted-number>-<lightning-formatted-number
+                                                                    value={prod.maxDiscount} format-style="currency"
+                                                                    minimum-fraction-digits="0"
+                                                                    currency-code={orderCurrency}
+                                                                    currency-display-as="symbol"></lightning-formatted-number>]
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="col-6">
+                                                        <div>
+                                                            <div>
+                                                                <strong>{DescriptionLabel}:</strong>
+                                                                <lightning-textarea
+                                                                    value={prod.pbe.Product2.Description}
+                                                                    data-index={index} onblur={handleDescription}
+                                                                    class="nolble mtm17" placeholder="Description"></lightning-textarea>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+
+                                                <template if:true={prod.isPSSPbe} for:each={prod.PSSPbe}
+                                                    for:item="psPbe" for:index="pssCount">
+                                                    <div key={psPbe.keyValue} class="trbgColor">
+                                                        <div class="slds-text-align--right">
+                                                            <div class="slds-form-element">
+                                                                <div class="slds-form-element__control">
+                                                                    <lightning-input type="checkbox"
+                                                                        variant="label-hidden"
+                                                                        checked={psPbe.checkSelected}
+                                                                        onchange={handleCheckboxPSS} data-index={index}
+                                                                        data-count={pssCount}></lightning-input><!-- onchange={checkboxSelect}-->
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div class="slds-truncate">
+                                                                <lightning-formatted-text
+                                                                    value={psPbe.pbe.Product2.ProductCode}></lightning-formatted-text>
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div class="slds-truncate slds-line-clamp_medium">
+                                                                <lightning-formatted-url
+                                                                    value={psPbe.pbe.Product2.nameUrl}
+                                                                    data-index={index} label={psPbe.pbe.Product2.Name}
+                                                                    target="_blank"></lightning-formatted-url>
+                                                                <!-- &nbsp;<img if:true={psPbe.pbe.Product2.Picture__c} src={psPbe.pbe.Product2.Picture__c} class="pwh40"/>   -->
+                                                                &nbsp;<lightning-icon
+                                                                    if:true={psPbe.pbe.Product2.Configure__c}
+                                                                    icon-name="utility:settings"
+                                                                    alternative-text="Configure Product"
+                                                                    size="xx-small"></lightning-icon>
+                                                            </div>
+                                                            <a if:true={psPbe.isSelConfiguration}
+                                                                onmouseover={showToolTip}
+                                                                onmouseout={HideToolTip}><lightning-icon
+                                                                    icon-name="utility:info"
+                                                                    alternative-text="Configuration icon"
+                                                                    size='x-small'></lightning-icon>
+                                                            </a>
+                                                            <div if:true={psPbe.isSelConfiguration}>
+                                                                <div if:true={tooltip}
+                                                                    class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left "
+                                                                    role="tooltip">
+                                                                    <div class="slds-popover__body">
+                                                                        <template for:each={psPbe.selConfiguration}
+                                                                            for:item="sc">
+                                                                            <div key={sc}>{sc}</div>
+                                                                        </template>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                        </div>
+                                                        <div if:false={isSubscriptionProd}>
+                                                            <lightning-formatted-text
+                                                                value={psPbe.pbe.Product2.QuantityUnitOfMeasure}></lightning-formatted-text>
+                                                        </div>
+                                                        <div if:true={isSubscriptionProd}>
+                                                            {START_DATELabel} : <lightning-formatted-text
+                                                                if:true={psPbe.isSubProd}
+                                                                value={psPbe.startDate}></lightning-formatted-text>
+                                                        </div>
+                                                        <div if:true={isSubscriptionProd}>
+                                                            {END_DATELabel} : <lightning-formatted-text
+                                                                if:true={psPbe.isSubProd}
+                                                                value={psPbe.endDate}></lightning-formatted-text>
+                                                        </div>
+                                                        <div>
+                                                            <div class="stock-pill">
+                                                                {psPbe.stock}
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div><lightning-input type="number" formatter="currency"
+                                                                    value={psPbe.pbe.UnitPrice} step=".00"
+                                                                    oncommit={handleUnitPricePSS} data-index={index}
+                                                                    data-count={pssCount} class={psPbe.UnitPriceClass}
+                                                                    variant="label-hidden"></lightning-input> </div>
+                                                        </div>
+                                                        <div>
+                                                            <lightning-input type="number" value={psPbe.quantity}
+                                                                oncommit={handleQuantityPSS} data-index={index}
+                                                                data-count={pssCount}
+                                                                data-prodid={psPbe.pbe.Product2.Id} step=".01"
+                                                                variant="label-hidden"
+                                                                class={psPbe.quantityClass}></lightning-input>
+                                                        </div>
+                                                        <!--<td>
+																																																						<lightning-combobox  class='no-input-lable' value={psPbe.discountPlan} options={psPbe.CurrentDiscounts} onchange={handleDiscPlan} data-index={index} data-count={pssCount} data-prodid={psPbe.pbe.Product2.Id}></lightning-combobox>
+																																																				</td>-->
+
+                                                        <div class="slds-grid">
+                                                            <lightning-input type="number" value={psPbe.discountPercent}
+                                                                oncommit={handleDiscountPSS} data-index={index}
+                                                                data-count={pssCount} variant="label-hidden"
+                                                                class={psPbe.discountClass}></lightning-input><!-- class="{!pro.discountPercent == '' ? 'hasError1 inputWidth1 no-display':'inputWidth1 no-display'}"-->
+                                                            <div class="min-discount">
+                                                                <div if:true={psPbe.isPercent}>
+                                                                    [{psPbe.minDiscount}-{psPbe.maxDiscount}]%</div>
+                                                                <div if:false={psPbe.isPercent}>
+                                                                    [<lightning-formatted-number
+                                                                        value={psPbe.minDiscount}
+                                                                        format-style="currency"
+                                                                        minimum-fraction-digits="0"
+                                                                        currency-code={orderCurrency}
+                                                                        currency-display-as="symbol"></lightning-formatted-number>-<lightning-formatted-number
+                                                                        value={psPbe.maxDiscount}
+                                                                        format-style="currency"
+                                                                        minimum-fraction-digits="0"
+                                                                        currency-code={orderCurrency}
+                                                                        currency-display-as="symbol"></lightning-formatted-number>]
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div>
+                                                            <div>
+                                                                <lightning-textarea
+                                                                    value={psPbe.pbe.Product2.Description}
+                                                                    data-index={index} data-count={pssCount}
+                                                                    onblur={handleDescriptionPSS}
+                                                                    class='no-input-lable' placeholder="Description"></lightning-textarea>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            <!--/div-->
+                                        </div>
+
+                                    </li>
+                                </ul>
+
+
+                            </div>
+
+                        </template>
+                    </div>
+                </div>
+            </template>
+            <template if:false={islistOfProdAvbl}>
+
+                <div>
+                    <div class="alert alert-warning d-flex align-items-center" role="alert">
+                        <i class="mdi mdi-alert-circle-check icon-size-warning mr-2"></i>
+                        <div>Product Not Available</div>
+                    </div>
+                </div>
+
+            </template>
+
+
+            <div class="slds-docked-form-footer">
+                <lightning-button label={BackLabel} variant="neutral" onclick={backToMainPage}></lightning-button>
+                &nbsp;
+                <lightning-button icon-name='utility:checkout' class="slds-m-left_xx-small" label={AddproductSmallchar}
+                    variant="brand" onclick={addProducts} disabled={disableSaveButton}></lightning-button>&nbsp;
+            </div>
+        </template>
+
+        <template if:true={isConfPage}>
+            <c-product-configurator prod-for-config={prodForConfig} qt-profile={quote.Order_Profile__c}
+                onback={backToListOfProdPg} onconfigure={assignVersion}
+                onsendoptionslist={getSelectedOptions}></c-product-configurator><!--prod-for-config-id={prodForConfig.Product2.Id}-->
+        </template>
+
+        <template if:true={isShowCalPandL}>
+            <!--<c-input-lookup obj-name="Profiling__c" icon-name="standard:people" required="true" selected-record-id={quote.Order_Profile__c} label-name="Customer Profile" qry={orderProfileQuery} onlookupselected={profileSelection} onremove={profileRemove} data-id="qtProfile"></c-input-lookup>-->
+            <c-calculate-profit-and-loss selected-products={selectedProducts} profile-id={quote.Order_Profile__c}
+                version-list={versionList} products-list={productsList}
+                onback={backToMainPage}></c-calculate-profit-and-loss>
+        </template>
+
+        <template if:true={isDiscountPlanConfirmation}>
+            <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open" aria-modal="true"
+                aria-describedby="modal-content-id-1">
+                <div class="slds-modal__container">
+                    <div class="slds-modal__content slds-p-around_medium text-center">
+                        <h3 class="discount-clr">{Dicount_AlertLabel}&nbsp;{Product_Default_Discount}.</h3>
+                        <h5>{Approval_ConfirmLabel}</h5>
+                    </div>
+                    <footer class="slds-modal__footer text-center">
+                        <lightning-button label={Nolabel} variant="neutral"
+                            onclick={closeDiscountPlanConfirmation}></lightning-button>
+                        <lightning-button variant="brand" label={YesLabel} onclick={makeLineWaitingForApproval}
+                            class="slds-m-left_x-small"></lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+
+    </div>
+    <template if:true={viewConfig}>
+        <section class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container custom-modal-container">
+                <header class="slds-modal__header">
+                    <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                        title="Close" onclick={closeviewconfig}>
+                        <lightning-icon icon-name="utility:close" alternative-text="close" variant="inverse"
+                            size="small"></lightning-icon>
+                    </button>
+                    <h2 class="slds-text-heading_medium slds-hyphenate">Selected Items in Configuration</h2>
+                </header>
+
+                <div class="slds-modal__content slds-p-around_medium">
+                    <table
+                        class="slds-table slds-table_bordered slds-table_col-bordered slds-table_cell-buffer slds-no-row-hover">
+                        <thead>
+                            <tr>
+                                <th></th>
+                                <th width="5%"></th>
+                                <th>Product Name</th>
+                                <th>Unit Price</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template if:true={Quotelinelist} for:each={Quotelinelist} for:item="Qt" for:index="index1">
+                                <tr key={Qt.Id}>
+                                    <td class="tdtext-align">
+                                        <lightning-icon icon-name={QuotelineIcon} if:true={Qt.IsversionAvailable}
+                                            size="x-small" data-index={index1}
+                                            onclick={handleQuotelineIcon}></lightning-icon>
+                                    </td>
+                                    <td class="picwidth"><img if:true={Qt.QuotelinePicture} src={Qt.QuotelinePicture}
+                                            class="pwh40" /></td>
+                                    <td><b>{Qt.prodName}</b></td>
+                                    <td><b><lightning-formatted-number value={Qt.totalUnitPrice}
+                                                format-style="currency"></lightning-formatted-number></b> </td>
+                                    <td><b>{Qt.Quantity}</b></td>
+                                </tr>
+                            </template>
+                            <template if:true={showBomtable}>
+                                <template if:true={configoptions1} for:each={configoptions1} for:item="prod"
+                                    for:index="index1">
+                                    <tr key={prod.Id} data-index={index1} onclick={checkindex1}>
+                                        <td class="tdtext-align" bgcolor="#f3f3f3">
+                                            <span if:true={prod.showAddIcon}><lightning-icon
+                                                    icon-name='utility:jump_to_bottom' onclick={ChevroIcontoggleBOms}
+                                                    size="x-small" data-index={index1}
+                                                    data-id={prod.Id}></lightning-icon></span>
+                                        </td>
+                                        <td class="picwidth" bgcolor="#f3f3f3"><img
+                                                if:true={prod.BOM_Component__r.Picture__c}
+                                                src={prod.BOM_Component__r.Picture__c} class="pwh40" />
+                                        </td>
+                                        <td bgcolor="#f3f3f3"><b>{prod.Name}</b></td>
+                                        <td bgcolor="#f3f3f3"><b><lightning-formatted-number value={prod.Unit_Price__c}
+                                                    format-style="currency"></lightning-formatted-number></b> </td>
+                                        <td bgcolor="#f3f3f3"><b>{prod.Quantity__c}</b></td>
+                                    </tr>
+
+                                    <template if:true={prod.showlvl2}>
+                                        <template if:true={prod.RelatedChildBoms} for:each={prod.RelatedChildBoms}
+                                            for:item="L2" for:index="index">
+
+                                            <tr key={L2.Id} data-index={index} onclick={checkindex2}>
+                                                <td></td>
+                                                <td class="picwidth"><img if:true={L2.BOM_Component__r.Picture__c}
+                                                        src={L2.BOM_Component__r.Picture__c} class="pwh40" /> </td>
+                                                <td>{L2.Name}</td>
+                                                <td><lightning-formatted-number value={L2.Unit_Price__c}
+                                                        format-style="currency"></lightning-formatted-number></td>
+                                                <td>{L2.Quantity__c}</td>
+                                            </tr>
+
+                                        </template>
+                                    </template>
+                                </template>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                <footer class="slds-modal__footer text-center">
+                    <lightning-button variant="brand" label="Close" title="Close"
+                        onclick={closeviewconfig}></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+</template>

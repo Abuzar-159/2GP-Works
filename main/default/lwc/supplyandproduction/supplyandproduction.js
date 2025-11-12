@@ -3071,6 +3071,7 @@ initializeSupplyForecastChart(fiscalLabels, supply, demand, forecastedSupply, fo
 
     // Hide chart and show the illustration instead
     this.showChart = false;
+    this.showSpendCustomYearSelector = false;
 
     // Optionally, destroy any existing chart instance
    if (this.chart) {
@@ -3709,6 +3710,18 @@ const monthLabels = isFiscal && Array.isArray(this.fiscalLabels)
             onTimeData = monthLabels.map(label => deliveryMap[label].onTime);
             lateData = monthLabels.map(label => deliveryMap[label].late);
         }
+
+         // ✅ Determine if chart has real data
+    const hasRealData =
+        (onTimeData.some(v => v > 0) || lateData.some(v => v > 0));
+
+    if (!hasRealData) {
+        this.showChart = false; // Show SVG if empty
+        console.warn('No chart data available — showing SVG illustration.');
+        return;
+    }
+
+    this.showChart = true; // Show chart when data exists
 
         // Render the chart with either real or empty data
         this.chartInstances.onTimeDeliveryChart = new window.Chart(ctx, {

@@ -1,0 +1,387 @@
+<aura:component controller="ConvertQuoteToOrder" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,force:lightningQuickAction" access="global">
+    <head>
+        <ltng:require styles="/resource/cpqassets/cpqassets/css/ConvertQuoteToOrder.css"/>
+    </head>
+    
+    <aura:attribute name="quoteId" type="String" default=""/>
+    <aura:attribute name="quoteName" type="String" default=""/>
+    <aura:attribute name="recType" type="String" default=""/>
+    <aura:attribute name="errorMsg" type="String" default=""/>
+    <aura:attribute name="nameError" type="String" default=""/>
+    <aura:attribute name="priceError" type="String" default=""/>
+    <aura:attribute name="quanError" type="String" default=""/>
+    <aura:attribute name="discError" type="String" default=""/>
+    <aura:attribute name="order" type="Order" default="{sObjectType :'Order',Name:'',AccountId:'',Contact__c:'',Contact__r:{Id:'',Name:''},Order_Profile__c:'',Order_Profile__r:{Id:'',Name:''},Employee__c:'',Employee__r:{Id:'',Name:''},Status:'',Bill_To_Address__c:'',Bill_To_Address__r:{Id:'',Name:''},Ship_To_Address__c:'',Ship_To_Address__r:{Id:'',Name:''},Description:'',Type:''}"/>
+    <aura:attribute name="orderStatusoptions" type="List"/>
+    <aura:attribute name="orderTypeoptions" type="List"/>
+    <aura:attribute name="listOfQuoteLine" type="Object"/>
+    <aura:attribute name="DragIndex" type="String"/>
+    <aura:attribute name="OrderAlreadyCreated" type="String"/>
+    
+    <aura:handler name="init" value="{!this}" action="{!c.initial}"/>
+    <aura:attribute name="Spinner" type="boolean" default="false"/>
+    <aura:handler event="aura:waiting" action="{!c.showSpinner}"/>
+    <aura:handler event="aura:doneWaiting" action="{!c.hideSpinner}"/>
+    <aura:if isTrue="{!v.Spinner}">
+        <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.alternative_text}"/>        
+    </aura:if> 
+    <aura:if isTrue="{!v.listOfQuoteLine.length > 0}">
+    <div class="slds-bg">
+        
+        <div class="slds-page-header" id="myHeader" >
+            <div class="slds-grid">
+                <div class="slds-col slds-has-flexi-truncate">
+                    <div class="slds-media slds-no-space slds-grow">
+                        <div class="slds-media__figure">
+                            <lightning:icon iconName="standard:orders" alternativeText="{!$Label.c.Order}" title="Order"/>                                
+                        </div>
+                        <div class="slds-media__body">
+                            <p class="slds-text-title--caps slds-line-height--reset">{!$Label.c.Quotelookup} {!v.quoteName}</p>
+                            <h1 class="slds-page-header__title slds-m-right--small slds-align-middle" title="">{!$Label.c.QuoToOrd_Convert_to_Order}</h1>                        
+                        </div>
+                    </div>
+                </div>                    
+            </div>
+        </div>
+        <div class="{!if(and(v.errorMsg != '', v.errorMsg != undefined),'slds-notify_container slds-is-fixed displaynone1','slds-notify_container slds-is-fixed displaynone')}">
+            <div class="slds-notify slds-notify_toast slds-theme_error" role="status">
+                <span class="slds-assistive-text">{!$Label.c.QuoToOrd_error}</span>
+                <div class="slds-button slds-button_icon-inverse errorcolorOverride slds-p-right_small">
+                    <lightning:icon iconName="utility:error" variant="inverse" alternativeText="Error!" title="Error" size="x-small"/>
+                </div>
+                <div class="slds-notify__content">
+                    <h2 class="slds-text-heading_x-small ">{!v.errorMsg}
+                    </h2>
+                </div>
+                <div class="slds-notify__close">
+                    <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                        <lightning:buttonIcon iconName="utility:close"  variant="bare-inverse" title="Close" alternativeText="Close window"/>
+                        <span class="slds-assistive-text">{!$Label.c.Close}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        
+            <div class="slds-card slds-card-extra" >
+            
+        <div class="slds-grid slds-wrap"> 
+            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small"> 
+                <div class="quote-main">
+                    <label class="slds-form-element__label">{!$Label.c.QuoToOrd_Order_Name}</label></div>
+                <lightning:input value="{!v.order.Name}" placeholder="Order Name..." aura:id="orderName" variant="label-hidden" class="nolble" maxlength="75"/><!--class="{!'nolble '+v.nameError}" onchange="{!c.removeError}"-->
+            </div> 
+            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                <c:CustomInputLookUp objectAPIName="Account" placeholder="Search account..."  IconName="standard:account" required="true" selectedRecordId="{!v.order.AccountId}" label="{!$Label.c.Customer_lookup}" aura:id="currCustomer" qry=" AND Account_Type__c= 'Customer'" inputStyleclass=""/>
+            </div>
+            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                <c:CustomInputLookUp objectAPIName="Contact" placeholder="Search contact..." IconName="standard:contact" required="true" selectedRecordId="{!v.order.Contact__c}" label="Contact" aura:id="currContact" qry="{!' AND AccountId = \''+v.order.AccountId+'\''}" inputStyleclass=""/>
+            </div> 
+            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">        
+                <c:CustomInputLookUp objectAPIName="Profiling__c" placeholder="Search order profile..." IconName="standard:people" required="true" selectedRecordId="{!v.order.Order_Profile__c}" label="{!$Label.c.Order_Profile}" inputStyleclass="" aura:id="currProfile" qry="{!' AND RecordTypeId =\''+v.recType+'\''}"/>
+            </div>
+            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small"> 
+                <c:CustomInputLookUp objectAPIName="Employees__c" placeholder="Search employee..." IconName="utility:user" selectedRecordId="{!v.order.Employee__c}" label="{!$Label.c.Employee_LookUp}"/>
+            </div>
+            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">       
+                <lightning:select name="orderStatus"  label="{!$Label.c.Status}" aura:id="orderStatus" value="{!v.order.Status}" >
+                    <aura:iteration items="{!v.orderStatusoptions}" var="item">
+                        <option text="{!item}" value="{!item}"/>
+                    </aura:iteration>
+                </lightning:select> 
+            </div>    
+            
+            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                <c:CustomInputLookUp objectAPIName="Address__c" IconName="standard:address" required="true" selectedRecordId="{!v.order.Bill_To_Address__c}" label="{!$Label.c.Bill_To_Address_LookUp}" inputStyleclass="" aura:id="billToAdd"  qry="{!' AND Customer__c = \''+v.order.AccountId+'\'AND Is_Billing_Address__c = true'}"/>
+            </div> 
+            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                <c:CustomInputLookUp objectAPIName="Address__c" IconName="standard:address" required="true" selectedRecordId="{!v.order.Ship_To_Address__c}" label="{!$Label.c.Ship_To_Address_LookUp}" inputStyleclass="" aura:id="shipToAdd"  qry="{!' And Customer__c = \''+v.order.AccountId+'\'AND Is_Shipping_Address__c = true'}"/>
+            </div> 
+            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">       
+                <lightning:select name="ordertype"  label="{!$Label.c.QuoToOrd_Order_Type}" aura:id="orderType" value="{!v.order.Type}" >
+                    <aura:iteration items="{!v.orderTypeoptions}" var="item">
+                        <option text="{!item}" value="{!item}"/>
+                    </aura:iteration>
+                </lightning:select> 
+            </div>
+            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                <label class="slds-form-element__label">{!$Label.c.Description}</label>
+                <lightning:textarea aura:id="description" value="{!v.order.Description}" class="nolble" variant="label-hidden" maxlength="1000"/>                
+            </div> 
+        </div>
+        
+        <div>
+            <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-m-top_small">
+                <thead>
+                    <tr class="slds-text-title--caps">
+                        <th width="5%">
+                           
+                        </th>
+                        <th>
+                            <span class="slds-truncate" title="{!$Label.c.EPOS_Product_Code}">{!$Label.c.EPOS_Product_Code}</span> 
+                        </th>                    
+                        <th>
+                            <span class="slds-truncate" title="{!$Label.c.QuoToOrd_Product}">{!$Label.c.QuoToOrd_Product}</span> 
+                        </th>
+                        <th>
+                            <span class="slds-truncate" title="{!$Label.c.QuoToOrd_Availability}">{!$Label.c.QuoToOrd_Availability}</span> 
+                        </th>
+                        <th>
+                            <span class="slds-truncate" title="{!$Label.c.QuoToOrd_Price}">{!$Label.c.QuoToOrd_Price}</span> 
+                        </th>
+                        <th>
+                            <span class="slds-truncate" title="{!$Label.c.Cost_Card_Quantity}">{!$Label.c.Cost_Card_Quantity}</span> 
+                        </th>
+                        <th>
+                            <span class="slds-truncate" title="{!$Label.c.Discount_Plan}">{!$Label.c.Discount_Plan}</span> 
+                        </th>
+                        <th>
+                            <span class="slds-truncate" title="{!$Label.c.Discount_Unit}">{!$Label.c.Discount_Unit}</span> 
+                        </th>
+                        <th>
+                            <span class="slds-truncate" title="{!$Label.c.Tax}">{!$Label.c.Tax}</span> 
+                        </th>
+                        <th>
+                            <span class="slds-truncate" title="{!$Label.c.NET}">{!$Label.c.NET}</span> 
+                        </th>
+                        <th>
+                            <span class="slds-truncate" title="{!$Label.c.Gross}">{!$Label.c.Gross}</span> 
+                        </th>
+                        <!--<th>
+                            <span class="slds-truncate" title="Total Price">Total Price</span> 
+                        </th>-->
+                        <th width="10%">
+                            <span class="slds-truncate" title="{!$Label.c.QuoToOrd_Line_Description}">{!$Label.c.QuoToOrd_Line_Description}</span> 
+                        </th>
+                    </tr>            
+                </thead>
+                <tbody>
+                    <aura:if isTrue="{!v.listOfQuoteLine.length > 0}">
+                        <aura:iteration items="{!v.listOfQuoteLine}" var="qtpro" indexVar="count">
+                            <tr id="{!count}" class="cursor-pointer">
+                                <td>
+                                    <div>{!count + 1}</div> <!-- Serial number -->
+                                </td>
+                                <td>
+                                    <div title="Product Code" class="slds-truncate">
+                                        <ui:outputText value="{!qtpro.qtLine.Product__r.ProductCode}"/>                                                
+                                    </div>                                        
+                                </td>
+                                <td>
+                                    <div title="Product" class="productname slds-truncate" >
+                                        <ui:outputText value="{!qtpro.qtLine.Product__r.Name}" click="{!c.NavRecord}" title="{!qtpro.qtLine.Product__r.Id}"/>  
+                                        <aura:if isTrue="{!(qtpro.qtLine.Product__r.Picture__c != undefined)}">
+                                            &nbsp;<img src="{!qtpro.qtLine.Product__r.Picture__c}" class="pwh40"/>
+                                        </aura:if>
+                                    </div>                                        
+                                </td>
+                                <td>
+                                    <div>
+                                        <aura:if isTrue="{!qtpro.stock == 0}">
+                                            <aura:if isTrue="{!qtpro.qtLine.Product__r.Allow_Back_Orders__c}">
+                                                <ui:outputText value="Back Order"/>
+                                                <aura:set attribute="else">
+                                                    <ui:outputText value="{!qtpro.stock}"/>
+                                                </aura:set>
+                                            </aura:if>
+                                            <aura:set attribute="else">
+                                                <ui:outputText value="{!qtpro.stock}"/>
+                                            </aura:set>
+                                        </aura:if>      
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <lightning:input type="number" formatter="currency" onchange="{!c.handleUnitPrice}" value="{!qtpro.qtLine.List_Price__c}" class="{!qtpro.qtLine.List_Price__c == '' ? 'hasError1 no-display1 inputWidth3':'no-display1 inputWidth3'}" maxlength="15"/>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <lightning:input type="number" value="{!qtpro.qtLine.Quantity__c}" onchange="{!c.handleQuantity}" title="{!count}" class="{!qtpro.qtLine.Quantity__c == '' ? 'hasError1 inputWidth no-display1':'inputWidth no-display1'}" maxlength="15"/>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <lightning:select onchange="{!c.handleDiscPlan}" title="{!qtpro.qtLine.Product__r.Id}" class="no-display1">
+                                            <aura:iteration items="{!qtpro.CurrentDiscounts}" var="cd"> 
+                                                <option value="{!cd.value}" text="{!cd.label}" selected="{!cd.value == qtpro.discountPlan}"></option> <!--{!cd.value == qtpro.qtLine.Discount_Plan__c}-->                                      
+                                            </aura:iteration>
+                                        </lightning:select>                                                    
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="slds-grid">
+                                        <lightning:input type="number" value="{!qtpro.discountPercent}" onchange="{!c.handleDiscount}" title="{!count}" class="{!qtpro.discountPercent == '' ? 'hasError1 inputWidth1 no-display1':'inputWidth1 no-display1'}" maxlength="15"/><!--  -->
+                                        <div class="min-discount">
+                                            [{!qtpro.minDiscount}-{!qtpro.maxDiscount}]
+                                            <aura:if isTrue="{!(qtpro.isPercent == true)}">%</aura:if>
+                                        </div>
+                                    </div>                                    
+                                </td>
+                                <td>
+                                	<div>
+                                        <lightning:formattedNumber value="{!(qtpro.vatAmount+qtpro.otherTax)}" style="currency"/>                                                                                              
+                                    </div>
+                                </td>
+                                <!--
+                                <td>
+                                    <div>
+                                        <aura:if isTrue="{!qtpro.isPercent}">
+                                            <ui:outputCurrency value="{!((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c-(((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c)*qtpro.discountPercent)/100)))}"/>
+                                            <aura:set attribute="else">
+                                                <ui:outputCurrency value="{!(((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c)-(qtpro.qtLine.Quantity__c*qtpro.discountPercent)))}"/>   
+                                            </aura:set>
+                                        </aura:if>                                                                                                 
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <aura:if isTrue="{!qtpro.isPercent}">
+                                            <ui:outputCurrency value="{!((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c-(((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c)*qtpro.discountPercent)/100)+(qtpro.vatAmount+qtpro.otherTax)))}"/>
+                                            <aura:set attribute="else">
+                                                <ui:outputCurrency value="{!(((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c)-(qtpro.qtLine.Quantity__c*qtpro.discountPercent)+(qtpro.vatAmount+qtpro.otherTax)))}"/>   
+                                            </aura:set>
+                                        </aura:if>                                                                                                 
+                                    </div>
+                                </td>-->
+                                <td>
+                                    <div>
+                                        <aura:if isTrue="{!qtpro.qtLine.Product__r.Is_Subscribe__c}">
+                                            <aura:if isTrue="{!qtpro.isPercent}">
+                                                <ui:outputCurrency value="{! ( ( ( ( qtpro.qtLine.List_Price__c * qtpro.qtLine.Quantity__c * qtpro.qtLine.Month_Duration__c ) + ( qtpro.qtLine.List_Price__c * qtpro.qtLine.Quantity__c * qtpro.qtLine.Duration_in_Days__c / 30 ) ) - ( ( ( ( qtpro.qtLine.List_Price__c * qtpro.qtLine.Quantity__c * qtpro.qtLine.Month_Duration__c ) + ( qtpro.qtLine.List_Price__c * qtpro.qtLine.Quantity__c * qtpro.qtLine.Duration_in_Days__c / 30 ) ) * qtpro.discountPercent ) / 100 ) ) ) }"/>
+                                                <aura:set attribute="else">
+                                                    <ui:outputCurrency value="{! ( ( ( qtpro.qtLine.List_Price__c * qtpro.qtLine.Quantity__c * qtpro.qtLine.Month_Duration__c ) + ( qtpro.qtLine.List_Price__c * qtpro.qtLine.Quantity__c * qtpro.qtLine.Duration_in_Days__c / 30 ) ) - ( qtpro.qtLine.Quantity__c * qtpro.discountPercent ) ) }"/>
+                                                </aura:set>
+                                            </aura:if> 
+                                            
+                                            <aura:set attribute="else">
+                                                <aura:if isTrue="{!qtpro.isPercent}">
+                                                    <ui:outputCurrency value="{!((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c-(((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c)*qtpro.discountPercent)/100)))}"/>
+                                                    <aura:set attribute="else">
+                                                        <ui:outputCurrency value="{!(((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c)-(qtpro.qtLine.Quantity__c*qtpro.discountPercent)))}"/>
+                                                    </aura:set>
+                                                </aura:if>  
+                                            </aura:set>
+                                        </aura:if>                                                                                                  
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <aura:if isTrue="{!qtpro.qtLine.Product__r.Is_Subscribe__c}">
+                                            <aura:if isTrue="{!qtpro.isPercent}">
+                                                <ui:outputCurrency value="{! ( ( ( qtpro.qtLine.List_Price__c * qtpro.qtLine.Quantity__c * qtpro.qtLine.Month_Duration__c ) + ( qtpro.qtLine.List_Price__c * qtpro.qtLine.Quantity__c * qtpro.qtLine.Duration_in_Days__c / 30 ) ) - ( ( ( qtpro.qtLine.List_Price__c * qtpro.qtLine.Quantity__c * qtpro.qtLine.Month_Duration__c ) + ( qtpro.qtLine.List_Price__c * qtpro.qtLine.Quantity__c * qtpro.qtLine.Duration_in_Days__c / 30 ) ) * qtpro.discountPercent ) / 100 ) + (qtpro.vatAmount + qtpro.otherTax) }"/>
+                                                <aura:set attribute="else">
+                                                    <ui:outputCurrency value="{!(((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c)-(qtpro.qtLine.Quantity__c*qtpro.discountPercent)+(qtpro.vatAmount+qtpro.otherTax)))}"/>   
+                                                </aura:set>
+                                            </aura:if>
+                                            <aura:set attribute="else">
+                                                <aura:if isTrue="{!qtpro.isPercent}">
+                                                    <ui:outputCurrency value="{!((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c-(((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c)*qtpro.discountPercent)/100)+(qtpro.vatAmount+qtpro.otherTax)))}"/>
+                                                    <aura:set attribute="else">
+                                                        <ui:outputCurrency value="{!(((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c)-(qtpro.qtLine.Quantity__c*qtpro.discountPercent)+(qtpro.vatAmount+qtpro.otherTax)))}"/>   
+                                                    </aura:set>
+                                                    
+                                                </aura:if>
+                                            </aura:set>
+                                        </aura:if>
+                                    </div>
+                                </td>
+                                <!--<td>
+                                    <div>
+                                        <aura:if isTrue="{!qtpro.isPercent}">
+                                            <ui:outputCurrency value="{!((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c-(((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c)*qtpro.discountPercent)/100)+(qtpro.vatAmount+qtpro.otherTax)))}"/>
+                                            <aura:set attribute="else">
+                                                <ui:outputCurrency value="{!(((qtpro.qtLine.List_Price__c*qtpro.qtLine.Quantity__c)-(qtpro.qtLine.Quantity__c*qtpro.discountPercent)+(qtpro.vatAmount+qtpro.otherTax)))}"/>   
+                                            </aura:set>
+                                        </aura:if>                                                                                                 
+                                    </div>
+                                </td>-->
+                                <td>
+                                    <div>
+                                        <lightning:textarea value="{!qtpro.qtLine.Description__c}" class="nolble" maxlength="1000"/>
+                                    </div>
+                                </td>
+                                
+                               
+                            </tr>
+                            <!-- New change getting added start date , end date & duration in convert to order screen -->
+                            
+                            <aura:if isTrue="{!qtpro.qtLine.Is_Subscribe__c}">
+                                <tr class="subscribed-dates-row"><!-- should add design in css -->
+                                    <td colspan="12">
+                                        
+                                            <div class="slds-grid slds-wrap slds-gutters">
+                                                <div class="slds-col slds-size_1-of-2 slds-medium-size_2-of-12"></div>
+                                                <div class="slds-col slds-size_1-of-2 slds-medium-size_3-of-12">
+                                                    <p><strong>Start Date:</strong></p>
+                                                    <lightning:input type="date" value="{!qtpro.qtLine.Start_Date__c}" label=" " variant="label-hidden" disabled="true"/>
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-2 slds-medium-size_3-of-12">
+                                                    <p><strong>End Date:</strong></p>
+                                                    <lightning:input type="date" value="{!qtpro.qtLine.End_Date__c}" label=" " variant="label-hidden" disabled="true"/>
+                                                </div>
+                                                <!--<div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4">
+                                                    <p><strong>Duration in Months:</strong></p>
+                                                    <lightning:input value="{!qtpro.qtLine.Month_Duration__c}" label=" " disabled="true"/>
+                                                </div>
+                                                <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-4">
+                                                    <p><strong>Duration in Days:</strong></p>
+                                                    <lightning:input value="{!qtpro.qtLine.Duration_in_Days__c}" label=" " disabled="true"/>
+                                                </div>-->
+                                                <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-top_small slds-p-bottom_small slds-m-left_medium">
+                                                    <div>
+                                                        <label><strong>Duration:</strong></label>
+                                                    </div>
+                                                    <span>{!qtpro.qtLine.Month_Duration__c} Months </span>
+                                                    <span>{!qtpro.qtLine.Duration_in_Days__c} Days</span>
+                                                </div>
+                                            </div>
+                                                
+                                       
+                                    </td>
+                                </tr>
+                            </aura:if>
+
+                            <!-- to here -->
+                            
+                        </aura:iteration>
+                        <aura:set attribute="else">
+                            <div>
+                                <ui:message severity="warning" closable="false">
+                                    {!$Label.c.QuoToOrd_Line_items_not_available}
+                                </ui:message>
+                            </div>
+                        </aura:set>
+                    </aura:if>
+                </tbody>
+            </table>
+            <br/>
+        </div>
+        
+        <div class="slds-p-top--small"></div>
+        <div class="slds-docked-form-footer opacity3">            
+            <lightning:button label="{!$Label.c.SaveBtn}" variant="brand" class="slds-button slds-button--brand" onclick="{!c.saveOrderAndLine1}" disabled="{!v.listOfQuoteLine.length == 0 ? true : false}"/>&nbsp;          
+            <lightning:button label="{!$Label.c.Cancel}"  class="slds-button slds-button--neutral border-1" onclick="{!c.goBack}"/>                
+        </div>        
+    </div>
+        
+        
+        
+    </div>
+        </aura:if>
+    
+    <!--remove item confirmation modal-->
+    <section aura:id="delModal" role="dialog" tabindex="-1" aria-labelledby="delModalHeading" aria-modal="true" aria-describedby="delModalBody" class="slds-modal slds-modal_xx-small">
+        <div class="slds-modal__container width30">            
+            <div class="slds-modal__content">     <!-- slds-p-around_xx-small-->          
+                <div class="row justify-content-center p15" style="text-align: center">                        
+                    {!v.OrderAlreadyCreated}<br/><br/>
+                </div>
+                <div class="balian">
+                    <lightning:button label="{!$Label.c.Cancel}" onclick="{!c.backToQuote}" variant="neutral"/>	
+                </div>
+            </div>            
+        </div>
+    </section>  
+    <div aura:id="delModalBackdrop" class="slds-backdrop"></div>
+</aura:component>
