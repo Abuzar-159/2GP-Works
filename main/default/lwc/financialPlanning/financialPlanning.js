@@ -37,7 +37,7 @@ import getMonthlyCreditDebitSummaryForFiscalYear from '@salesforce/apex/financia
 
 export default class FinancialTabs extends NavigationMixin(LightningElement) {
 
-
+ @track projectSelected = false; 
     @track isSimulatedBudgetVisible = false;    
         @track chartData;
     @track summaryTableData = {};
@@ -351,6 +351,7 @@ selectNewBudget() {
 
   selectNewPlanning() {
         this.resetTabs();
+        this.resetSimulation();
         this.selectedChartOfAccount = {};
         this.selectedProject = {};
         this.projectFilter = '';
@@ -930,31 +931,35 @@ scrollToSimulationTable() {
 // }
 
 
- handlesimulatedProjectSelected(event) {
-        const selected = event.detail;
-        this.simulatedProject = selected;
-        console.log('🔄 Simulated Project Selected:', JSON.stringify(selected, null, 2));
+handlesimulatedProjectSelected(event) {
+    const selected = event.detail;
+    this.simulatedProject = selected;
+    console.log('🔄 Simulated Project Selected:', JSON.stringify(selected, null, 2));
 
-        if (selected?.Id) {
-            this.fetchProjectBudget(selected.Id);
-        }
-         this.isSimulationTableVisible = true; 
-         this.issliderVisible = true;
-
-
+    if (selected?.Id) {
+        this.fetchProjectBudget(selected.Id);
     }
 
- get justchecking1() {
-    return this.issliderVisible
-        ? "slds-col slds-size_1-of-1 slds-p-right_small slds-large-size_5-of-12"
-        : "slds-col slds-size_1-of-1 slds-p-right_small slds-large-size_8-of-12";
+    this.isSimulationTableVisible = true; 
+    this.projectSelected = true;
+
+    // ✅ Automatically add one default month row when a project is selected
+    if (!this.months || this.months.length === 0) {
+        this.addSimulationRow(); 
+    }
 }
 
-get justchecking2() {
-    return this.issliderVisible
-        ? "slds-col slds-size_1-of-1 slds-p-right_small slds-large-size_3-of-12"
-        : "slds-col slds-size_1-of-1 slds-p-right_small slds-large-size_4-of-12";
-}
+//  get justchecking1() {
+//     return this.issliderVisible
+//         ? "slds-col slds-size_1-of-1 slds-p-right_small slds-large-size_5-of-12"
+//         : "slds-col slds-size_1-of-1 slds-p-right_small slds-large-size_8-of-12";
+// }
+
+// get justchecking2() {
+//     return this.issliderVisible
+//         ? "slds-col slds-size_1-of-1 slds-p-right_small slds-large-size_3-of-12"
+//         : "slds-col slds-size_1-of-1 slds-p-right_small slds-large-size_4-of-12";
+// }
 
 
     fetchProjectBudget(projectId) {
@@ -1350,65 +1355,115 @@ this.simulateMonth = currentMonthFormatted; // Default to current month
         console.log('📅 Selected Month for Simulation:', this.simulateMonth);
     }
 
-   handleApplySimulation() {
+//    handleApplySimulation() {
    
 
-    // ✅ Extract values
-const selectedMonth = this.simulateMonth; // e.g., "2025-09"
-const simulatedAmount = Number(this.simulateRemaining) || 0;
+//     // ✅ Extract values
+// const selectedMonth = this.simulateMonth; // e.g., "2025-09"
+// const simulatedAmount = Number(this.simulateRemaining) || 0;
 
 
-if (!selectedMonth) {
-    console.warn(' Missing simulation month');
-    return;
-}
+// if (!selectedMonth) {
+//     console.warn(' Missing simulation month');
+//     return;
+// }
 
-// ✅ Convert YYYY-MM to 'Sep' or similar
-const monthIndex = parseInt(selectedMonth.split('-')[1], 10) - 1;
-const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
+// // ✅ Convert YYYY-MM to 'Sep' or similar
+// const monthIndex = parseInt(selectedMonth.split('-')[1], 10) - 1;
+// const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][monthIndex];
 
-const allMonths = this.expenseChartLabels; // e.g. ['Jul', 'Aug', 'Sep', ..., 'Jun']
-const selectedIndex = allMonths.indexOf(monthName);
+// const allMonths = this.expenseChartLabels; // e.g. ['Jul', 'Aug', 'Sep', ..., 'Jun']
+// const selectedIndex = allMonths.indexOf(monthName);
 
-if (selectedIndex === -1) {
-    console.warn('⚠️ Selected month not in labels');
-    return;
-}
+// if (selectedIndex === -1) {
+//     console.warn('⚠️ Selected month not in labels');
+//     return;
+// }
 
-// ✅ Construct simulation payload including previous and next months
-const simulatedPoints = [];
+// // ✅ Construct simulation payload including previous and next months
+// const simulatedPoints = [];
 
-// Previous month (if exists)
-if (selectedIndex > 0) {
-    simulatedPoints.push({
-        month: allMonths[selectedIndex - 1],
-        amount: 0
+// // Previous month (if exists)
+// if (selectedIndex > 0) {
+//     simulatedPoints.push({
+//         month: allMonths[selectedIndex - 1],
+//         amount: 0
+//     });
+// }
+
+// // Selected month
+// simulatedPoints.push({
+//     month: monthName,
+//     amount: simulatedAmount
+// });
+
+// // Next month (if exists)
+// if (selectedIndex < allMonths.length - 1) {
+//     simulatedPoints.push({
+//         month: allMonths[selectedIndex + 1],
+//         amount: 0
+//     });
+// }
+
+// console.log('🧮 Simulated Points:', JSON.stringify(simulatedPoints, null, 2));
+
+// // 🔁 Redraw chart with simulation data
+// this.renderChartForBudgeting(this.expenseChartLabels, this.expenseDataForChart, simulatedPoints);
+
+// // ✅ Close modal
+// this.showSimulateModal = false;
+
+// }
+
+handleApplySimulation() {
+    const selectedMonth = this.simulateMonth; // e.g. "2026-02"
+    const simulatedAmount = Number(this.simulateRemaining) || 0;
+
+    if (!selectedMonth) {
+        console.warn('⚠️ Missing simulation month');
+        return;
+    }
+
+    // Parse selected year & month
+    const [year, monthNum] = selectedMonth.split('-').map(Number);
+    const selectedKey = `${year}-${String(monthNum).padStart(2, '0')}`;
+
+    // ✅ Build base months (Jan–Dec current year)
+    const currentYear = new Date().getFullYear();
+    const monthKeys = [];
+    for (let m = 1; m <= 12; m++) {
+        monthKeys.push(`${currentYear}-${String(m).padStart(2, '0')}`);
+    }
+
+    // ✅ Extend future months dynamically if selected > Dec current year
+    if (year > currentYear) {
+        for (let m = 1; m <= monthNum; m++) {
+            monthKeys.push(`${year}-${String(m).padStart(2, '0')}`);
+        }
+    }
+
+    // ✅ Create readable labels (e.g. "Jan 2025", "Feb 2026")
+    const labels = monthKeys.map((key) => {
+        const [y, m] = key.split('-');
+        const d = new Date(y, m - 1);
+        return d.toLocaleString('default', { month: 'short', year: 'numeric' });
     });
+
+    // ✅ Build simulated dataset: only one adjusted month
+    const simulatedPoints = [
+        { month: selectedKey, amount: simulatedAmount }
+    ];
+
+    console.log('📆 Final Labels:', labels);
+    console.log('💰 Simulated Points:', simulatedPoints);
+
+    // ✅ Render the chart
+    this.renderChartForBudgeting(labels, this.expenseDataForChart, simulatedPoints);
+
+    this.showSimulateModal = false;
 }
 
-// Selected month
-simulatedPoints.push({
-    month: monthName,
-    amount: simulatedAmount
-});
 
-// Next month (if exists)
-if (selectedIndex < allMonths.length - 1) {
-    simulatedPoints.push({
-        month: allMonths[selectedIndex + 1],
-        amount: 0
-    });
-}
-
-console.log('🧮 Simulated Points:', JSON.stringify(simulatedPoints, null, 2));
-
-// 🔁 Redraw chart with simulation data
-this.renderChartForBudgeting(this.expenseChartLabels, this.expenseDataForChart, simulatedPoints);
-
-// ✅ Close modal
-this.showSimulateModal = false;
-
-}
 get monthOptions() {
     const options = [];
     const today = new Date();
@@ -1499,6 +1554,7 @@ handleValueChange(event) {
   if (month) {
     const base = parseFloat(event.target.value) || 0;
     month.originalValue = base;
+     month.sliderPercent = 0; // ✅ Reset slider
     this.recalculateRow(month);
   }
 }
@@ -1512,28 +1568,53 @@ handleSliderInput(event) {
   }
 }
 
-recalculateRow(m) {
-    // Calculate the adjusted value
-    m.adjustedValue = m.originalValue + (m.originalValue * m.sliderPercent / 100);
+// recalculateRow(m) {
+//     // Calculate the adjusted value
+//     m.adjustedValue = m.originalValue + (m.originalValue * m.sliderPercent / 100);
 
-    // Compute difference
-    const diff = m.adjustedValue - m.originalValue;
+//     // Compute difference
+//     const diff = m.adjustedValue - m.originalValue;
 
-    // Determine the sign for adjustedText display
-    const sign = diff > 0 ? '+' : diff < 0 ? '-' : '';
+//     // Determine the sign for adjustedText display
+//     const sign = diff > 0 ? '+' : diff < 0 ? '-' : '';
 
-    // Format for display on card
-    m.adjustedText = `${sign}${this.currencySymbol}${Math.abs(m.adjustedValue).toLocaleString()}`;
+//     // Format for display on card
+//     m.adjustedText = `${sign}${this.currencySymbol}${Math.abs(m.adjustedValue).toLocaleString()}`;
 
-    // Delta type for display
-    m.deltaType =
-        m.adjustedValue === m.originalValue
-            ? ''
-            : m.adjustedValue > m.originalValue
-            ? 'Increase'
-            : 'Decrease';
+//     // Delta type for display
+//     m.deltaType =
+//         m.adjustedValue === m.originalValue
+//             ? ''
+//             : m.adjustedValue > m.originalValue
+//             ? 'Increase'
+//             : 'Decrease';
 
-    // Trigger re-render
+//     // Trigger re-render
+//     this.months = [...this.months];
+// }
+
+
+recalculateRow(month) {
+    const base = month.originalValue || 0;
+    const percent = month.sliderPercent || 0;
+
+    // ✅ Calculate adjusted value based on slider
+    const adjusted = base + (base * percent) / 100;
+
+    // ✅ Update the display text and delta type
+    month.adjustedText = adjusted.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+
+    month.deltaType =
+        percent > 0
+            ? `Increased by ${percent}%`
+            : percent < 0
+            ? `Decreased by ${Math.abs(percent)}%`
+            : `No change`;
+
+    // ✅ Trigger reactive refresh
     this.months = [...this.months];
 }
 
@@ -1621,6 +1702,46 @@ resetSimulation() {
 
     this.months = [...this.months, newMonth];
 }
+// handleSimulateForecastNew() {
+//     if (this.months && this.months.length > 0) {
+//         this.simRows = this.months.map((month, index) => {
+//             let numericValue = null;
+//             let sign = '';
+
+//             if (month.adjustedText) {
+//                 // Extract sign
+//                 if (month.adjustedText.startsWith('-')) sign = '-';
+//                 else if (month.adjustedText.startsWith('+')) sign = '+';
+
+//                 // Extract numeric value (ignore currency symbols and commas)
+//                 const match = month.adjustedText.match(/[\d,]+(\.\d+)?/);
+//                 if (match) numericValue = Number(match[0].replace(/,/g, ''));
+//             }
+
+//             const allocationValue = numericValue !== null ? Number(sign + numericValue) : null;
+
+//             // Compute class for coloring (+ green, - red)
+//             let allocationClass = '';
+//             if (allocationValue > 0) allocationClass = 'slds-text-color_success';
+//             else if (allocationValue < 0) allocationClass = 'slds-text-color_error';
+
+//             return {
+//                 id: month.id || index,
+//                 statement: month.statement || '',
+//                 additionalAllocation: allocationValue,
+//                 month: month.value || '',
+//                 allocationClass // <-- store class here
+//             };
+//         });
+
+//         console.log('Simulation Table Data:', JSON.stringify(this.simRows, null, 2));
+//         this.simulateAll();
+//     } else {
+//         console.log('No months data available.');
+//     }
+// }
+
+
 handleSimulateForecastNew() {
     if (this.months && this.months.length > 0) {
         this.simRows = this.months.map((month, index) => {
@@ -1644,12 +1765,16 @@ handleSimulateForecastNew() {
             if (allocationValue > 0) allocationClass = 'slds-text-color_success';
             else if (allocationValue < 0) allocationClass = 'slds-text-color_error';
 
+            // ✅ Add serial number here
+            const serialNumber = index + 1;
+
             return {
                 id: month.id || index,
+                serialNumber, // ✅ added serial number field
                 statement: month.statement || '',
                 additionalAllocation: allocationValue,
                 month: month.value || '',
-                allocationClass // <-- store class here
+                allocationClass
             };
         });
 
@@ -1659,11 +1784,6 @@ handleSimulateForecastNew() {
         console.log('No months data available.');
     }
 }
-
-
-
-
-
 
     deleteRow(event) {
         const idToDelete = parseInt(event.target.dataset.id, 10);
@@ -1707,66 +1827,194 @@ handleSimulateForecastNew() {
 
 
     //need to work on this 
+// simulateAllformonthlywise() {
+//     const allMonths = this.expenseChartLabels; // e.g., ['Jul', 'Aug', 'Sep', ..., 'Jun']
+//     const monthMap = {}; // Map of month => total simulated amount
+
+//     console.log('📋 Simulating for rows:', this.simRows.length);
+
+//     this.simRows.forEach((row, index) => {
+//         if (!row.month) {
+//             console.warn(`⚠️ Row ${index + 1} has no selected month`);
+//             return;
+//         }
+
+//         const monthValue = row.month; // e.g., "2025-09"
+//         const amount = Number(row.additionalAllocation) || 0;
+
+//         const monthIndex = parseInt(monthValue.split('-')[1], 10) - 1;
+//         const monthName = [
+//             'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+//             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+//         ][monthIndex];
+
+//         const chartIndex = allMonths.indexOf(monthName);
+
+//         if (chartIndex === -1) {
+//             console.warn(`❌ Month '${monthName}' not found in labels`);
+//             return;
+//         }
+
+//         // Set center
+//         if (!monthMap[monthName]) {
+//             monthMap[monthName] = 0;
+//         }
+//         monthMap[monthName] += amount;
+
+//         // Set surrounding zero months
+//         const prevMonth = allMonths[chartIndex - 1];
+//         const nextMonth = allMonths[chartIndex + 1];
+
+//         if (prevMonth && !monthMap.hasOwnProperty(prevMonth)) {
+//             monthMap[prevMonth] = 0;
+//         }
+//         if (nextMonth && !monthMap.hasOwnProperty(nextMonth)) {
+//             monthMap[nextMonth] = 0;
+//         }
+
+//         console.log(`✅ Processed Row ${index + 1} — ${monthName}: +${amount}`);
+//     });
+
+//     console.log('🗺️ Aggregated Month Map:', JSON.stringify(monthMap, null, 2));
+
+//     // Build final simulated array in chart label order
+//     const simulatedPoints = allMonths.map(month => ({
+//         month,
+//         amount: monthMap.hasOwnProperty(month) ? monthMap[month] : null
+//     }));
+
+//     console.log('🧮 Final Simulated Points:', JSON.stringify(simulatedPoints, null, 2));
+
+//     this.renderChartForBudgeting(this.expenseChartLabels, this.expenseDataForChart, simulatedPoints);
+// }
+
 simulateAllformonthlywise() {
-    const allMonths = this.expenseChartLabels; // e.g., ['Jul', 'Aug', 'Sep', ..., 'Jun']
-    const monthMap = {}; // Map of month => total simulated amount
+    let allMonths = this.expenseChartLabels; // e.g., ['Jan', 'Feb', ..., 'Dec']
+    const monthMap = {}; // Map of 'YYYY-MM' => total simulated amount
 
     console.log('📋 Simulating for rows:', this.simRows.length);
 
+    const currentYear = new Date().getFullYear();
+    let maxSimYear = currentYear;
+    let maxSimMonth = 12;
+
+    // Detect furthest selected month
+    this.simRows.forEach((row) => {
+        if (row.month && /^\d{4}-\d{2}$/.test(row.month)) {
+            const [y, m] = row.month.split('-').map(Number);
+            if (y > maxSimYear || (y === maxSimYear && m > maxSimMonth)) {
+                maxSimYear = y;
+                maxSimMonth = m;
+            }
+        }
+    });
+
+    // Extend labels for next year if needed
+    if (maxSimYear > currentYear) {
+        const nextMonths = [];
+        for (let y = currentYear + 1; y <= maxSimYear; y++) {
+            const limit = y === maxSimYear ? maxSimMonth : 12;
+            for (let m = 1; m <= limit; m++) {
+                const label = new Date(y, m - 1).toLocaleString('default', {
+                    month: 'short',
+                    year: 'numeric'
+                });
+                nextMonths.push(label);
+            }
+        }
+
+        allMonths = [...allMonths, ...nextMonths]; 
+    }
+
+    // Build label → YYYY-MM key map
+    const labelToKey = {};
+    allMonths.forEach((lbl) => {
+        const parts = lbl.split(' ');
+        const monthName = parts[0];
+        const year = parts[1] ? parseInt(parts[1], 10) : currentYear;
+        const monthNum = new Date(`${monthName} 1, ${year}`).getMonth() + 1;
+        labelToKey[lbl] = `${year}-${String(monthNum).padStart(2, '0')}`;
+    });
+
+    // Process simulation rows
     this.simRows.forEach((row, index) => {
         if (!row.month) {
             console.warn(`⚠️ Row ${index + 1} has no selected month`);
             return;
         }
 
-        const monthValue = row.month; // e.g., "2025-09"
+        const monthValue = row.month; // e.g., "2026-01"
         const amount = Number(row.additionalAllocation) || 0;
+        const [yearStr, monthStr] = monthValue.split('-');
+        const year = parseInt(yearStr, 10);
+        const monthNum = parseInt(monthStr, 10);
 
-        const monthIndex = parseInt(monthValue.split('-')[1], 10) - 1;
-        const monthName = [
-            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-        ][monthIndex];
+        // Current month
+        if (!monthMap[monthValue]) monthMap[monthValue] = 0;
+        monthMap[monthValue] += amount;
 
-        const chartIndex = allMonths.indexOf(monthName);
-
-        if (chartIndex === -1) {
-            console.warn(`❌ Month '${monthName}' not found in labels`);
-            return;
+        // Add next month = 0
+        let nextYear = year;
+        let nextMonth = monthNum + 1;
+        if (nextMonth > 12) {
+            nextMonth = 1;
+            nextYear++;
+        }
+        const nextKey = `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
+        if (!monthMap.hasOwnProperty(nextKey)) {
+            monthMap[nextKey] = 0;
         }
 
-        // Set center
-        if (!monthMap[monthName]) {
-            monthMap[monthName] = 0;
-        }
-        monthMap[monthName] += amount;
-
-        // Set surrounding zero months
-        const prevMonth = allMonths[chartIndex - 1];
-        const nextMonth = allMonths[chartIndex + 1];
-
-        if (prevMonth && !monthMap.hasOwnProperty(prevMonth)) {
-            monthMap[prevMonth] = 0;
-        }
-        if (nextMonth && !monthMap.hasOwnProperty(nextMonth)) {
-            monthMap[nextMonth] = 0;
-        }
-
-        console.log(`✅ Processed Row ${index + 1} — ${monthName}: +${amount}`);
+        console.log(`✅ Row ${index + 1} — ${monthValue}: +${amount}, next → ${nextKey}=0`);
     });
 
-    console.log('🗺️ Aggregated Month Map:', JSON.stringify(monthMap, null, 2));
+    // Include all months present in monthMap
+    Object.keys(monthMap).forEach((key) => {
+        const [y, m] = key.split('-').map(Number);
+        const lbl = new Date(y, m - 1).toLocaleString('default', {
+            month: 'short',
+            year: 'numeric'
+        });
+        if (!allMonths.includes(lbl)) allMonths.push(lbl);
+    });
 
-    // Build final simulated array in chart label order
-    const simulatedPoints = allMonths.map(month => ({
-        month,
-        amount: monthMap.hasOwnProperty(month) ? monthMap[month] : null
-    }));
+    // ✅ Deduplicate and sort once at the end (fixes double rendering)
+    allMonths = Array.from(new Set(allMonths));
+    allMonths.sort((a, b) => {
+        const toDate = (lbl) => {
+            const parts = lbl.split(' ');
+            const month = parts[0];
+            const year = parts[1] ? parseInt(parts[1], 10) : currentYear;
+            return new Date(`${month} 1, ${year}`);
+        };
+        return toDate(a) - toDate(b);
+    });
+
+    // Final label → key map
+    const labelToKeyFinal = {};
+    allMonths.forEach((lbl) => {
+        const parts = lbl.split(' ');
+        const monthName = parts[0];
+        const year = parts[1] ? parseInt(parts[1], 10) : currentYear;
+        const monthNum = new Date(`${monthName} 1, ${year}`).getMonth() + 1;
+        labelToKeyFinal[lbl] = `${year}-${String(monthNum).padStart(2, '0')}`;
+    });
+
+    // Build final simulated points
+    const simulatedPoints = allMonths.map((lbl) => {
+        const key = labelToKeyFinal[lbl];
+        return {
+            month: key,
+            amount: monthMap.hasOwnProperty(key) ? monthMap[key] : null
+        };
+    });
 
     console.log('🧮 Final Simulated Points:', JSON.stringify(simulatedPoints, null, 2));
 
-    this.renderChartForBudgeting(this.expenseChartLabels, this.expenseDataForChart, simulatedPoints);
+    // Render chart
+    this.renderChartForBudgeting(allMonths, this.expenseDataForChart, simulatedPoints);
 }
+
 
 
 
@@ -3316,6 +3564,8 @@ handleProjectSelected(event) {
     handleProjectRemoved() {
         this.selectedProject = {};
         this.isProjectPieVisible = false;
+        this.projectSelected = false;
+
     }
 
    renderProjectPie(data) {
@@ -3716,6 +3966,141 @@ loadBudgetingExpenseChart() {
 }
 
 
+// renderChartForBudgeting(labels, expenseData, simulatedPoints = []) {
+//     const ctx = this.template.querySelector('.budget-expense-line')?.getContext('2d');
+//     if (!ctx) {
+//         console.error('❌ Canvas context for budgeting not found');
+//         return;
+//     }
+
+//     if (this.chartInstances.budgetExpenseChart) {
+//         this.chartInstances.budgetExpenseChart.destroy();
+//     }
+
+//     const easing = window.Chart.helpers.easingEffects.easeOutQuad;
+//     const totalDuration = 2000;
+
+//     const duration = (ctx) => easing(ctx.index / labels.length) * totalDuration / labels.length;
+//     const delay = (ctx) => easing(ctx.index / labels.length) * totalDuration;
+//     const previousY = (ctx) =>
+//         ctx.index === 0
+//             ? ctx.chart.scales.y.getPixelForValue(0)
+//             : ctx.chart.getDatasetMeta(ctx.datasetIndex).data[ctx.index - 1].getProps(['y'], true).y;
+
+//     const animation = {
+//         x: {
+//             type: 'number',
+//             easing: 'linear',
+//             duration: duration,
+//             from: NaN,
+//             delay(ctx) {
+//                 if (ctx.type !== 'data' || ctx.xStarted) return 0;
+//                 ctx.xStarted = true;
+//                 return delay(ctx);
+//             }
+//         },
+//         y: {
+//             type: 'number',
+//             easing: 'linear',
+//             duration: duration,
+//             from: previousY,
+//             delay(ctx) {
+//                 if (ctx.type !== 'data' || ctx.yStarted) return 0;
+//                 ctx.yStarted = true;
+//                 return delay(ctx);
+//             }
+//         }
+//     };
+
+//     const symbol = this.currencySymbol || '';
+
+//     const datasets = [
+//         {
+//             label: 'Expense',
+//             fill: true,
+//             backgroundColor: 'rgba(157, 83, 242, 0.1)',
+//             borderColor: '#9D53F2',
+//             data: expenseData,
+//             tension: 0.3,
+//             borderWidth: 2,
+//             pointRadius: 0
+//         }
+//     ];
+
+//     if (simulatedPoints && simulatedPoints.length) {
+//         const simData = labels.map((label) => {
+//             const match = simulatedPoints.find((p) => p.month === label);
+//             return match ? match.amount : null;
+//         });
+
+//         console.log('🔄 Simulated Data Array:', simData);
+
+//         datasets.push({
+//             label: 'Adjusted Approvaled Amount',
+//             data: simData,
+//             borderColor: '#FF5733',
+//             borderDash: [6, 6],
+//             backgroundColor: 'rgba(255, 87, 51, 0.1)',
+//             fill: false,
+//             pointRadius: 6,
+//             pointBackgroundColor: '#FF5733',
+//             pointStyle: 'rectRot',
+//             tension: 0.3,
+//             borderWidth: 2
+//         });
+//     }
+
+//     this.chartInstances.budgetExpenseChart = new window.Chart(ctx, {
+//         type: 'line',
+//         data: {
+//             labels: labels.map(String),
+//             datasets: datasets
+//         },
+//         options: {
+//             responsive: true,
+//             animation: animation,
+//             plugins: {
+//                 title: {
+//                     display: true,
+//                     text: 'Monthly Budgeted Expenses'
+//                 },
+//                 legend: {
+//                     position: 'top'
+//                 },
+//                 tooltip: {
+//                     mode: 'index',
+//                     intersect: false
+//                 }
+//             },
+//             interaction: {
+//                 mode: 'index',
+//                 intersect: false
+//             },
+//             scales: {
+//                 x: {
+//                     display: true,
+//                     title: {
+//                         display: true,
+//                         text: 'Month'
+//                     }
+//                 },
+//                 y: {
+//                     display: true,
+//                     title: {
+//                         display: true,
+//                         text: 'Amount ' + symbol
+//                     },
+//                     ticks: {
+//                         callback: (value) => symbol + value.toLocaleString()
+//                     },
+//                     beginAtZero: true
+//                 }
+//             }
+//         }
+//     });
+// }
+
+
 renderChartForBudgeting(labels, expenseData, simulatedPoints = []) {
     const ctx = this.template.querySelector('.budget-expense-line')?.getContext('2d');
     if (!ctx) {
@@ -3764,44 +4149,102 @@ renderChartForBudgeting(labels, expenseData, simulatedPoints = []) {
 
     const symbol = this.currencySymbol || '';
 
-    const datasets = [
-        {
-            label: 'Expense',
-            fill: true,
-            backgroundColor: 'rgba(157, 83, 242, 0.1)',
-            borderColor: '#9D53F2',
-            data: expenseData,
-            tension: 0.3,
-            borderWidth: 2,
-            pointRadius: 0
-        }
-    ];
+    // 🔥 FIX START — normalize all base labels to include current year
+    const currentYear = new Date().getFullYear();
+    labels = labels.map((lbl, idx) => {
+        // if label already contains year (like "Dec 2025"), keep it
+        if (lbl.includes(' ')) return lbl;
+
+        // otherwise add current year
+        const monthNum = idx + 1;
+        const date = new Date(currentYear, monthNum - 1);
+        const monthName = date.toLocaleString('default', { month: 'short' });
+        return `${monthName} ${currentYear}`;
+    });
+    // 🔥 FIX END
+
+    // Find max year/month from simulated points
+    let maxSimYear = currentYear;
+    let maxSimMonth = 12;
 
     if (simulatedPoints && simulatedPoints.length) {
-        const simData = labels.map((label) => {
-            const match = simulatedPoints.find((p) => p.month === label);
-            return match ? match.amount : null;
-        });
-
-        console.log('🔄 Simulated Data Array:', simData);
-
-        datasets.push({
-            label: 'Adjusted Approvaled Amount',
-            data: simData,
-            borderColor: '#FF5733',
-            borderDash: [6, 6],
-            backgroundColor: 'rgba(255, 87, 51, 0.1)',
-            fill: false,
-            pointRadius: 6,
-            pointBackgroundColor: '#FF5733',
-            pointStyle: 'rectRot',
-            tension: 0.3,
-            borderWidth: 2
+        simulatedPoints.forEach((p) => {
+            if (p.month && /^\d{4}-\d{2}$/.test(p.month)) {
+                const [yearStr, monthStr] = p.month.split('-');
+                const y = parseInt(yearStr, 10);
+                const m = parseInt(monthStr, 10);
+                if (y > maxSimYear || (y === maxSimYear && m > maxSimMonth)) {
+                    maxSimYear = y;
+                    maxSimMonth = m;
+                }
+            }
         });
     }
 
+    // Extend chart labels dynamically if simulated months go beyond current year
+    let extendedLabels = [...labels];
+    if (maxSimYear > currentYear) {
+        const nextMonths = [];
+        for (let y = currentYear + 1; y <= maxSimYear; y++) {
+            const limit = y === maxSimYear ? maxSimMonth : 12;
+            for (let m = 1; m <= limit; m++) {
+                const monthName = new Date(y, m - 1).toLocaleString('default', {
+                    month: 'short',
+                    year: 'numeric'
+                });
+                nextMonths.push(monthName);
+            }
+        }
+        extendedLabels = [...labels, ...nextMonths];
+    }
+
+    // ✅ Deduplicate and sort labels to remove duplicates like “Dec” + “Dec 2025”
+    extendedLabels = Array.from(new Set(extendedLabels));
+    extendedLabels.sort((a, b) => {
+        const toDate = (lbl) => {
+            const [monthName, yearStr] = lbl.split(' ');
+            return new Date(`${monthName} 1, ${yearStr}`);
+        };
+        return toDate(a) - toDate(b);
+    });
+
+    labels = extendedLabels;
+    console.log('📆 Final Labels:', labels);
+
+    // Build adjusted approved amount data
+    const simData = labels.map((label) => {
+        const [monthName, year] = label.split(' ');
+        const monthNum = new Date(`${monthName} 1, ${year}`).getMonth() + 1;
+        const key = `${year}-${String(monthNum).padStart(2, '0')}`;
+        const match = simulatedPoints.find((p) => p.month === key);
+        return match ? Number(match.amount) : null;
+    });
+
+    console.log('🔄 Simulated Data Array:', simData);
+
+    // Grouped bar datasets
+    const datasets = [
+        {
+            label: 'Expense',
+            backgroundColor: '#9D53F2',
+            borderColor: '#7A3FC2',
+            borderWidth: 1,
+            data: expenseData,
+            barThickness: 24
+        },
+        {
+            label: 'Adjusted Approved Amount',
+            backgroundColor: 'rgba(255, 87, 51, 0.8)',
+            borderColor: '#FF5733',
+            borderWidth: 1,
+            data: simData,
+            barThickness: 24
+        }
+    ];
+
+    // Render grouped bar chart
     this.chartInstances.budgetExpenseChart = new window.Chart(ctx, {
-        type: 'line',
+        type: 'bar',
         data: {
             labels: labels.map(String),
             datasets: datasets
@@ -3814,12 +4257,16 @@ renderChartForBudgeting(labels, expenseData, simulatedPoints = []) {
                     display: true,
                     text: 'Monthly Budgeted Expenses'
                 },
-                legend: {
-                    position: 'top'
-                },
+                legend: { position: 'top' },
                 tooltip: {
                     mode: 'index',
-                    intersect: false
+                    intersect: false,
+                    callbacks: {
+                        label: function (context) {
+                            const val = context.parsed.y;
+                            return `${context.dataset.label}: ${symbol}${val?.toLocaleString() || 0}`;
+                        }
+                    }
                 }
             },
             interaction: {
@@ -3829,17 +4276,12 @@ renderChartForBudgeting(labels, expenseData, simulatedPoints = []) {
             scales: {
                 x: {
                     display: true,
-                    title: {
-                        display: true,
-                        text: 'Month'
-                    }
+                    title: { display: true, text: 'Month' },
+                    grid: { display: false }
                 },
                 y: {
                     display: true,
-                    title: {
-                        display: true,
-                        text: 'Amount ' + symbol
-                    },
+                    title: { display: true, text: `Amount (${symbol})` },
                     ticks: {
                         callback: (value) => symbol + value.toLocaleString()
                     },

@@ -1,19 +1,20 @@
-import { LightningElement, track } from 'lwc';
+import { LightningElement ,track } from 'lwc';
+import { NavigationMixin } from 'lightning/navigation';
+
 import SOPlogo from '@salesforce/resourceUrl/SOPlogo';
 import getDefaultOrganisation from '@salesforce/apex/sandOP.getDefaultOrganisation';
 
-export default class SandOP extends LightningElement {
+export default class SandOP extends NavigationMixin (LightningElement) {
     logoUrl = SOPlogo;
 
     @track DefaultOrganisation = { Id: '', Name: '' };
     @track isDataLoaded = false;
     @track currentTab = null;
     @track showChart = true;
-
     // Main tabs
     @track isDemandTabOpen = true;
     @track isSupplyTabOpen = false;
-    @track isInventoryTabOpen = false;   
+    @track isInventoryTabOpen = false;
     @track isProductionTabOpen = false;
     @track isFinanceTabOpen = false;
     @track isExecutiveTabOpen = false;
@@ -38,8 +39,25 @@ export default class SandOP extends LightningElement {
 //     });
 //   }
 
-  
+
 // }
+
+
+// navigateToSupply() {
+//     console.log('az  in nav');
+//     console.log('AZ organisation id',this.DefaultOrganisation.Id);
+
+//         this[NavigationMixin.Navigate]({
+//             type: 'standard__component',
+//             attributes: {
+//                 componentName: 'c__supplyandproduction'
+//             },
+//             state: {
+//                 c__organisationId: this.DefaultOrganisation.Id,
+
+//             }
+//         });
+//     }
 
     loadDefaultOrganisation() {
         getDefaultOrganisation()
@@ -57,6 +75,7 @@ export default class SandOP extends LightningElement {
         this.DefaultOrganisation = { Id: null, Name: null };
         this.showChart = false; // hide charts → show SVGs instead
     }
+
 
     handleOrganisationSelect(event) {
         // this.DefaultOrganisation = { Id: event.detail.Id, Name: event.detail.Name };
@@ -167,19 +186,19 @@ export default class SandOP extends LightningElement {
                 break;
             case 'finance':
                 this.isFinanceTabOpen = true;
-                this.currentTab = 'finance';    
+                this.currentTab = 'finance';
                 break;
             case 'executive':
                 this.isExecutiveTabOpen = true;
-                this.currentTab = 'executive';  
+                this.currentTab = 'executive';
                 break;
             case 'subscription':
                 this.isSubscriptionTabOpen = true;
-                this.currentTab = 'subscription';   
+                this.currentTab = 'subscription';
                 break;
             case 'riskAndReturn':
                 this.isRiskAndReturnTabOpen = true; console.log('Risk and Return tab clicked');
-                this.currentTab = 'riskAndReturn';  
+                this.currentTab = 'riskAndReturn';
                 break;
         }
     }

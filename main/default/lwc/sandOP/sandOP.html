@@ -58,9 +58,9 @@
                 </div>
                 <div class={supplyTabClass} data-tab="supply" onclick={handleMainTabClick}>
                     <div class="slds-grid">
-                        <div class="slds-col slds-size_3-of-12">
-                            <lightning-icon icon-name='standard:planogram' alternative-text='planogram' size='medium' title='planogram'></lightning-icon>                        </div>
-                        <div class="slds-col slds-p-top_xx-small hide-on-mobile">
+                        <div class="slds-col slds-size_3-of-12" onclick={navigateToSupply} >
+                            <lightning-icon icon-name='standard:planogram'  alternative-text='planogram' size='medium' title='planogram'></lightning-icon>                        </div>
+                        <div class="slds-col slds-p-top_xx-small hide-on-mobile" onclick={navigateToSupply}>
                             Supply Planning
                         </div>
                     </div>
@@ -182,6 +182,9 @@
                     </div>
                 </article>
                 <template if:true={isDataLoaded}>
+                    
+                        <div class="dynamic-container"></div>
+
                     <template if:true={isDemandTabOpen}>
                         <c-demand-planning organisation-id={DefaultOrganisation.Id}
                         show-chart={showChart}
@@ -198,9 +201,7 @@
                         show-chart={showChart}
                             is-inventory-tab-open={isInventoryTabOpen}></c-demand-planning>
                     </template>
-                    <!-- <template if:true={isProductionTabOpen}>
-                        <c-demand-planning organisation-id={DefaultOrganisation.Id}></c-demand-planning>
-                    </template> -->
+                   
                     <template if:true={isFinanceTabOpen}>
                         <c-financial-planning organisation-id={DefaultOrganisation.Id}
                         show-chart={showChart}
@@ -215,11 +216,15 @@
                         show-chart={showChart}
                         ></c-demand-planning>
                     </template>
+                </template>
                     
                     <!-- <template if:true={isExecutiveTabOpen}>
                         <c-financial-planning organisation-id={DefaultOrganisation.Id}></c-financial-planning>
                     </template> -->
-                </template>
+                     <!-- <template if:true={isProductionTabOpen}>
+                        <c-demand-planning organisation-id={DefaultOrganisation.Id}></c-demand-planning>
+                        -->
+                    <!-- </template>  -->
             </div>
         </div>
     </div>

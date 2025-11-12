@@ -8,6 +8,8 @@ function formatDateLocal(date) {
 
 import { LightningElement, track, wire, api } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
+// import { CurrentPageReference } from 'lightning/navigation';
+
 
 import { loadScript } from 'lightning/platformResourceLoader';
 import chartJs from '@salesforce/resourceUrl/ChartJS';
@@ -43,8 +45,17 @@ import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 
 export default class SupplyPlanningSidebar extends  NavigationMixin(LightningElement) {
+
+    //  @wire(CurrentPageReference)
+    // getStateParameters(pageRef) {
+    //     if (pageRef) {
+    //         this.organisationId = pageRef.state.c__organisationId;
+    //         this.showChart = pageRef.state.c__showChart === 'true';
+    //     }
+    // }
+    
     @api organisationId;
-    @api showChart = false;
+    @api showChart ;
     //stock alert 
     // Sorting for Safety Stock Table
 sortBySafety = 'productName';

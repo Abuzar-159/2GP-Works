@@ -1,3 +1,19 @@
+.slider-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--lwc-colorTextWeak, #706e6b);
+}
+
+lightning-slider {
+  flex: 1;
+  margin: 0 10px;
+}
+.slds-illustration {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* keep both centered horizontally */
+}
+
 .delete-icon {
     cursor: pointer;
     margin-left: 0.25rem;
