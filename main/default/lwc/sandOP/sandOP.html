@@ -58,9 +58,10 @@
                 </div>
                 <div class={supplyTabClass} data-tab="supply" onclick={handleMainTabClick}>
                     <div class="slds-grid">
-                        <div class="slds-col slds-size_3-of-12" onclick={navigateToSupply} >
-                            <lightning-icon icon-name='standard:planogram'  alternative-text='planogram' size='medium' title='planogram'></lightning-icon>                        </div>
-                        <div class="slds-col slds-p-top_xx-small hide-on-mobile" onclick={navigateToSupply}>
+                        <div class="slds-col slds-size_3-of-12">
+                            <lightning-icon icon-name='standard:planogram'  alternative-text='planogram' size='medium' title='planogram'></lightning-icon>
+                        </div>
+                        <div class="slds-col slds-p-top_xx-small hide-on-mobile">
                             Supply Planning
                         </div>
                     </div>
@@ -141,7 +142,7 @@
                     <div class="slds-card__header slds-grid ">
                         <header class="slds-media slds-media_center slds-has-flexi-truncate">
                             <div class="slds-media__figure">
-                              
+
                             </div>
                             <div class="slds-media__body">
                                 <div class="slds-grid slds-wrap">
@@ -152,14 +153,14 @@
                                         </span>
                                     </h1>
                                 </div>
-                                
+
                             </div>
                             </div>
                         </header>
                         <div class="slds-page-header__col-actions">
                             <div class="slds-page-header__controls">
                                 <div class="slds-page-header__control">
-                                    
+
                                         <div class="slds-grid">
                                             <label class="slds-form-element__label" for="combobox-id-1">
                                                 <b>Company</b>
@@ -169,55 +170,64 @@
                                                 icon-name="standard:account" selected-value={DefaultOrganisation.Id}
                                                 selected-name={DefaultOrganisation.Name}
                                                 onlookupselected={handleOrganisationSelect} is-value-selected=true
-                                                    onremove={handleOrganisationRemoved}  
+                                                    onremove={handleOrganisationRemoved}
                                                 >
                                             </c-custom-input-lookup-l-w-c>
                                             </div>
                                         </div>
                                     </div>
-                               
-                               
+
+
                             </div>
                         </div>
                     </div>
                 </article>
                 <template if:true={isDataLoaded}>
-                    
+
                         <div class="dynamic-container"></div>
 
                     <template if:true={isDemandTabOpen}>
-                        <c-demand-planning organisation-id={DefaultOrganisation.Id}
+                        <!-- <c-demand-planning organisation-id={DefaultOrganisation.Id}
                         show-chart={showChart}
-                            is-demand-tab-open={isDemandTabOpen}></c-demand-planning>
-
+                            is-demand-tab-open={isDemandTabOpen}></c-demand-planning> -->
+                        <lwc:component lwc:is={demandPlanningConstructor} organisation-id={DefaultOrganisation.Id} show-chart={showChart} is-demand-tab-open={isDemandTabOpen}></lwc:component>
                     </template>
                     <template if:true={isSupplyTabOpen}>
-                        <c-supplyandproduction organisation-id={DefaultOrganisation.Id}
-                        show-chart={showChart}
-                        ></c-supplyandproduction>
+                        <div class="tab-content" id="supply">
+                            <!-- Simple HTML test - direct component reference -->
+                            <!-- <c-supplyandproduction
+                                organisation-id={DefaultOrganisation.Id}
+                                show-chart={showChart}>
+                            </c-supplyandproduction> -->
+                                <lwc:component lwc:is={supplyAndProductionConstructor} organisation-id={DefaultOrganisation.Id} show-chart={showChart}></lwc:component>
+                        </div>
                     </template>
                     <template if:true={isInventoryTabOpen}>
-                        <c-demand-planning organisation-id={DefaultOrganisation.Id}
+                        <!-- <c-demand-planning organisation-id={DefaultOrganisation.Id}
                         show-chart={showChart}
-                            is-inventory-tab-open={isInventoryTabOpen}></c-demand-planning>
+                            is-inventory-tab-open={isInventoryTabOpen}></c-demand-planning> -->
+                            <lwc:component lwc:is={demandPlanningConstructor} organisation-id={DefaultOrganisation.Id} show-chart={showChart} is-inventory-tab-open={isInventoryTabOpen}></lwc:component>
                     </template>
-                   
+
                     <template if:true={isFinanceTabOpen}>
-                        <c-financial-planning organisation-id={DefaultOrganisation.Id}
+                        <!-- <c-financial-planning organisation-id={DefaultOrganisation.Id}
                         show-chart={showChart}
-                        ></c-financial-planning>
+                        ></c-financial-planning> -->
+                        <lwc:component lwc:is={financialPlanningConstructor} organisation-id={DefaultOrganisation.Id} show-chart={showChart}></lwc:component>
                     </template>
                     <template if:true={isSubscriptionTabOpen}>
-                        <c-subscription-planning organisation-id={DefaultOrganisation.Id}
-                        show-chart={showChart}></c-subscription-planning>
+                        <!-- <c-subscription-planning organisation-id={DefaultOrganisation.Id}
+                        show-chart={showChart}></c-subscription-planning> -->
+                        <lwc:component lwc:is={subscriptionPlanningConstructor} organisation-id={DefaultOrganisation.Id} show-chart={showChart}></lwc:component>
                     </template>
                     <template if:true={isRiskAndReturnTabOpen}>
-                        <c-demand-planning organisation-id={DefaultOrganisation.Id} is-risk-and-return-tab-open={isRiskAndReturnTabOpen}
+                        <!-- <c-demand-planning organisation-id={DefaultOrganisation.Id} is-risk-and-return-tab-open={isRiskAndReturnTabOpen}
                         show-chart={showChart}
-                        ></c-demand-planning>
+                        ></c-demand-planning> -->
+                        <lwc:component lwc:is={demandPlanningConstructor} organisation-id={DefaultOrganisation.Id} is-risk-and-return-tab-open={isRiskAndReturnTabOpen}></lwc:component>
                     </template>
                 </template>
-                    
+
                     <!-- <template if:true={isExecutiveTabOpen}>
                         <c-financial-planning organisation-id={DefaultOrganisation.Id}></c-financial-planning>
                     </template> -->

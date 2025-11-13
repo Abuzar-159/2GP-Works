@@ -148,37 +148,243 @@
         if (isFieldsCom) return true;
         else return false;
     },
+//Commented by Abuzar on 12-11-2025 to add new tax calculation logic for subscription products
+//     taxCalculation: function (cmp, event) {
+//         console.log('AZ Inside tax calculation');
+        
+//         console.log("inside taxCalculation");
+//         console.log("listOfQuoteLine ***", cmp.get("v.listOfQuoteLine"));
+//         var selectedProducts = cmp.get("v.listOfQuoteLine");
+//         for (var i = 0; i < selectedProducts.length; i++) {
+//             var discount = 0;
+//             var vatAmount1 = 0;
+//             var otherTax1 = 0;
+//             var discountPercent1 = parseFloat(selectedProducts[i].discountPercent);
+//             if (selectedProducts[i].discountPercent != 0) {
+//                 if (selectedProducts[i].isPercent) {
+//                     discount = ((parseFloat(selectedProducts[i].qtLine.List_Price__c) * parseFloat(selectedProducts[i].qtLine.Quantity__c)) * parseFloat(selectedProducts[i].discountPercent)) / 100;
+//                 } else {
+//                     discount = parseFloat(selectedProducts[i].qtLine.Quantity__c) * (parseFloat(selectedProducts[i].discountPercent) / parseFloat(selectedProducts[i].qtLine.Quantity__c));
+//                 }
+//             }
+            
+//             //if (selectedProducts[i].tax.Tax_Rate__c != undefined) vatAmount1 = (selectedProducts[i].tax.Apply_Tax_On__c == 'Cost Price' && selectedProducts[i].qtLine.List_Price__c != undefined) ? (parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100 * (parseFloat(selectedProducts[i].qtLine.Cost_Price__c))) : (parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100 * ((parseFloat(selectedProducts[i].qtLine.List_Price__c) * parseFloat(selectedProducts[i].qtLine.Quantity__c)) - discount));
+//             // if(selectedProducts[i].tax.Tax_Rate__c != undefined) vatAmount1= (selectedProducts[i].tax.Apply_Tax_On__c == 'Cost Price' && selectedProducts[i].qtLine.List_Price__c != undefined)?(parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100 * (parseFloat(selectedProducts[i].qtLine.Cost_Price__c))):(parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100 * ((parseFloat(selectedProducts[i].qtLine.List_Price__c)*parseFloat(selectedProducts[i].qtLine.Quantity__c)) - discount));
+//             // console.log('vat amoiunt here--'+(parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100 * ((parseFloat(selectedProducts[i].qtLine.List_Price__c)*parseFloat(selectedProducts[i].qtLine.Quantity__c)) - discount)));
+//             // if (selectedProducts[i].tax.Other_Tax_Rate__c != undefined) otherTax1 = (selectedProducts[i].tax.Apply_Tax_On__c == 'Cost Price' && selectedProducts[i].qtLine.List_Price__c != undefined) ? (parseFloat(selectedProducts[i].tax.Other_Tax_Rate__c) / 100 * (parseFloat(selectedProducts[i].qtLine.Cost_Price__c))) : (parseFloat(selectedProducts[i].tax.Other_Tax_Rate__c) / 100 * ((parseFloat(selectedProducts[i].qtLine.List_Price__c) * parseFloat(selectedProducts[i].qtLine.Quantity__c)) - discount));
+           
+// if (selectedProducts[i].qtLine.Product2 && selectedProducts[i].qtLine.Product2__r.Is_Subscribe__c) {
+//         var No_of_Months = selectedProducts[i].qtLine.No_of_Months__c || 0;
+//     var No_of_Days = selectedProducts[i].qtLine.No_of_Days__c || 0;
+    
+//     console.log('Subscription - Months:', No_of_Months, 'Days:', No_of_Days);
+    
+//     // --- VAT for Subscription Product ---
+//     if (selectedProducts[i].tax && selectedProducts[i].tax.Tax_Rate__c != undefined) {
+//         vatAmount1 =
+//             (selectedProducts[i].tax.Apply_Tax_On__c == 'Cost Price' &&
+//                 selectedProducts[i].qtLine.Cost_Price__c != undefined)
+//                 ? (parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100 *
+//                     parseFloat(selectedProducts[i].qtLine.Cost_Price__c))
+//                 : (parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100 *
+//                     (
+//                         (parseFloat(selectedProducts[i].qtLine.List_Price__c) *
+//                             parseFloat(selectedProducts[i].qtLine.Quantity__c) *
+//                             parseFloat(No_of_Months))
+//                         +
+//                         (parseFloat(selectedProducts[i].qtLine.List_Price__c) *
+//                             parseFloat(selectedProducts[i].qtLine.Quantity__c) *
+//                             (parseFloat(No_of_Days) / 30))
+//                         - parseFloat(discount)
+//                     )
+//                 );
+//     }
 
-    taxCalculation: function (cmp, event) {
-        console.log("inside taxCalculation");
-        console.log("listOfQuoteLine ***", cmp.get("v.listOfQuoteLine"));
-        var selectedProducts = cmp.get("v.listOfQuoteLine");
-        for (var i = 0; i < selectedProducts.length; i++) {
-            var discount = 0;
-            var vatAmount1 = 0;
-            var otherTax1 = 0;
-            var discountPercent1 = parseFloat(selectedProducts[i].discountPercent);
-            if (selectedProducts[i].discountPercent != 0) {
-                if (selectedProducts[i].isPercent) {
-                    discount = ((parseFloat(selectedProducts[i].qtLine.List_Price__c) * parseFloat(selectedProducts[i].qtLine.Quantity__c)) * parseFloat(selectedProducts[i].discountPercent)) / 100;
+//     // --- Other Tax for Subscription Product ---
+//     if (selectedProducts[i].tax && selectedProducts[i].tax.Other_Tax_Rate__c != undefined) {
+//         otherTax1 =
+//             (selectedProducts[i].tax.Apply_Tax_On__c == 'Cost Price' &&
+//                 selectedProducts[i].qtLine.Cost_Price__c != undefined)
+//                 ? (parseFloat(selectedProducts[i].tax.Other_Tax_Rate__c) / 100 *
+//                     parseFloat(selectedProducts[i].qtLine.Cost_Price__c))
+//                 : (parseFloat(selectedProducts[i].tax.Other_Tax_Rate__c) / 100 *
+//                     (
+//                         (parseFloat(selectedProducts[i].qtLine.List_Price__c) *
+//                             parseFloat(selectedProducts[i].qtLine.Quantity__c) *
+//                             parseFloat(No_of_Months))
+//                         +
+//                         (parseFloat(selectedProducts[i].qtLine.List_Price__c) *
+//                             parseFloat(selectedProducts[i].qtLine.Quantity__c) *
+//                             (parseFloat(No_of_Days) / 30))
+//                         - parseFloat(discount)
+//                     )
+//                 );
+//     }
+
+// } else {
+
+//     // --- VAT for Non-Subscription Product ---
+//     if (selectedProducts[i].tax && selectedProducts[i].tax.Tax_Rate__c != undefined) {
+//         vatAmount1 =
+//             (selectedProducts[i].tax.Apply_Tax_On__c == 'Cost Price' &&
+//                 selectedProducts[i].qtLine.Cost_Price__c != undefined)
+//                 ? (parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100 *
+//                     parseFloat(selectedProducts[i].qtLine.Cost_Price__c))
+//                 : (parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100 *
+//                     (
+//                         (parseFloat(selectedProducts[i].qtLine.List_Price__c) *
+//                             parseFloat(selectedProducts[i].qtLine.Quantity__c))
+//                         - parseFloat(discount)
+//                     )
+//                 );
+//     }
+
+//     // --- Other Tax for Non-Subscription Product ---
+//     if (selectedProducts[i].tax && selectedProducts[i].tax.Other_Tax_Rate__c != undefined) {
+//         otherTax1 =
+//             (selectedProducts[i].tax.Apply_Tax_On__c == 'Cost Price' &&
+//                 selectedProducts[i].qtLine.Cost_Price__c != undefined)
+//                 ? (parseFloat(selectedProducts[i].tax.Other_Tax_Rate__c) / 100 *
+//                     parseFloat(selectedProducts[i].qtLine.Cost_Price__c))
+//                 : (parseFloat(selectedProducts[i].tax.Other_Tax_Rate__c) / 100 *
+//                     (
+//                         (parseFloat(selectedProducts[i].qtLine.List_Price__c) *
+//                             parseFloat(selectedProducts[i].qtLine.Quantity__c))
+//                         - parseFloat(discount)
+//                     )
+//                 );
+//     }
+// }
+//             selectedProducts[i].vatAmount = vatAmount1;
+//             console.log('vat amt here 2 --'+selectedProducts[i].vatAmount);
+//             selectedProducts[i].otherTax = otherTax1;
+//             if (selectedProducts[i].qtLine.VAT_Amount__c != undefined) selectedProducts[i].qtLine.VAT_Amount__c = vatAmount1;
+//             console.log('qtline vat amount -> '+selectedProducts[i].qtLine.VAT_Amount__c);
+//             if (selectedProducts[i].qtLine.Other_Tax__c != undefined) selectedProducts[i].qtLine.Other_Tax__c = otherTax1;
+
+//         }
+//         cmp.set("v.listOfQuoteLine", selectedProducts);
+//     },
+
+
+
+//             //-------------- added by abuzr on 12-11-2025 for handling the subscribtion produt tax calculation on quantity change ----------------
+
+taxCalculation: function (cmp, event) {
+    console.log('AZ Inside tax calculation');
+    console.log("inside taxCalculation");
+    console.log("listOfQuoteLine ***", cmp.get("v.listOfQuoteLine"));
+    var selectedProducts = cmp.get("v.listOfQuoteLine");
+    
+    for (var i = 0; i < selectedProducts.length; i++) {
+        var discount = 0;
+        var vatAmount1 = 0;
+        var otherTax1 = 0;
+        var discountPercent1 = parseFloat(selectedProducts[i].discountPercent);
+        
+        if (selectedProducts[i].discountPercent != 0) {
+            if (selectedProducts[i].isPercent) {
+                discount = ((parseFloat(selectedProducts[i].qtLine.List_Price__c) * parseFloat(selectedProducts[i].qtLine.Quantity__c)) * parseFloat(selectedProducts[i].discountPercent)) / 100;
+            } else {
+                discount = parseFloat(selectedProducts[i].qtLine.Quantity__c) * (parseFloat(selectedProducts[i].discountPercent) / parseFloat(selectedProducts[i].qtLine.Quantity__c));
+            }
+        }
+        
+        // Calculate base amount (before tax)
+        var baseAmount = 0;
+        
+        // Handle VAT and Other Tax for both subscription and non-subscription products
+        if (selectedProducts[i].qtLine.Product__r && selectedProducts[i].qtLine.Product__r.Is_Subscribe__c) {
+            
+            var No_of_Months = parseFloat(selectedProducts[i].qtLine.Month_Duration__c) || 0;
+            var No_of_Days = parseFloat(selectedProducts[i].qtLine.Duration_in_Days__c) || 0;
+            
+            console.log('Subscription - Months:', No_of_Months, 'Days:', No_of_Days);
+            
+            // Calculate base amount for subscription (Price * Quantity * Months + Price * Quantity * Days/30)
+            var monthlyAmount = (parseFloat(selectedProducts[i].qtLine.List_Price__c) * 
+                                parseFloat(selectedProducts[i].qtLine.Quantity__c) * 
+                                No_of_Months);
+            
+            var dailyAmount = (parseFloat(selectedProducts[i].qtLine.List_Price__c) * 
+                              parseFloat(selectedProducts[i].qtLine.Quantity__c) * 
+                              (No_of_Days / 30));
+            
+            baseAmount = monthlyAmount + dailyAmount - parseFloat(discount);
+            
+            console.log('Monthly Amount:', monthlyAmount, 'Daily Amount:', dailyAmount, 'Base Amount:', baseAmount);
+            
+            // --- VAT for Subscription Product ---
+            if (selectedProducts[i].tax && selectedProducts[i].tax.Tax_Rate__c != undefined) {
+                if (selectedProducts[i].tax.Apply_Tax_On__c == 'Cost Price' && 
+                    selectedProducts[i].qtLine.Cost_Price__c != undefined) {
+                    vatAmount1 = (parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100) * 
+                                 parseFloat(selectedProducts[i].qtLine.Cost_Price__c);
                 } else {
-                    discount = parseFloat(selectedProducts[i].qtLine.Quantity__c) * (parseFloat(selectedProducts[i].discountPercent) / parseFloat(selectedProducts[i].qtLine.Quantity__c));
+                    vatAmount1 = (parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100) * baseAmount;
                 }
             }
             
-            //if (selectedProducts[i].tax.Tax_Rate__c != undefined) vatAmount1 = (selectedProducts[i].tax.Apply_Tax_On__c == 'Cost Price' && selectedProducts[i].qtLine.List_Price__c != undefined) ? (parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100 * (parseFloat(selectedProducts[i].qtLine.Cost_Price__c))) : (parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100 * ((parseFloat(selectedProducts[i].qtLine.List_Price__c) * parseFloat(selectedProducts[i].qtLine.Quantity__c)) - discount));
-            if(selectedProducts[i].tax.Tax_Rate__c != undefined) vatAmount1= (selectedProducts[i].tax.Apply_Tax_On__c == 'Cost Price' && selectedProducts[i].qtLine.List_Price__c != undefined)?(parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100 * (parseFloat(selectedProducts[i].qtLine.Cost_Price__c))):(parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100 * ((parseFloat(selectedProducts[i].qtLine.List_Price__c)*parseFloat(selectedProducts[i].qtLine.Quantity__c)) - discount));
-            console.log('vat amoiunt here--'+(parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100 * ((parseFloat(selectedProducts[i].qtLine.List_Price__c)*parseFloat(selectedProducts[i].qtLine.Quantity__c)) - discount)));
-            if (selectedProducts[i].tax.Other_Tax_Rate__c != undefined) otherTax1 = (selectedProducts[i].tax.Apply_Tax_On__c == 'Cost Price' && selectedProducts[i].qtLine.List_Price__c != undefined) ? (parseFloat(selectedProducts[i].tax.Other_Tax_Rate__c) / 100 * (parseFloat(selectedProducts[i].qtLine.Cost_Price__c))) : (parseFloat(selectedProducts[i].tax.Other_Tax_Rate__c) / 100 * ((parseFloat(selectedProducts[i].qtLine.List_Price__c) * parseFloat(selectedProducts[i].qtLine.Quantity__c)) - discount));
-            selectedProducts[i].vatAmount = vatAmount1;
-            console.log('vat amt here 2 --'+selectedProducts[i].vatAmount);
-            selectedProducts[i].otherTax = otherTax1;
-            if (selectedProducts[i].qtLine.VAT_Amount__c != undefined) selectedProducts[i].qtLine.VAT_Amount__c = vatAmount1;
-            console.log('qtline vat amount -> '+selectedProducts[i].qtLine.VAT_Amount__c);
-            if (selectedProducts[i].qtLine.Other_Tax__c != undefined) selectedProducts[i].qtLine.Other_Tax__c = otherTax1;
-
+            // --- Other Tax for Subscription Product ---
+            if (selectedProducts[i].tax && selectedProducts[i].tax.Other_Tax_Rate__c != undefined) {
+                if (selectedProducts[i].tax.Apply_Tax_On__c == 'Cost Price' && 
+                    selectedProducts[i].qtLine.Cost_Price__c != undefined) {
+                    otherTax1 = (parseFloat(selectedProducts[i].tax.Other_Tax_Rate__c) / 100) * 
+                                parseFloat(selectedProducts[i].qtLine.Cost_Price__c);
+                } else {
+                    otherTax1 = (parseFloat(selectedProducts[i].tax.Other_Tax_Rate__c) / 100) * baseAmount;
+                }
+            }
+            
+        } else {
+            
+            // Calculate base amount for non-subscription
+            baseAmount = (parseFloat(selectedProducts[i].qtLine.List_Price__c) * 
+                         parseFloat(selectedProducts[i].qtLine.Quantity__c)) - parseFloat(discount);
+            
+            console.log('Non-Subscription Base Amount:', baseAmount);
+            
+            // --- VAT for Non-Subscription Product ---
+            if (selectedProducts[i].tax && selectedProducts[i].tax.Tax_Rate__c != undefined) {
+                if (selectedProducts[i].tax.Apply_Tax_On__c == 'Cost Price' && 
+                    selectedProducts[i].qtLine.Cost_Price__c != undefined) {
+                    vatAmount1 = (parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100) * 
+                                 parseFloat(selectedProducts[i].qtLine.Cost_Price__c);
+                } else {
+                    vatAmount1 = (parseFloat(selectedProducts[i].tax.Tax_Rate__c) / 100) * baseAmount;
+                }
+            }
+            
+            // --- Other Tax for Non-Subscription Product ---
+            if (selectedProducts[i].tax && selectedProducts[i].tax.Other_Tax_Rate__c != undefined) {
+                if (selectedProducts[i].tax.Apply_Tax_On__c == 'Cost Price' && 
+                    selectedProducts[i].qtLine.Cost_Price__c != undefined) {
+                    otherTax1 = (parseFloat(selectedProducts[i].tax.Other_Tax_Rate__c) / 100) * 
+                                parseFloat(selectedProducts[i].qtLine.Cost_Price__c);
+                } else {
+                    otherTax1 = (parseFloat(selectedProducts[i].tax.Other_Tax_Rate__c) / 100) * baseAmount;
+                }
+            }
         }
-        cmp.set("v.listOfQuoteLine", selectedProducts);
-    },
+        
+        selectedProducts[i].vatAmount = vatAmount1;
+        selectedProducts[i].otherTax = otherTax1;
+        selectedProducts[i].baseAmount = baseAmount;
+        selectedProducts[i].netAmount = baseAmount + vatAmount1 + otherTax1;
+        
+        console.log('VAT Amount:', selectedProducts[i].vatAmount);
+        console.log('Other Tax:', selectedProducts[i].otherTax);
+        console.log('Net Amount:', selectedProducts[i].netAmount);
+        
+        if (selectedProducts[i].qtLine.VAT_Amount__c != undefined) 
+            selectedProducts[i].qtLine.VAT_Amount__c = vatAmount1;
+        if (selectedProducts[i].qtLine.Other_Tax__c != undefined) 
+            selectedProducts[i].qtLine.Other_Tax__c = otherTax1;
+    }
+    
+    cmp.set("v.listOfQuoteLine", selectedProducts);
+},
+//             //-----------end here abuzar's changes---------
+
 
 })

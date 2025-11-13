@@ -192,6 +192,8 @@
                             listOfQuoteLine[i]=crtlistOfQuoteLine;
                     }
                     cmp.set("v.listOfQuoteLine",listOfQuoteLine);
+                    console.log('AZ calling tax calculation');
+                    
                     helper.taxCalculation(cmp,event);
                     return;
                 }else{

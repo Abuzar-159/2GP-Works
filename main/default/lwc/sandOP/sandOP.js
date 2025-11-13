@@ -1,4 +1,4 @@
-import { LightningElement ,track } from 'lwc';
+import { LightningElement, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
 
 import SOPlogo from '@salesforce/resourceUrl/SOPlogo';
@@ -21,11 +21,64 @@ export default class SandOP extends NavigationMixin (LightningElement) {
     @track isRiskAndReturnTabOpen = false;
     @track isSubscriptionTabOpen = false;
 
+    supplyAndProductionConstructor;
+    demandPlanningConstructor;
+    financialPlanningConstructor;
+    subscriptionPlanningConstructor;
+
+    // Removed dynamic loading - testing direct HTML rendering
+
     // Subtab value
     @track selectedForecastType = 'Short';
 
     connectedCallback() {
         this.loadDefaultOrganisation();
+        this.loadDynamicComponents();
+    }
+
+    async loadDynamicComponents() {
+        // Define components to load with their property names
+        const componentsToLoad = [
+            {
+                path: 'c/supplyandproduction',
+                property: 'supplyAndProductionConstructor',
+            },
+            {
+                path: 'c/financialplanning',
+                property: 'financialPlanningConstructor',
+            },
+            {
+                path: 'c/demandplanning',
+                property: 'demandPlanningConstructor',
+            },
+            {
+                path: 'c/subscriptionplanning',
+                property: 'subscriptionPlanningConstructor',
+            }
+        ];
+
+        // Load all components
+        const promises = componentsToLoad.map(component =>
+            this.importComponent(component.path, component.property)
+        );
+
+        // Wait for all imports to complete (optional)
+        try {
+            await Promise.allSettled(promises);
+            console.log('All dynamic components loaded');
+        } catch (error) {
+            console.error('Error loading some components:', error);
+        }
+    }
+
+    async importComponent(componentPath, propertyName) {
+        try {
+            const { default: constructor } = await import(componentPath);
+            this[propertyName] = constructor;
+            console.log(`${propertyName} component loaded successfully`);
+        } catch (error) {
+            console.error(`Error importing ${propertyName} component:`, error);
+        }
     }
 
 //     renderedCallback() {
@@ -43,21 +96,7 @@ export default class SandOP extends NavigationMixin (LightningElement) {
 // }
 
 
-// navigateToSupply() {
-//     console.log('az  in nav');
-//     console.log('AZ organisation id',this.DefaultOrganisation.Id);
-
-//         this[NavigationMixin.Navigate]({
-//             type: 'standard__component',
-//             attributes: {
-//                 componentName: 'c__supplyandproduction'
-//             },
-//             state: {
-//                 c__organisationId: this.DefaultOrganisation.Id,
-
-//             }
-//         });
-//     }
+// navigateToSupply method removed - using dynamic loading instead
 
     loadDefaultOrganisation() {
         getDefaultOrganisation()
@@ -100,10 +139,9 @@ export default class SandOP extends NavigationMixin (LightningElement) {
 
             case 'supply':
                 setTimeout(() => {
-
                     this.isSupplyTabOpen = true;
                     this.currentTab = 'supply';
-                    console.log('supply tab clicked');
+                    console.log('supply tab clicked - direct HTML rendering');
                 }, 50);
                 break;
             case 'inventory':
@@ -161,7 +199,11 @@ export default class SandOP extends NavigationMixin (LightningElement) {
         this.isExecutiveTabOpen = false;
         this.isRiskAndReturnTabOpen = false;
         this.isSubscriptionTabOpen = false;
+
+        // No dynamic loading cleanup needed
     }
+
+
 
     handleMainTabClick(event) {
         const tab = event.currentTarget.dataset.tab;
@@ -175,6 +217,7 @@ export default class SandOP extends NavigationMixin (LightningElement) {
             case 'supply':
                 this.isSupplyTabOpen = true;
                 this.currentTab = 'supply';
+                console.log('Supply tab clicked - testing direct HTML rendering');
                 break;
             case 'inventory':
                 this.isInventoryTabOpen = true;
