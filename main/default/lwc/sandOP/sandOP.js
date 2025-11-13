@@ -1,5 +1,6 @@
 import { LightningElement, track } from 'lwc';
 import { NavigationMixin } from 'lightning/navigation';
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
 
 import SOPlogo from '@salesforce/resourceUrl/SOPlogo';
 import getDefaultOrganisation from '@salesforce/apex/sandOP.getDefaultOrganisation';
@@ -207,6 +208,18 @@ export default class SandOP extends NavigationMixin (LightningElement) {
 
     handleMainTabClick(event) {
         const tab = event.currentTarget.dataset.tab;
+        // If no organisation is selected, keep charts hidden during tab switch
+        // and show a toast asking the user to select an organisation
+        if (!this.DefaultOrganisation || !this.DefaultOrganisation.Id) {
+            this.showChart = false;
+            this.dispatchEvent(
+                new ShowToastEvent({
+                    title: 'Select Organisation',
+                    message: 'Please select an organisation to view charts.',
+                    variant: 'warning'
+                })
+            );
+        }
         this.resetTabs();
         switch (tab) {
             case 'demand':
@@ -244,7 +257,7 @@ export default class SandOP extends NavigationMixin (LightningElement) {
                 this.currentTab = 'riskAndReturn';
                 break;
         }
-    }
+        }
 
     // Handle subtab switching
     handleSubTabClick(event) {

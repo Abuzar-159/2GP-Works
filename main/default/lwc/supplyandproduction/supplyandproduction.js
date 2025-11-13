@@ -41,7 +41,7 @@ import getMonthlyPurchasePriceStats from '@salesforce/apex/supplyPlanningControl
 import getMonthlyManufacturingUnitPriceStats from '@salesforce/apex/supplyPlanningController.getMonthlyManufacturingUnitPriceStats';
 
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
- 
+
 
 
 export default class SupplyPlanningSidebar extends  NavigationMixin(LightningElement) {
@@ -53,10 +53,10 @@ export default class SupplyPlanningSidebar extends  NavigationMixin(LightningEle
     //         this.showChart = pageRef.state.c__showChart === 'true';
     //     }
     // }
-    
+
     @api organisationId;
-    @api showChart ;
-    //stock alert 
+    @api showChart;
+    //stock alert
     // Sorting for Safety Stock Table
 sortBySafety = 'productName';
 sortDirectionSafety = 'asc';
@@ -119,8 +119,8 @@ currentPageSafety = 1;
     @track isProductSelected = false;
     // @track showChart = true;
     @track showMoDetails = false;
-    @track selectedRowMo;         
-    @track selectedMOStatusData = []; 
+    @track selectedRowMo;
+    @track selectedMOStatusData = [];
     @track moOrderBy = { complete:null, inProgress:null, draft:null, cancelled:null, release:null };
     @track moOrder   = { complete:'ASC', inProgress:'ASC', draft:'ASC', cancelled:'ASC', release:'ASC' };
 // Page size like your example (but 5 as requested)
@@ -143,12 +143,12 @@ currentPageMoPrice = {
   cancelled: 1,
   release: 1
 };
-    
+
     currentPagePoPrice = { draft:1, logged:1, assigned:1, approved:1, rejected:1,
   inprogress:1, booked:1, closed:1, cancelled:1, supplieraccepted:1,
   reconciled:1, submittedforapproval:1, onhold:1 };
 poSortState = { /* same keys, default {sortBy:'orderDate', sortDir:'asc'} */ };
-    
+
     pageSizeSummary = 5;
 currentPageSummary = {
   mfg: 1,
@@ -198,7 +198,7 @@ currentPageSo = {
   cancelled: 'soCancelledList'
     };
     soSort = {};
-    
+
     // sort state per status (EffectiveDate only)
 soSort = {
   draft: { by: 'EffectiveDate', dir: 'asc' },
@@ -211,7 +211,7 @@ soSort = {
   cancelled: { by: 'EffectiveDate', dir: 'asc' }
 };
 
-    
+
 
 
 
@@ -233,7 +233,7 @@ soSort = {
     @track actualData;
     @track forecastData= [];
         @track hasForecastData = false; // Add this line
-        
+
 
     //Inventory
     @track rawData = [];
@@ -266,11 +266,11 @@ soSort = {
     @track isCustomYear = false;
 @track selectedCustomYear = new Date().getFullYear(); // Default current year
     @track availableYearOptions = [];
-    
+
     @track selectedSpendYearType = 'Fiscal'; // default
 @track selectedSpendCustomYear = new Date().getFullYear();
     @track showSpendCustomYearSelector = false;
-    
+
 
 
     chart;          // Chart.js instance
@@ -281,8 +281,8 @@ forecastAlgorithmOptions = [
     { label: 'Holt-Winters (Seasonal)', value: 'Holt-Winters' }
 ];
 
-    
-    
+
+
 
     get chartTitle() {
         return this.selectedProductId
@@ -330,7 +330,7 @@ forecastAlgorithmOptions = [
     return this.selectedYearType === 'Custom';
 }
 
-    
+
 // generateAvailableYearOptions() {
 //     const currentYear = new Date().getFullYear();
 //     const years = [];
@@ -341,7 +341,7 @@ forecastAlgorithmOptions = [
 
 //     this.availableYearOptions = years;
     // }
-    
+
     // 🧠 Button Classes for styling toggle buttons
 get fiscalButtonClass() {
     return `year-button ${this.selectedYearType === 'Fiscal' ? 'selected' : ''}`;
@@ -350,7 +350,7 @@ get fiscalButtonClass() {
 get customButtonClass() {
     return `year-button ${this.selectedYearType === 'Custom' ? 'selected' : ''}`;
 }
-    
+
     //for supplier score card
     // Computed classes for button styling
 get spendFiscalRadioClass() {
@@ -369,7 +369,7 @@ selectSpendFiscalYear() {
 
       if (this.isProductSelected && this.inventoryProduct.Id) {
         this.fetchPriceData();
-          
+
     }
 }
 
@@ -381,11 +381,11 @@ selectSpendFiscalYear() {
         // ✅ Same logic for Custom year
         if (this.isProductSelected && this.inventoryProduct.Id) {
         this.fetchPriceData();
-                  
+
 
     }
         }
-    
+
 
 
 
@@ -396,7 +396,7 @@ async selectFiscalYear() {
 
     if (this.inventoryProduct?.Id && this.fromDate && this.toDate) {
         this.fetchPriceData();
-                  
+
 
     }
 }
@@ -407,7 +407,7 @@ async selectCustomYear() {
 
     if (this.inventoryProduct?.Id && this.fromDate && this.toDate) {
         this.fetchPriceData();
-                  
+
 
     }
 }
@@ -442,11 +442,11 @@ handleCustomYearSliderChange(event) {
     this.loadAllChartData();
      if (this.isProductSelected && this.inventoryProduct.Id) {
         this.fetchPriceData();
-                  
+
 
     }
 }
-    
+
     decreaseYear() {
     let year = parseInt(this.selectedCustomYear, 10);
     if (year > this.minCustomYear) {
@@ -464,8 +464,8 @@ increaseYear() {
         this.loadAllChartData();
     }
 }
-    
-    
+
+
     //supplier score caard
 
     get minCustomYear() {
@@ -501,13 +501,13 @@ setCustomSpendYearAndLoadData() {
     this.fetchSupplierData(); // Your existing method
 }
 
-    
-    
+
+
     handleToggleChange(event) {
     this.selectedYearType = event.target.checked ? 'Custom' : 'Fiscal';
     this.handleYearTypeChange({ detail: { value: this.selectedYearType } });
 }
-    
+
 // handleYearTypeChange(event) {
 //     this.selectedYearType = event.detail.value;
 
@@ -553,7 +553,7 @@ setCustomSpendYearAndLoadData() {
 //         this.loadAllChartData();
 //     }
     // }
-    
+
     handleYearTypeChange(event) {
     return new Promise((resolve, reject) => {
         this.selectedYearType = event.detail.value;
@@ -615,7 +615,7 @@ setCustomSpendYearAndLoadData() {
 //         this.handleSearchClick();
 //     }
     // }
-    
+
     handleCustomYearChange(event) {
     this.selectedCustomYear = event.detail.value;
     this.setCustomYearDates(this.selectedCustomYear);
@@ -643,7 +643,7 @@ generateCustomYearLabels(year) {
     const day = String(dateObj.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
     }
-    
+
 
     generateAvailableYearOptions() {
     const currentYear = new Date().getFullYear();
@@ -657,7 +657,7 @@ generateCustomYearLabels(year) {
 }
 
 
-    
+
 
     generateFiscalLabels(startMonth, year) {
     console.log('💕💕AZ in fiscal labels');
@@ -679,10 +679,18 @@ generateCustomYearLabels(year) {
 
     console.log('📦 Final labels array:', JSON.stringify(labels));
     return labels;
-}  
+}
 
     connectedCallback() {
-        
+      console.log("supplyandproduction called");
+      console.log("showChart:", this.showChart);
+      
+      // If showChart is false (no organisation selected), skip chart initialization
+      if (this.showChart === false) {
+          console.log('⚠️ showChart is false, skipping chart initialization');
+          return;
+      }
+
         const currentYear = new Date().getFullYear().toString();
     if (!this.selectedCustomYear) {
         this.selectedCustomYear = currentYear;
@@ -770,12 +778,12 @@ generateCustomYearLabels(year) {
                     this.selectedYearSup = fiscalYear; // 🟢 used in Apex calls
             this.fiscalLabels = this.generateFiscalLabels(startMonth, fiscalYear);
             console.log('AZ ingenerateFiscalLabels',this.generateFiscalLabels(startMonth, fiscalYear));
-            
+
             console.log('❌❌AZ Fiscal Labels',this.fiscalLabels);
 
             // Now call your chart function
             console.log('AZ calling initializeSupplyForecastChart from fiscal year');
-            
+
             this.initializeSupplyForecastChart(
                 this.fiscalLabels,
                 this.supplyData,
@@ -804,7 +812,7 @@ generateCustomYearLabels(year) {
    }
     handleCreatePO() {
         console.log('create po');
-        
+
     this[NavigationMixin.Navigate]({
         type: 'standard__component',
         attributes: {
@@ -821,7 +829,7 @@ generateCustomYearLabels(year) {
         return Array.isArray(this.manufacturingPriceData) && this.manufacturingPriceData.length > 0;
     }
 
-    
+
     async fetchPriceData() {
         if (!this.inventoryProduct?.Id || !this.fromDate || !this.toDate) return;
 
@@ -844,7 +852,7 @@ generateCustomYearLabels(year) {
 
 
             // ---- SALES (UPDATED: totalSOCount + per-status lists) ----
-            
+
     const salesData = await getMonthlySalesPriceStats({
       productId: this.inventoryProduct.Id,
       orgId: this.organisationId || null,
@@ -853,7 +861,7 @@ generateCustomYearLabels(year) {
     });
 console.log('📦 Apex getMonthlySalesPriceStats() raw response:', salesData);
 console.log('🧾 Apex getMonthlySalesPriceStats() JSON string:', JSON.stringify(salesData, null, 2));
-            
+
 
     const fmtAmount = (v) => this.formatPrice(v);
     const decorateSO = (list) => (list || []).map(s => ({
@@ -884,7 +892,7 @@ console.log('🧾 Apex getMonthlySalesPriceStats() JSON string:', JSON.stringify
     }));
 
             // ---- Purchase price (UPDATED: add totalPOCount + per-status lists) ----
-            
+
 
 
     const purchaseData = await getMonthlyPurchasePriceStats({
@@ -923,7 +931,7 @@ console.log('🧾 Apex getMonthlySalesPriceStats() JSON string:', JSON.stringify
       poReconciledList:           decoratePO(row.poReconciledList),
       poSubmittedForApprovalList: decoratePO(row.poSubmittedForApprovalList),
       poOnHoldList:               decoratePO(row.poOnHoldList)
-    }));            
+    }));
             // Manufacturing Unit Cost
             const mfgData = await getMonthlyManufacturingUnitPriceStats({
                 productId: this.inventoryProduct.Id,
@@ -954,7 +962,7 @@ console.log('🧾 Apex getMonthlySalesPriceStats() JSON string:', JSON.stringify
   draftMOList:      row.draftMOList      || [],
   cancelledMOList:  row.cancelledMOList  || [],
                 releaseMOList: row.releaseMOList || [],
-  
+
 
             }));
                     this._refreshSummaryPagers();
@@ -1096,7 +1104,7 @@ handleNextPageSummary = (event) => {
 
 //   this.showSpinner = false;
     //     }
-    
+
     sortByMo(event) {
   this.showSpinner = true;
 
@@ -1134,7 +1142,7 @@ handleNextPageSummary = (event) => {
   this.showSpinner = false;
 }
 
-    
+
 
     // ===== Generic helpers =====
 _getList(status) {
@@ -1293,7 +1301,7 @@ handleTotalPOClick = (event) => {
   const key = event.currentTarget.dataset.key;
   const row = (this.purchasePriceData || []).find(r => r.key === key);
     if (!row) return;
-    
+
      // reset current pages for a fresh view
   Object.keys(this.currentPagePoPrice).forEach(k => this.currentPagePoPrice[k] = 1);
 
@@ -1323,7 +1331,7 @@ handleTotalPOClick = (event) => {
     supplierAccepted:1, reconciled:1, submittedForApproval:1, onHold:1
   };
 };
-    
+
     goBack = () => {
         this.showMoDetails = false;
         this.selectedRowMo = undefined;
@@ -1350,7 +1358,7 @@ handleTotalPOClick = (event) => {
   const recordId = event.currentTarget.dataset.id;
 
         // 👇 defaults to Manufacturing Order; override via data-object on the link
-        
+
   const objectApiName = event.currentTarget.dataset.object || 'Manufacturing_Order__c';
   // optional: allow data-action="edit" if you ever need it
   const actionName = event.currentTarget.dataset.action || 'view';
@@ -1371,7 +1379,7 @@ handleCreateMO() {
     this[NavigationMixin.Navigate]({
         type: 'standard__component',
         attributes: {
-            componentName: 'c__WorkCenterSchedule' 
+            componentName: 'c__WorkCenterSchedule'
         }
     });
 }
@@ -1379,11 +1387,11 @@ handleStockTakeNav() {
     this[NavigationMixin.Navigate]({
         type: 'standard__component',
         attributes: {
-            componentName: 'c__StockTake'  
+            componentName: 'c__StockTake'
         }
     });
 }
-    
+
 
     //from here for the po price stats
 
@@ -1392,7 +1400,7 @@ handleTotalPOClick = (event) => {
   const key = event.currentTarget.dataset.key;
   const row = (this.purchasePriceData || []).find(r => r.key === key);
     if (!row) return;
-    
+
      // reset current pages for a fresh view
   Object.keys(this.currentPagePoPrice).forEach(k => this.currentPagePoPrice[k] = 1);
 
@@ -1422,7 +1430,7 @@ handleTotalPOClick = (event) => {
     supplierAccepted:1, reconciled:1, submittedForApproval:1, onHold:1
   };
 };
-    
+
     // Map status key -> list from selectedRowPo
 _getPoList(key) {
   if (!this.selectedRowPo) return [];
@@ -1472,7 +1480,7 @@ _pagedPo(status) {
   const end = start + this.pageSizePoPrice;
   return data.slice(start, end);
 }
-    
+
     _buildPoSection(key, title) {
   const total = this._getPoList(key).length;
   const totalPages = total ? Math.ceil(total / this.pageSizePoPrice) : 1;
@@ -1512,7 +1520,7 @@ _pagedPo(status) {
     this._buildPoSection('onhold', 'On Hold')
   ];
 }
-    
+
 
 // example getters for Draft (repeat pattern for others or generate in template)
 // get totalPagesPoDraft() { return this._totalPagesPo('draft'); }
@@ -1529,7 +1537,7 @@ _pagedPo(status) {
 // }
 // get pagedPoDraft() { return this._pagedPo('draft'); }
 
-    
+
     get poPager() {
   // Returns an object keyed by status:
   // poPager.draft = { totalPages, isFirst, isLast, from, to, paged, total, currentPage }
@@ -1554,8 +1562,8 @@ _pagedPo(status) {
   return obj;
 }
 
-    
-    
+
+
 // Prev/Next (generic)
 handlePrevPagePo = (event) => {
   const status = event.currentTarget.dataset.status; // e.g. 'draft'
@@ -1597,8 +1605,8 @@ sortByPo = (event) => {
   this.poSortState = { ...this.poSortState, [status]: next };
   this.currentPagePoPrice = { ...this.currentPagePoPrice, [status]: 1 };
 };
-    
-    
+
+
     // from here for the sales price stats
 
     handleTotalSOClick = (e) => {
@@ -1639,9 +1647,9 @@ this.selectedRowSo = {
   this.currentPageSoPrice = { ...this.currentPageSoPrice, [status]: 1 };
 };
 
-    
-    
-    
+
+
+
     // helper: return raw list for a status key from selectedRowSo
 _getSoList(statusKey) {
   if (!this.selectedRowSo) return [];
@@ -1755,7 +1763,7 @@ decorateSO(so) {
   };
 }
 
-    
+
 // pager handlers
 handlePrevPageSo = (event) => {
   const status = event.currentTarget.dataset.status;
@@ -1789,7 +1797,7 @@ handleNextPageSo = (event) => {
         this.loadTop5CountrySupplyDemand(this.fromDate, this.toDate);
 
 
-        
+
 
     } else {
         this.fetchData(this.fromDate, this.toDate);
@@ -1797,8 +1805,8 @@ handleNextPageSo = (event) => {
 
         this.initializeSupplyForecastChart();
         this.initializeTop5CountryChart();
-        this.resolveSupplyOverviewData();    
-        this.resolveCountrySupplyDemand();  
+        this.resolveSupplyOverviewData();
+        this.resolveCountrySupplyDemand();
 }
 
 
@@ -1813,7 +1821,7 @@ handleNextPageSo = (event) => {
 
 
 
-    
+
     resetTabs() {
         this.isSupplyOverview = false;
         this.isSupplierScorecard = false;
@@ -1859,7 +1867,7 @@ handleProductRemoved(event) {
             this.productName = null;
             this.isProductSelected = false;
             this.showChart = false;
- 
+
             // Optional: Clear existing chart
             if (this.chart) {
                 this.chart.destroy();
@@ -1868,15 +1876,24 @@ handleProductRemoved(event) {
         }
 
 
-   
+
     // Tab Selection Methods
     selectSupplyOverview() {
+        // if(this.organisationId == null){
+        //     this.showChart = false;
+        // }
         this.showChart = true;
+         if (!this.organisationId) {
+            this.showChart = false;
+            this.showToast('Warning', 'Please select an Organisation to view Supply Overview.', 'warning');
+        } else {
+            this.showChart = true;
+        }
         this.productId = null;
         this.productName = null;
         this.resetTabs();
         console.log('in selectSupplyOverview');
-        
+
         this.isSupplyOverview = true;
          this.isProductSelected = false;
 
@@ -1886,84 +1903,37 @@ handleProductRemoved(event) {
     // this.selectedCustomYear = null;
     // console.log('✅ Year type reset to Fiscal, custom year cleared');
         this.setFiscalDates();
-        if (! this.inventoryProduct.Id) {
+        // if (! this.inventoryProduct.Id) {
+        //     console.log('calling load top 5');
+         // Only attempt to load/chart data when organisation is present
+        if (!this.inventoryProduct.Id && this.showChart) {
             console.log('calling load top 5');
-            
+
             // ⬅️ If no product is selected, load both default charts
             this.loadTopFive(); // Top 5 Products
             this.loadTop5CountrySupplyDemand(); // Top 5 Countries
         }
-        setTimeout(() => {
-            this.initializeSupplyForecastChart();
-             this.initializeBreakdownChart();
-           this.initializeInventoryLevelChart();
-        }, 100);
-
+       // Initialize charts only when we actually show charts
+        if (this.showChart) {
+            setTimeout(() => {
+                this.initializeSupplyForecastChart();
+                this.initializeBreakdownChart();
+                this.initializeInventoryLevelChart();
+            }, 100);
+        }
     }
-    
-//     selectSupplyOverview() {
-//     console.log('🔹 selectSupplyOverview called');
-
-//     this.productId = null;
-//     this.productName = null;
-//     this.inventoryProduct = { Id: null, Name: null };
-//     this.resetTabs();
-//     console.log('✅ Product selection and tabs reset');
-
-//     // Reset year type and custom year
-//     this.selectedYearType = 'Fiscal';
-//     this.showCustomYearSelector = false;
-//     this.selectedCustomYear = null;
-//     console.log('✅ Year type reset to Fiscal, custom year cleared');
-
-//     // Wait for fiscal dates to be set
-//     this.setFiscalDates()
-//         .then(() => {
-//             console.log('📅 Fiscal dates set:', this.fromDate, '→', this.toDate);
-//             return getOrgFiscalStartMonth();
-//         })
-//         .then((startMonth) => {
-//             const today = new Date();
-//             let fiscalYear = today.getFullYear();
-//             if (today.getMonth() + 1 < startMonth) fiscalYear -= 1;
-
-//             this.selectedYearSup = fiscalYear;
-//             this.fiscalLabels = this.generateFiscalLabels(startMonth, fiscalYear);
-//             console.log('📆 Fiscal year & labels set:', this.selectedYearSup, this.fiscalLabels);
-
-//             // Reset chart arrays
-//             this.supplyData = new Array(12).fill(0);
-//             this.demandData = new Array(12).fill(0);
-//             this.forecastedSupplyData = new Array(12).fill(null);
-//             this.forecastedDemandData = new Array(12).fill(null);
-//             console.log('📊 Chart arrays reset');
-
-//             // Load default charts if no product is selected
-//             if (!this.inventoryProduct?.Id) {
-//                 console.log('📊 Loading default Top 5 charts');
-//                 this.loadTopFive();
-//                 this.loadTop5CountrySupplyDemand();
-//             }
-
-//             // Initialize charts after data
-//             console.log('📈 Initializing charts...');
-//             this.initializeSupplyForecastChart();
-//             this.initializeBreakdownChart();
-//             this.initializeInventoryLevelChart();
-//             console.log('✅ Charts initialized');
-//         })
-//         .catch((error) => {
-//             console.error('❌ Error in selectSupplyOverview:', error);
-//         });
-// }
-
-
-
-
-
 selectSupplierScorecard() {
     // Reset product selection
-    this.showChart = true;
+    // if(this.organisationId == null){
+    //         this.showChart = false;
+    //     }
+    // show charts only when organisation is selected; still allow tab switch
+    if (!this.organisationId) {
+        this.showChart = false;
+        this.showToast('Warning', 'Please select an Organisation to view Supplier Scorecard.', 'warning');
+    } else {
+        this.showChart = true;
+    }
     this.productId = null;
     this.productName = null;
     this.inventoryProduct.Id = null;
@@ -1977,7 +1947,7 @@ selectSupplierScorecard() {
     this.showSpendCustomYearSelector = false;
     this.selectedSpendCustomYear = null;
 
-    // Get fiscal year and labels
+    // Get fiscal year and labels. Only fetch vendor / supplier data when showChart is true.
     getOrgFiscalStartMonth()
         .then(startMonth => {
             const today = new Date();
@@ -1989,14 +1959,18 @@ selectSupplierScorecard() {
             this.selectedYearSup = fiscalYear; // For Apex & chart
             this.fiscalLabels = this.generateFiscalLabels(startMonth, fiscalYear);
 
-            // Clear and redraw chart
+            // Clear and redraw chart (empty) so UI shows a clean placeholder when no org
             this.destroyChart('spendChart');
             this.renderSpendChart([]);
+
+            // If charts are hidden, skip vendor fetch
+            if (!this.showChart) return null;
 
             // Fetch default vendor data
             return getDefaultTopVendor({ organisationId: this.organisationId, year: fiscalYear });
         })
         .then((vendor) => {
+            if (!vendor) return; // nothing to do when showChart was false
             if (vendor && vendor.Id) {
                 this.selectedVendorId = vendor.Id;
                 this.selectedVendorName = vendor.Name;
@@ -2089,7 +2063,7 @@ selectSupplierScorecard() {
             this.isLoading = true;
         //getMonthlyDemandSupply({
         getSupplyDemandForecastWithHistory({
-            
+
             productId: this.inventoryProduct.Id,
             organisationId: this.organisationId,
             //selectedYear: this.selectedYear,
@@ -2100,10 +2074,10 @@ selectSupplierScorecard() {
             .then(result => {
                 console.log('📊 Supply Overview Data:', result);
                 console.log('✅this is After removing the apex method❌');
-                
+
               //  this.supplyDemandRaw = result;
                 this.processMonthlyDataForChart(result); // ✅ replaces transformToChartData + render
-                //this.issuppydemandloaded = true; 
+                //this.issuppydemandloaded = true;
             })
             .catch(error => {
                 console.error('Error fetching Supply Overview data:', error);
@@ -2116,7 +2090,7 @@ selectSupplierScorecard() {
 
 
 
-    //for defaault 
+    //for defaault
 
     fetchCountrySupplyDemand() {
                     this.isLoading = true;
@@ -2243,7 +2217,7 @@ selectSupplierScorecard() {
         //     console.log('callig resolve by country');
         this.resolveCountrySupplyDemand();
         //     console.log('aftr calling resolve');
-        // }  
+        // }
     }
 
     //top 5 supply demand
@@ -2278,7 +2252,7 @@ selectSupplierScorecard() {
                 });
     }
 
-   
+
 
     processTopFiveChartData(data) {
         console.log('in processTopFiveChartData');
@@ -2498,7 +2472,7 @@ selectSupplierScorecard() {
 
     //renders the supply and demand
     //from to date
-    
+
 //     processMonthlyDataForChart(rawData) {
 //     console.log('🔍 Raw input to processMonthlyDataForChart:', rawData);
 
@@ -2619,9 +2593,9 @@ selectSupplierScorecard() {
 //     this.issuppydemandloaded = true;
 //     console.log('✅ Chart loaded flag set: issuppydemandloaded = true');
 //     }
-    
-    
-    
+
+
+
     processMonthlyDataForChart(rawData) {
     console.log('🔍 Raw input to processMonthlyDataForChart:', rawData);
 
@@ -3059,7 +3033,10 @@ initializeSupplyForecastChart(fiscalLabels, supply, demand, forecastedSupply, fo
 
     handleVendorRemoved() {
     console.log('Vendor lookup cleared');
-
+        if(this.organisationId == null){
+            this.showChart = false;
+            return;
+        }
     // Clear selected vendor details
     this.selectedVendorId = null;
     this.selectedVendorName = null;
@@ -3080,7 +3057,7 @@ initializeSupplyForecastChart(fiscalLabels, supply, demand, forecastedSupply, fo
             }
 }
 
- 
+
     fetchSupplierData() {
         console.log("📥 In fetchSupplierData");
 
@@ -3155,7 +3132,7 @@ initializeSupplyForecastChart(fiscalLabels, supply, demand, forecastedSupply, fo
   .finally(() => {
                     this.isLoading = false;
                 });
-        
+
     }
 
     destroyChart(chartKey) {
@@ -3282,7 +3259,7 @@ initializeSupplyForecastChart(fiscalLabels, supply, demand, forecastedSupply, fo
 //     return years;
 // }
 
-    
+
 //     handleSpendYearTypeChange(event) {
 //     this.selectedSpendYearType = event.detail.value;
 
@@ -3308,7 +3285,7 @@ initializeSupplyForecastChart(fiscalLabels, supply, demand, forecastedSupply, fo
 //     } else if (this.selectedSpendYearType === 'Custom') {
 //         this.showSpendCustomYearSelector = true;
 //         // this.loadSpendChartDataUsingCustomYear();
-        
+
 //     // 🔒 Safely set the custom year
 //     const yearToUse = this.selectedSpendCustomYear || new Date().getFullYear().toString();
 //     this.selectedYearSup = parseInt(yearToUse, 10);
@@ -3321,7 +3298,7 @@ initializeSupplyForecastChart(fiscalLabels, supply, demand, forecastedSupply, fo
 //     this.fetchSupplierData();
 //     }
     // }
-    
+
     handleSpendYearTypeChange(event) {
     this.selectedSpendYearType = event.detail.value;
 
@@ -3379,11 +3356,11 @@ handleSpendCustomYearChange(event) {
     this.fetchSupplierData();
 }
 
-    
+
     loadSpendChartDataUsingFiscal() {
-    getSpendData({ 
-        organisationId: this.organisationId, 
-        monthLabels: this.fiscalLabels 
+    getSpendData({
+        organisationId: this.organisationId,
+        monthLabels: this.fiscalLabels
     })
         .then(data => {
             this.renderSpendChart(data);
@@ -3411,7 +3388,7 @@ loadSpendChartDataUsingCustomYear() {
 }
 
 
-    
+
     renderSpendChart(data) {
     // if (!Array.isArray(data) || data.length === 0) {
     //     this.showToast('No Data', 'No spend data to display.', 'warning');
@@ -3478,7 +3455,7 @@ loadSpendChartDataUsingCustomYear() {
     //         actualMap[shortMonth] = item.amount;
     //     }
         // });
-        
+
        data.forEach(item => {
     const shortMonth = fullMonthNames[item.month];
     if (!shortMonth) return;
@@ -3590,7 +3567,7 @@ loadSpendChartDataUsingCustomYear() {
     });
 }
 
- 
+
 
 
 downloadSpendForecastAsCSV() {
@@ -3598,7 +3575,7 @@ downloadSpendForecastAsCSV() {
     console.log('forecastData', this.forecastData);
     if (!this.hasForecastData || this.forecastData.length === 0) {
         console.log('hasForecastData==>/',this.hasForecastData);
-        
+
         this.showToast('No Forecast', 'No forecast data available to download.', 'warning');
         return;
     }
@@ -3715,13 +3692,14 @@ const monthLabels = isFiscal && Array.isArray(this.fiscalLabels)
     const hasRealData =
         (onTimeData.some(v => v > 0) || lateData.some(v => v > 0));
 
+    // If no real data, render an empty chart (axes + title) instead of returning early.
+    // This ensures the UI shows an empty graph placeholder rather than nothing.
+    let chartTitle = 'On-Time Delivery Performance';
     if (!hasRealData) {
-        this.showChart = false; // Show SVG if empty
-        console.warn('No chart data available — showing SVG illustration.');
-        return;
+        console.warn('No chart data available — rendering empty chart.');
+        chartTitle += ' (no data)';
+        // keep onTimeData/lateData as zero arrays so Chart.js renders axes
     }
-
-    this.showChart = true; // Show chart when data exists
 
         // Render the chart with either real or empty data
         this.chartInstances.onTimeDeliveryChart = new window.Chart(ctx, {
@@ -3749,7 +3727,7 @@ const monthLabels = isFiscal && Array.isArray(this.fiscalLabels)
                     legend: { position: 'top' },
                     title: {
                         display: true,
-                        text: 'On-Time Delivery Performance'
+                        text: chartTitle
                     },
                     tooltip: {
                         mode: 'index',
@@ -3879,7 +3857,7 @@ const monthLabels = isFiscal && Array.isArray(this.fiscalLabels)
                 }
             }
         });
-        
+
 //         const summaryContainer = this.template.querySelector('.quality-summary');
 //         if(this.showChart == false){
 // if (summaryContainer) {
@@ -3979,7 +3957,7 @@ renderQualitySummary(data) {
 
 
 
-    setFiscalDates(fromProductSelection = false) {  
+    setFiscalDates(fromProductSelection = false) {
         return getOrgFiscalStartMonth()
             .then(startMonth => {
                 console.log('Start month: ', startMonth);
@@ -4076,7 +4054,7 @@ renderQualitySummary(data) {
         }
     }
 
-    
+
     loadTop5Data() {
                     this.isLoading = true;
         getTop5Inventory()
@@ -4324,26 +4302,45 @@ renderQualitySummary(data) {
     }
 
 
-// safety stock stock alert tab 
+// safety stock stock alert tab
  get safetyTabClass() {
         return this.isSafety ? 'sub-tab-horizontal active' : 'sub-tab-horizontal';
     }
     selectSafety() {
     console.log('in selectsafety');
+    // Determine whether to show charts based on organisation selection; allow tab switch regardless
+    if (!this.organisationId) {
+        this.showChart = false;
+        this.showToast('No Organisation Selected', 'Please select an organisation to view safety stock data.', 'warning');
+    } else {
+        this.showChart = true;
+    }
+
     this.clearCharts();
     this.selectedProduct = { Id: null, Name: null };
-    this.isSupplyOverview=false;
-    this.isSupplierScorecard=false;
+    this.isSupplyOverview = false;
+    this.isSupplierScorecard = false;
     this.resetTabs();
-        this.isSafety = true;
-                    this.isLoading = true;
+    this.isSafety = true;
+
+    // If no organisation selected, skip fetching warehouse / safety data and leave placeholders
+    if (!this.showChart) {
+        this.selectedWarehouseForSafetyStock = { Id: null, Name: null };
+        this.isWarehouseSelectedForsafetyStock = false;
+        this.safetyStockData = [];
+        this.filteredSafetyStockData = [];
+        this.locationFilter = null;
+        return;
+    }
+
+    // Only set loading and call Apex when we have an organisation
+    this.isLoading = true;
     getDefaultWarehouseByStock({ organisationId: this.organisationId })
         .then(site => {
             if (site) {
                 console.log('sucess');
                 this.selectedWarehouseForSafetyStock.Id = site.Id;
                 this.selectedWarehouseForSafetyStock.Name = site.Name;
-                //console.log('warehouse default ->',this.selectedWarehouseForSafetyStock);
                 this.isWarehouseSelectedForsafetyStock = true;
                 this.locationFilter = "Company__c = '" + this.organisationId + "' AND Active__c = true AND Site__c = '" + this.selectedWarehouseForSafetyStock.Id + "'";
                 this.fetchSafetyStockData();
@@ -4355,9 +4352,9 @@ renderQualitySummary(data) {
         .catch(error => {
             console.error('Error fetching default warehouse by stock:', error);
         })
-          .finally(() => {
-                    this.isLoading = false;
-                });
+        .finally(() => {
+            this.isLoading = false;
+        });
     }
     renderSafetyStockChart() {
         console.log('in render');

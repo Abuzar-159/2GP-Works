@@ -53,11 +53,13 @@ export default class DemandPlanning extends NavigationMixin(LightningElement) {
 
     selectedFiscalYear = new Date().getFullYear();
     @track currencySymbol=null;
-    @track isDemandProductSel = false;
+    // @track isDemandProductSel = false;
+    
     @track isWarehouseSelectedForAging = false;
     @track isDemand = false;
     @track isInventory = false;
     @api organisationId;
+    @api showChart;
     @api isDemandTabOpen;
     @api isInventoryTabOpen;
     @api isRiskAndReturnTabOpen;
@@ -465,32 +467,45 @@ handleYearChange(event) {
         return this.isCustomerRAR ? 'sub-tab-horizontal active' : 'sub-tab-horizontal';
     }
     selectDemand() {
+        // Decide whether to show charts depending on organisation selection.
+        this.showChart = !!this.organisationId;
+        if (!this.showChart) {
+            this.showToast('Warning', 'Please select an Organisation to view Demand charts.', 'warning');
+        }
+
+        // Switch tab state (always allow tab switch so placeholders can render)
         this.clearCharts();
         this.isDemand = true;
         this.isInventory = false;
         this.selectedWarehouse = null;
         this.isCustomerPattern = false;
-        this.selectedCustomerYear = null
+        this.selectedCustomerYear = null;
         this.selectedCustomer = { Id: null, Name: null };
         this.isSimulationPlanning = false;
-         getDefaultProductFromOrderItem()
-                            .then(product => {  console.log('default product: ',product);
-                                if (product) {
-                                    this.selectedProduct = {
-                                        Id: product.Id,
-                                        Name: product.Name
-                                    };
-                                    this.isDemandProductSel = true;
-                                    this.fetchDemandData();
-                                    this.fetchTopCustomers();
-                                    this.fetchTopProducts();
-                                } else {
-                                    console.warn('No default product found from OrderItem.');
-                                }
-                            })
-                            .catch(error => {
-                                console.error('Error fetching default product from OrderItem:', error);
-                            });
+
+        // Only fetch default product & demand/top data when we actually show charts
+        if (this.showChart) {
+            getDefaultProductFromOrderItem()
+                .then(product => {
+                    console.log('default product: ', product);
+                    if (product) {
+                        this.selectedProduct = {
+                            Id: product.Id,
+                            Name: product.Name
+                        };
+                        this.showChart = true;
+
+                        this.fetchDemandData();
+                        this.fetchTopCustomers();
+                        this.fetchTopProducts();
+                    } else {
+                        console.warn('No default product found from OrderItem.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching default product from OrderItem:', error);
+                });
+        }
         this.custProd = { Id: null, Name: null };
        // this.scheduleChartRender();
         
@@ -511,6 +526,21 @@ handleYearChange(event) {
         this.locationInventoryData = {};
         this.isStockMovement = false;
         this.selectedProduct={Id:null,Name:null};
+
+        // Decide whether to show charts depending on organisation selection.
+        this.showChart = !!this.organisationId;
+        if (!this.showChart) {
+            this.showToast('Warning', 'Please select an Organisation to view Inventory charts.', 'warning');
+            // Ensure placeholders render and avoid server calls when no organisation is selected
+            this.inventoryData = {};
+            this.scheduleChartRender();
+            setTimeout(() => {
+                this.isLoading = false;
+            }, 500);
+            return;
+        }
+
+        // Only fetch inventory data when organisation is selected
         getWarehouseInventory({ organisationId: this.organisationId , productId: this.inventoryProduct.Id })
         .then(result => {
             this.inventoryData = result;
@@ -518,7 +548,6 @@ handleYearChange(event) {
             this.scheduleChartRender();
         })
         .catch(error => {
-            console.error('Error fetching warehouse inventory:', error);
             this.dispatchEvent(
                 new ShowToastEvent({
                     title: 'Error',
@@ -565,7 +594,9 @@ handleYearChange(event) {
     handleProductSelected(event) {
         this.selectedProduct.Id = event.detail.Id;
         this.selectedProduct.Name = event.detail.Name;
-        this.isDemandProductSel = true;
+        // this.isDemandProductSel = true;
+                                            this.showChart = true;
+
         console.log('Selected product:', this.selectedProduct);
         this.fetchDemandData();
         this.fetchTopCustomers();
@@ -573,7 +604,9 @@ handleYearChange(event) {
     }
     handleDemandProdRemove(){
         this.selectedProduct = { Id: null, Name: null };
-        this.isDemandProductSel = false;
+        // this.isDemandProductSel = false;
+                                            this.showChart = false;
+
         this.showSimulationPanel = false;
         this.simulationHasRun = false;
         this.simulationInputs = [];
@@ -641,9 +674,17 @@ handleSiteSelected(event) {
 
     connectedCallback() {
         console.log('organisationId:', this.organisationId);
+        console.log('showChart:', this.showChart);
         console.log('isDemandTabOpen:', this.isDemandTabOpen);
         console.log('isInventoryTabOpen:', this.isInventoryTabOpen);
         console.log('isRiskAndReturnTabOpen:', this.isRiskAndReturnTabOpen);
+        
+        // If showChart is false (no organisation selected), skip chart initialization
+        if (this.showChart === false) {
+            console.log('⚠️ showChart is false, skipping chart initialization and data fetch');
+            return;
+        }
+        
         this.siteFilter = "Company__c = '" + this.organisationId + "' AND Active__c = true";
         this.customerFilter = "Company__c = '" + this.organisationId + "' AND Active__c = true AND (" +
                       "Account_Type__c = 'Customer' OR " +
@@ -686,7 +727,9 @@ handleSiteSelected(event) {
                                         Id: product.Id,
                                         Name: product.Name
                                     };
-                                    this.isDemandProductSel = true;
+                                    // this.isDemandProductSel = true;
+                                    this.showChart = true;
+
                                     this.fetchDemandData();
                                     this.fetchTopCustomers();
                                     this.fetchTopProducts();
@@ -3899,7 +3942,8 @@ selectSimulationPlanning() {
                                         Id: product.Id,
                                         Name: product.Name
                                     };
-                                    this.isDemandProductSel = true;
+                                    // this.isDemandProductSel = true;
+                                    this.showChart = true;
                                     this.fetchDemandData();
                                     this.fetchTopCustomers();
                                     this.fetchTopProducts();

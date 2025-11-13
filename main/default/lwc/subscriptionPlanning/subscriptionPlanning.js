@@ -9,8 +9,6 @@ import getTopSubscribedProducts from '@salesforce/apex/subscriptionPlanning.getT
 
 export default class SubscriptionPlanning extends NavigationMixin(LightningElement) {
 
-        @api organisationId;
-
     @track isSubscribedProducts = false;
     @track isProductsOrderSummary = false;
     @track isSubscriptionAnalytics = true;
@@ -114,7 +112,7 @@ renderedCallback() {
         getSubscribedProductSummary() {
             console.log('Fetching subscribed product summary...');
             // Call your Apex method to get the product summary
-            getSubscribedOrderItems({organisationId : this.organisationId})
+            getSubscribedOrderItems()
                 .then(result => {
                     this.orderItems = result;
                     this.error = undefined;
@@ -143,7 +141,7 @@ renderedCallback() {
         }
         
  loadSubscriptionChart() {
-        getSubscriptionStatusCounts({organisationId : this.organisationId})
+        getSubscriptionStatusCounts()
             .then(data => {
                 this.statusCounts = data;
                 this.renderStatusChart();
@@ -212,7 +210,7 @@ renderStatusChart() {
 
 
 loadTopProductsChart() {
-    getTopSubscribedProducts({organisationId : this.organisationId})
+    getTopSubscribedProducts()
         .then(data => {
             this.topProducts = data;
             this.renderTopProductsChart();

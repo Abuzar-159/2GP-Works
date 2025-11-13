@@ -51,6 +51,7 @@ export default class FinancialTabs extends NavigationMixin(LightningElement) {
     @track isNewPlanningIn = false;
     @track simulatedProjectBudgetData = {};
     @api organisationId;
+    @api showChart;
      @track currencySymbol = ''; // 👈 Will hold the returned symbol
     @track fromDate = new Date();
     @track toDate = new Date();
@@ -195,6 +196,14 @@ handleChartOfAccountRemoved(event) {
     
 
 connectedCallback() {
+    console.log('showChart:', this.showChart);
+    
+    // If showChart is false (no organisation selected), skip initialization
+    if (this.showChart === false) {
+        console.log('⚠️ showChart is false, skipping financial planning initialization');
+        return;
+    }
+    
     const today = new Date();
     const year = today.getFullYear();
     this.fromDate = `${year}-01-01`;
