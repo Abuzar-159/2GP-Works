@@ -2315,7 +2315,7 @@ export default class QuoteConsoleLwc extends LightningElement {
 
     }
 
-
+    //commented by abuzar for handling the tax calculation for the subscription products
     // calculateSelItemsTax(index) {
     //     console.log('inside calculateSelItemsTax');
     //     try {
@@ -2351,55 +2351,236 @@ export default class QuoteConsoleLwc extends LightningElement {
     //     } catch (e) { console.log('Error:', e); }
     // }
 
+    //added by abuzar for handling the tax calculation for the subscription products
+
+    // calculateSelItemsTax(index) {
+    //     console.log('inside calculateSelItemsTax');
+    //     try {
+    //         var discount = 0;
+    //         var vatAmount1 = 0;
+    //         var otherTax1 = 0;
+
+    //         let No_of_Months = 0;
+    //         let No_of_Days = 0;
+
+    //         if (this.selectedProducts[index].pbe.Product2.Is_Subscribe__c) {
+    //             if (this.selectedProducts[index].Year > 0) { No_of_Months = this.selectedProducts[index].Year * 12; } if (this.selectedProducts[index].Months > 0) { No_of_Months += this.selectedProducts[index].Months; } if (this.selectedProducts[index].Days > 0) { No_of_Days = this.selectedProducts[index].Days; }
+    //             console.log('No_of_Months:', No_of_Months);
+    //         }
+
+    //         if (this.selectedProducts[index].discountPercent != 0) {
+    //             if (this.selectedProducts[index].isPercent) {
+    //                 if (!this.selectedProducts[index].pbe.Product2.Is_Subscribe__c) discount = ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity)) * parseFloat(this.selectedProducts[index].discountPercent)) / 100;
+    //                 if (this.selectedProducts[index].pbe.Product2.Is_Subscribe__c) discount = ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months)) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30)) * parseFloat(this.selectedProducts[index].discountPercent)) / 100;
+    //             } else {
+    //                 discount = parseFloat(this.selectedProducts[index].quantity) * parseFloat(this.selectedProducts[index].discountPercent);
+    //             }
+    //         }
+    //         console.log('discount in calculateSelItemsTax:', discount);
+    //         if (this.selectedProducts[index].discountPercent == 0) discount = 0;
+    //         if (this.selectedProducts[index].pbe.Product2.Is_Subscribe__c) {
+    //             if (this.selectedProducts[index].tax.Tax_Rate__c != undefined) vatAmount1 = (this.selectedProducts[index].tax.Apply_Tax_On__c == 'Cost Price' && this.selectedProducts[index].pbe.Purchase_Price__c != undefined) ? (parseFloat(this.selectedProducts[index].tax.Tax_Rate__c) / 100 * (parseFloat(this.selectedProducts[index].pbe.Purchase_Price__c))) : (parseFloat(this.selectedProducts[index].tax.Tax_Rate__c) / 100 * ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months)) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30)) - parseFloat(discount)));
+    //             if (this.selectedProducts[index].tax.Other_Tax_Rate__c != undefined) otherTax1 = (this.selectedProducts[index].tax.Apply_Tax_On__c == 'Cost Price' && this.selectedProducts[index].pbe.Purchase_Price__c != undefined) ? (parseFloat(this.selectedProducts[index].tax.Other_Tax_Rate__c) / 100 * (parseFloat(this.selectedProducts[index].pbe.Purchase_Price__c))) : (parseFloat(this.selectedProducts[index].tax.Other_Tax_Rate__c) / 100 * ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months)) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30)) - parseFloat(discount)));
+    //         }
+    //         console.log('AZ total tax',vatAmount1);
+    //         console.log('AZ other Tax 1',otherTax1);
+    //         console.log('AZ vat + other',vatAmount1 + otherTax1);
+            
+    //         if (!this.selectedProducts[index].pbe.Product2.Is_Subscribe__c) {
+    //             if (this.selectedProducts[index].tax.Tax_Rate__c != undefined) vatAmount1 = (this.selectedProducts[index].tax.Apply_Tax_On__c == 'Cost Price' && this.selectedProducts[index].pbe.Purchase_Price__c != undefined) ? (parseFloat(this.selectedProducts[index].tax.Tax_Rate__c) / 100 * (parseFloat(this.selectedProducts[index].pbe.Purchase_Price__c))) : (parseFloat(this.selectedProducts[index].tax.Tax_Rate__c) / 100 * ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity)) - parseFloat(discount)));
+    //             if (this.selectedProducts[index].tax.Other_Tax_Rate__c != undefined) otherTax1 = (this.selectedProducts[index].tax.Apply_Tax_On__c == 'Cost Price' && this.selectedProducts[index].pbe.Purchase_Price__c != undefined) ? (parseFloat(this.selectedProducts[index].tax.Other_Tax_Rate__c) / 100 * (parseFloat(this.selectedProducts[index].pbe.Purchase_Price__c))) : (parseFloat(this.selectedProducts[index].tax.Other_Tax_Rate__c) / 100 * ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity)) - parseFloat(discount)));
+    //         }
+    //         this.selectedProducts[index].vatAmount = vatAmount1;
+    //         this.selectedProducts[index].otherTax = otherTax1;
+    //         this.selectedProducts[index].totalTaxAmount = vatAmount1 + otherTax1;
+    //         this.selectedProducts[index].totalDiscount = discount;
+
+    //         //Calculate NetAmount and GrossAmount
+    //         if (!this.selectedProducts[index].pbe.Product2.Is_Subscribe__c) {
+    //             if (this.selectedProducts[index].isPercent) { console.log('7'); this.selectedProducts[index].NetAmount = ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) - (((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity)) * parseFloat(this.selectedProducts[index].discountPercent)) / 100))); this.selectedProducts[index].GrossAmount = ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) - (((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity)) * parseFloat(this.selectedProducts[index].discountPercent)) / 100) + (parseFloat(this.selectedProducts[index].vatAmount) + parseFloat(this.selectedProducts[index].otherTax)))); }
+    //             else { console.log('8'); this.selectedProducts[index].NetAmount = (((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity)) - (parseFloat(this.selectedProducts[index].quantity) * parseFloat(this.selectedProducts[index].discountPercent)))); this.selectedProducts[index].GrossAmount = (((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity)) - (parseFloat(this.selectedProducts[index].quantity) * parseFloat(this.selectedProducts[index].discountPercent)) + (parseFloat(this.selectedProducts[index].vatAmount) + parseFloat(this.selectedProducts[index].otherTax)))); }
+    //             console.log('net amount 1 --' + this.selectedProducts[index].NetAmount);
+    //         }
+    //         else
+    //             if (this.selectedProducts[index].pbe.Product2.Is_Subscribe__c) { if (this.selectedProducts[index].isPercent) { console.log('99'); this.selectedProducts[index].NetAmount = ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months)) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30))); console.log('999---this.selectedProducts[index].NetAmount---' + this.selectedProducts[index].NetAmount); this.selectedProducts[index].GrossAmount = (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30)) - ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30))) * parseFloat(this.selectedProducts[index].discountPercent) / 100) + (parseFloat(this.selectedProducts[index].vatAmount) + parseFloat(this.selectedProducts[index].otherTax))); } else { console.log('10'); this.selectedProducts[index].NetAmount = (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months) - parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months) * parseFloat(this.selectedProducts[index].discountPercent) + parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30)); this.selectedProducts[index].GrossAmount = ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30))) - (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months) * parseFloat(this.selectedProducts[index].discountPercent) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30)))) + (parseFloat(this.selectedProducts[index].vatAmount) + parseFloat(this.selectedProducts[index].otherTax)); } }
+    //         console.log('11--this.selectedProducts[index].NetAmount--' + this.selectedProducts[index].NetAmount);
+    //     } catch (e) { console.log('Error:', e); }
+    // }
+
+    //enhanced version of the above method for better readability and performance by Abuzar
+
     calculateSelItemsTax(index) {
-        console.log('inside calculateSelItemsTax');
-        try {
-            var discount = 0;
-            var vatAmount1 = 0;
-            var otherTax1 = 0;
+    console.log('inside calculateSelItemsTax');
+    try {
+        const item = this.selectedProducts[index];
 
-            let No_of_Months = 0;
-            let No_of_Days = 0;
+        // Safely extract booleans / strings
+        const isSubscribe = item.pbe?.Product2?.Is_Subscribe__c;
+        const applyTaxOnCostPrice = item.tax?.Apply_Tax_On__c === 'Cost Price';
 
-            if (this.selectedProducts[index].pbe.Product2.Is_Subscribe__c) {
-                if (this.selectedProducts[index].Year > 0) { No_of_Months = this.selectedProducts[index].Year * 12; } if (this.selectedProducts[index].Months > 0) { No_of_Months += this.selectedProducts[index].Months; } if (this.selectedProducts[index].Days > 0) { No_of_Days = this.selectedProducts[index].Days; }
-                console.log('No_of_Months:', No_of_Months);
-            }
+        // Convert everything to numbers once
+        const quantity        = Number(item.quantity) || 0;
+        const unitPrice       = Number(item.pbe?.UnitPrice) || 0;
+        const purchasePrice   = Number(item.pbe?.Purchase_Price__c) || 0;
+        const discountPercent = Number(item.discountPercent) || 0;    // percent OR flat value (based on isPercent)
+        const isPercent       = !!item.isPercent;
 
-            if (this.selectedProducts[index].discountPercent != 0) {
-                if (this.selectedProducts[index].isPercent) {
-                    if (!this.selectedProducts[index].pbe.Product2.Is_Subscribe__c) discount = ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity)) * parseFloat(this.selectedProducts[index].discountPercent)) / 100;
-                    if (this.selectedProducts[index].pbe.Product2.Is_Subscribe__c) discount = ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months)) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30)) * parseFloat(this.selectedProducts[index].discountPercent)) / 100;
+        const taxRate         = item.tax?.Tax_Rate__c != null
+            ? Number(item.tax.Tax_Rate__c)
+            : null;
+
+        const otherTaxRate    = item.tax?.Other_Tax_Rate__c != null
+            ? Number(item.tax.Other_Tax_Rate__c)
+            : null;
+
+        const year   = Number(item.Year)   || 0;
+        const months = Number(item.Months) || 0;
+        const days   = Number(item.Days)   || 0;
+
+        // Subscription duration
+        let No_of_Months = 0;
+        let No_of_Days   = 0;
+
+        if (isSubscribe) {
+            if (year   > 0) No_of_Months += year * 12;
+            if (months > 0) No_of_Months += months;
+            if (days   > 0) No_of_Days    = days;
+
+            console.log('No_of_Months:', No_of_Months);
+        }
+
+        // Common base amounts
+        const normalBaseAmount = unitPrice * quantity;
+        const subMonthAmount   = unitPrice * quantity * No_of_Months;
+        const subDayAmount     = unitPrice * quantity * (No_of_Days / 30);
+        const subBaseAmount    = subMonthAmount + subDayAmount;
+
+        // -------------------- DISCOUNT --------------------
+        let discount = 0;
+
+        if (discountPercent !== 0) {
+            if (isPercent) {
+                // Percent discount on total amount
+                if (!isSubscribe) {
+                    discount = (normalBaseAmount * discountPercent) / 100;
                 } else {
-                    discount = parseFloat(this.selectedProducts[index].quantity) * parseFloat(this.selectedProducts[index].discountPercent);
+                    discount = (subBaseAmount * discountPercent) / 100;
                 }
+            } else {
+                // Flat per-unit discount
+                discount = quantity * discountPercent;
             }
-            console.log('discount in calculateSelItemsTax:', discount);
-            if (this.selectedProducts[index].discountPercent == 0) discount = 0;
-            if (this.selectedProducts[index].pbe.Product2.Is_Subscribe__c) {
-                if (this.selectedProducts[index].tax.Tax_Rate__c != undefined) vatAmount1 = (this.selectedProducts[index].tax.Apply_Tax_On__c == 'Cost Price' && this.selectedProducts[index].pbe.Purchase_Price__c != undefined) ? (parseFloat(this.selectedProducts[index].tax.Tax_Rate__c) / 100 * (parseFloat(this.selectedProducts[index].pbe.Purchase_Price__c))) : (parseFloat(this.selectedProducts[index].tax.Tax_Rate__c) / 100 * ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months)) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30)) - parseFloat(discount)));
-                if (this.selectedProducts[index].tax.Other_Tax_Rate__c != undefined) otherTax1 = (this.selectedProducts[index].tax.Apply_Tax_On__c == 'Cost Price' && this.selectedProducts[index].pbe.Purchase_Price__c != undefined) ? (parseFloat(this.selectedProducts[index].tax.Other_Tax_Rate__c) / 100 * (parseFloat(this.selectedProducts[index].pbe.Purchase_Price__c))) : (parseFloat(this.selectedProducts[index].tax.Other_Tax_Rate__c) / 100 * ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months)) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30)) - parseFloat(discount)));
-            }
-            if (!this.selectedProducts[index].pbe.Product2.Is_Subscribe__c) {
-                if (this.selectedProducts[index].tax.Tax_Rate__c != undefined) vatAmount1 = (this.selectedProducts[index].tax.Apply_Tax_On__c == 'Cost Price' && this.selectedProducts[index].pbe.Purchase_Price__c != undefined) ? (parseFloat(this.selectedProducts[index].tax.Tax_Rate__c) / 100 * (parseFloat(this.selectedProducts[index].pbe.Purchase_Price__c))) : (parseFloat(this.selectedProducts[index].tax.Tax_Rate__c) / 100 * ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity)) - parseFloat(discount)));
-                if (this.selectedProducts[index].tax.Other_Tax_Rate__c != undefined) otherTax1 = (this.selectedProducts[index].tax.Apply_Tax_On__c == 'Cost Price' && this.selectedProducts[index].pbe.Purchase_Price__c != undefined) ? (parseFloat(this.selectedProducts[index].tax.Other_Tax_Rate__c) / 100 * (parseFloat(this.selectedProducts[index].pbe.Purchase_Price__c))) : (parseFloat(this.selectedProducts[index].tax.Other_Tax_Rate__c) / 100 * ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity)) - parseFloat(discount)));
-            }
-            this.selectedProducts[index].vatAmount = vatAmount1;
-            this.selectedProducts[index].otherTax = otherTax1;
-            this.selectedProducts[index].totalTaxAmount = vatAmount1 + otherTax1;
-            this.selectedProducts[index].totalDiscount = discount;
+        }
 
-            //Calculate NetAmount and GrossAmount
-            if (!this.selectedProducts[index].pbe.Product2.Is_Subscribe__c) {
-                if (this.selectedProducts[index].isPercent) { console.log('7'); this.selectedProducts[index].NetAmount = ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) - (((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity)) * parseFloat(this.selectedProducts[index].discountPercent)) / 100))); this.selectedProducts[index].GrossAmount = ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) - (((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity)) * parseFloat(this.selectedProducts[index].discountPercent)) / 100) + (parseFloat(this.selectedProducts[index].vatAmount) + parseFloat(this.selectedProducts[index].otherTax)))); }
-                else { console.log('8'); this.selectedProducts[index].NetAmount = (((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity)) - (parseFloat(this.selectedProducts[index].quantity) * parseFloat(this.selectedProducts[index].discountPercent)))); this.selectedProducts[index].GrossAmount = (((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity)) - (parseFloat(this.selectedProducts[index].quantity) * parseFloat(this.selectedProducts[index].discountPercent)) + (parseFloat(this.selectedProducts[index].vatAmount) + parseFloat(this.selectedProducts[index].otherTax)))); }
-                console.log('net amount 1 --' + this.selectedProducts[index].NetAmount);
+        console.log('discount in calculateSelItemsTax:', discount);
+
+        if (discountPercent === 0) {
+            discount = 0;
+        }
+
+        // -------------------- TAX CALCULATION --------------------
+        let vatAmount1   = 0;
+        let otherTax1    = 0;
+        let taxBaseAmount;
+
+        if (isSubscribe) {
+            if (applyTaxOnCostPrice && purchasePrice) {
+                taxBaseAmount = purchasePrice;
+            } else {
+                taxBaseAmount = subBaseAmount - discount;
             }
-            else
-                if (this.selectedProducts[index].pbe.Product2.Is_Subscribe__c) { if (this.selectedProducts[index].isPercent) { console.log('99'); this.selectedProducts[index].NetAmount = ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months)) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30))); console.log('999---this.selectedProducts[index].NetAmount---' + this.selectedProducts[index].NetAmount); this.selectedProducts[index].GrossAmount = (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30)) - ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30))) * parseFloat(this.selectedProducts[index].discountPercent) / 100) + (parseFloat(this.selectedProducts[index].vatAmount) + parseFloat(this.selectedProducts[index].otherTax))); } else { console.log('10'); this.selectedProducts[index].NetAmount = (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months) - parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months) * parseFloat(this.selectedProducts[index].discountPercent) + parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30)); this.selectedProducts[index].GrossAmount = ((parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30))) - (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * parseFloat(No_of_Months) * parseFloat(this.selectedProducts[index].discountPercent) + (parseFloat(this.selectedProducts[index].pbe.UnitPrice) * parseFloat(this.selectedProducts[index].quantity) * (parseFloat(No_of_Days) / 30)))) + (parseFloat(this.selectedProducts[index].vatAmount) + parseFloat(this.selectedProducts[index].otherTax)); } }
-            console.log('11--this.selectedProducts[index].NetAmount--' + this.selectedProducts[index].NetAmount);
-        } catch (e) { console.log('Error:', e); }
+
+            if (taxRate != null) {
+                vatAmount1 = (taxRate / 100) * taxBaseAmount;
+            }
+
+            if (otherTaxRate != null) {
+                otherTax1 = (otherTaxRate / 100) * taxBaseAmount;
+            }
+        }
+
+        if (!isSubscribe) {
+            if (applyTaxOnCostPrice && purchasePrice) {
+                taxBaseAmount = purchasePrice;
+            } else {
+                taxBaseAmount = normalBaseAmount - discount;
+            }
+
+            if (taxRate != null) {
+                vatAmount1 = (taxRate / 100) * taxBaseAmount;
+            }
+
+            if (otherTaxRate != null) {
+                otherTax1 = (otherTaxRate / 100) * taxBaseAmount;
+            }
+        }
+
+        console.log('AZ total tax', vatAmount1);
+        console.log('AZ other Tax 1', otherTax1);
+        console.log('AZ vat + other', vatAmount1 + otherTax1);
+
+        const totalTax = vatAmount1 + otherTax1;
+
+        item.vatAmount       = vatAmount1;
+        item.otherTax        = otherTax1;
+        item.totalTaxAmount  = totalTax;
+        item.totalDiscount   = discount;
+
+        // -------------------- NET & GROSS AMOUNT --------------------
+        if (!isSubscribe) {
+            // Non-subscription products
+            let netAmount  = 0;
+            let grossAmount = 0;
+
+            if (isPercent) {
+                console.log('7');
+                netAmount   = normalBaseAmount - (normalBaseAmount * discountPercent / 100);
+                grossAmount = netAmount + totalTax;
+            } else {
+                console.log('8');
+                netAmount   = normalBaseAmount - (quantity * discountPercent);
+                grossAmount = netAmount + totalTax;
+            }
+
+            item.NetAmount   = netAmount;
+            item.GrossAmount = grossAmount;
+            console.log('net amount 1 --' + item.NetAmount);
+        } else {
+            // Subscription products
+            if (isPercent) {
+                console.log('99');
+
+                const base = subBaseAmount; // month + day
+                const discountForSub = (base * discountPercent) / 100;
+                item.NetAmount   = base - discountForSub;  // Subtract discount from NetAmount
+                console.log('999---this.selectedProducts[index].NetAmount---' + item.NetAmount);
+
+                item.GrossAmount = base - discountForSub + totalTax;
+            } else {
+                console.log('10');
+
+                // Keeping your original math, just using the precomputed variables
+                const netAmount =
+                    subMonthAmount
+                    - (quantity * No_of_Months * discountPercent)
+                    + subDayAmount;
+
+                const grossAmount =
+                    (subMonthAmount + subDayAmount)
+                    - (subMonthAmount * discountPercent + subDayAmount)
+                    + totalTax;
+
+                item.NetAmount   = netAmount;
+                item.GrossAmount = grossAmount;
+            }
+        }
+
+        console.log('11--this.selectedProducts[index].NetAmount--' + item.NetAmount);
+    } catch (e) {
+        console.log('Error:', e);
     }
+}
+
 
     closeDiscountPlanConfirmation() {
         try {

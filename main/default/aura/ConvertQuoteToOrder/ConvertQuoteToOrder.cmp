@@ -244,7 +244,9 @@
                                         </aura:if>                                                                                                 
                                     </div>
                                 </td>-->
-                                <td>
+
+                                
+                                <!-- <td>
                                     <div>
                                         <aura:if isTrue="{!qtpro.qtLine.Product__r.Is_Subscribe__c}">
                                             <aura:if isTrue="{!qtpro.isPercent}">
@@ -285,7 +287,17 @@
                                             </aura:set>
                                         </aura:if>
                                     </div>
+                                </td> -->
+
+                                <td>
+                                    <ui:outputCurrency value="{!qtpro.subNetAmount}" />
                                 </td>
+                                <td>
+                                <ui:outputCurrency value="{!qtpro.subGrossAmount}" />
+                                </td>
+
+
+                                
                                 <!--<td>
                                     <div>
                                         <aura:if isTrue="{!qtpro.isPercent}">

@@ -370,11 +370,20 @@ taxCalculation: function (cmp, event) {
         selectedProducts[i].vatAmount = vatAmount1;
         selectedProducts[i].otherTax = otherTax1;
         selectedProducts[i].baseAmount = baseAmount;
-        selectedProducts[i].netAmount = baseAmount + vatAmount1 + otherTax1;
+        
+        // Calculate net and gross amounts for display in component
+        var netAmount = baseAmount;  // netAmount = base amount after discount
+        var grossAmount = netAmount + vatAmount1 + otherTax1;  // grossAmount = net + tax
+        
+        selectedProducts[i].netAmount = netAmount;
+        selectedProducts[i].subNetAmount = netAmount;       // For component display
+        selectedProducts[i].subGrossAmount = grossAmount;  // For component display
         
         console.log('VAT Amount:', selectedProducts[i].vatAmount);
         console.log('Other Tax:', selectedProducts[i].otherTax);
         console.log('Net Amount:', selectedProducts[i].netAmount);
+        console.log('Sub Net Amount:', selectedProducts[i].subNetAmount); 
+        console.log('Sub Gross Amount:', selectedProducts[i].subGrossAmount);
         
         if (selectedProducts[i].qtLine.VAT_Amount__c != undefined) 
             selectedProducts[i].qtLine.VAT_Amount__c = vatAmount1;

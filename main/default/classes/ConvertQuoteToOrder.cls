@@ -356,8 +356,40 @@ qtlWprList.add(qtlWpr);
                     qtlWpr.maxDiscount = 0;
                     qtlWpr.discountPlan = '';
                 }
-                
-                qtlWprList.add(qtlWpr);
+
+                    // Calculate Net and Gross amounts (handle subscription and non-subscription)
+                    Decimal unitPrice = (qtlWpr.qtLine.List_Price__c != null) ? qtlWpr.qtLine.List_Price__c : 0;
+                    Decimal qty = (qtlWpr.qtLine.Quantity__c != null) ? qtlWpr.qtLine.Quantity__c : 0;
+                    Decimal monthDur = (qtlWpr.qtLine.Month_Duration__c != null) ? qtlWpr.qtLine.Month_Duration__c : 0;
+                    Decimal durDays = (qtlWpr.qtLine.Duration_in_Days__c != null) ? qtlWpr.qtLine.Duration_in_Days__c : 0;
+
+                    Decimal normalBaseAmount = unitPrice * qty;
+                    Decimal subMonthAmount = unitPrice * qty * monthDur;
+                    Decimal subDayAmount = unitPrice * qty * (durDays / 30);
+                    Decimal subBaseAmount = subMonthAmount + subDayAmount;
+
+                    Decimal discountAmt = 0;
+                    if (qtlWpr.isPercent) {
+                        if (qtlWpr.qtLine.Product__r != null && qtlWpr.qtLine.Product__r.Is_Subscribe__c == true) {
+                            discountAmt = (subBaseAmount * qtlWpr.discountPercent) / 100;
+                        } else {
+                            discountAmt = (normalBaseAmount * qtlWpr.discountPercent) / 100;
+                        }
+                    } else {
+                        discountAmt = qtlWpr.discountPercent * qty;
+                    }
+
+                    Boolean isSub = (qtlWpr.qtLine.Product__r != null && qtlWpr.qtLine.Product__r.Is_Subscribe__c == true);
+                    Decimal netAmount = (isSub) ? (subBaseAmount - discountAmt) : (normalBaseAmount - discountAmt);
+                    Decimal taxAmount = 0;
+                    if (qtlWpr.vatAmount != null) taxAmount += qtlWpr.vatAmount;
+                    if (qtlWpr.otherTax != null) taxAmount += qtlWpr.otherTax;
+                    Decimal grossAmount = netAmount + taxAmount;
+
+                    qtlWpr.subNetAmount = netAmount.setScale(2);
+                    qtlWpr.subGrossAmount = grossAmount.setScale(2);
+
+                    qtlWprList.add(qtlWpr);
             }
             // ================= End =================
             
@@ -550,6 +582,18 @@ qtlWprList.add(qtlWpr);
                 //ordItem.Is_Back_Order__c =  pbe.Product2.Allow_Back_Orders__c && (pbe.Product2.Available_Stock__c == null || pbe.Product2.Available_Stock__c <= 0) ? true : false;
                 ordItem.Description = qtLine.qtLine.Description__c;
                 
+                // Added by Abuzar on 18-11-2025 for Calculate Sub_Total__c: default = ListPrice * Quantity
+                Decimal listPrice = (qtLine.qtLine.List_Price__c != null) ? qtLine.qtLine.List_Price__c : 0;
+                Decimal qty = (qtLine.qtLine.Quantity__c != null) ? qtLine.qtLine.Quantity__c : 0;
+                Decimal monthDur = (qtLine.qtLine.Month_Duration__c != null) ? qtLine.qtLine.Month_Duration__c : 0;
+                Decimal durDays = (qtLine.qtLine.Duration_in_Days__c != null) ? qtLine.qtLine.Duration_in_Days__c : 0;
+
+                if (qtLine.qtLine.Product__r != null && qtLine.qtLine.Product__r.Is_Subscribe__c == true) {
+                    ordItem.Sub_Total__c = (listPrice * qty * monthDur) + ((listPrice * qty * durDays) / 30);
+                } else {
+                    ordItem.Sub_Total__c = (listPrice * qty);
+                }
+                
                 // Add additional fields as necessary (e.g., discount, tax).
                 if (qtLine.isPercent) {
                     ordItem.Discount_Percent__c = qtLine.discountPercent;
@@ -599,6 +643,8 @@ qtlWprList.add(qtlWpr);
         @AuraEnabled global String taxId								{ get; set; }
         @AuraEnabled global Decimal vatAmount							{ get; set; }
         @AuraEnabled global Decimal otherTax							{ get; set; }
+        @AuraEnabled global Decimal subNetAmount { get; set; }
+        @AuraEnabled global Decimal subGrossAmount { get; set; }
         
         global qtLineWrapper(){
             checkSelected=false;
