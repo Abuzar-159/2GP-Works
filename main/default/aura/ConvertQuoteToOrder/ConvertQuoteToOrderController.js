@@ -269,45 +269,91 @@
             }
         }
     },
+
+    //  handleDiscount : function(cmp,event,helper){
+    //     console.log("inside handleDiscount");
+    //     var currentIndex=event.getSource().get("v.title");
+    //     var discount=event.getSource().get("v.value");
+    //     var listOfQuoteLine=cmp.get("v.listOfQuoteLine");
+    //     var crtlistOfQuoteLine=listOfQuoteLine[currentIndex];
+    //     console.log('discount :',discount);
+    //     if(discount != ''){
+    //         if(crtlistOfQuoteLine.maxDiscount != 0){
+    //             if(discount > crtlistOfQuoteLine.maxDiscount){
+    //                 cmp.set("v.errorMsg","Discount was larger than Max discount");
+    //                 for(var i=0;i<listOfQuoteLine.length;i++){
+    //                     if(i==currentIndex){
+    //                         for(var j=0;j<listOfQuoteLine[i].disPlans.length;j++){
+    //                             if(crtlistOfQuoteLine.isPercent){
+    //                                 crtlistOfQuoteLine.discountPercent=listOfQuoteLine[i].disPlans[j].Default_Discount_Percentage__c;
+    //                                 break;
+    //                             }                                	
+    //                             else{
+    //                                 crtlistOfQuoteLine.discountPercent=listOfQuoteLine[i].disPlans[j].Default_Discount_Value__c;
+    //                             }
+    //                         }                            	
+    //                         listOfQuoteLine[i]=crtlistOfQuoteLine;
+    //                     }   
+    //                 }                    
+    //                 cmp.set("v.listOfQuoteLine",listOfQuoteLine);
+    //                 helper.taxCalculation(cmp,event);
+    //                 return;
+    //             }else{
+    //                 helper.taxCalculation(cmp,event);
+    //             }
+    //         }else{
+    //             helper.taxCalculation(cmp,event);
+    //         }             
+    //     }
+    // },
     
-    handleDiscount : function(cmp,event,helper){
+handleDiscount : function(cmp,event,helper){
         console.log("inside handleDiscount");
         var currentIndex=event.getSource().get("v.title");
         var discount=event.getSource().get("v.value");
         var listOfQuoteLine=cmp.get("v.listOfQuoteLine");
         var crtlistOfQuoteLine=listOfQuoteLine[currentIndex];
         console.log('discount :',discount);
-        if(discount != ''){
-            if(crtlistOfQuoteLine.maxDiscount != 0){
-                if(discount > crtlistOfQuoteLine.maxDiscount){
-                    cmp.set("v.errorMsg","Discount was larger than Max discount");
-                    for(var i=0;i<listOfQuoteLine.length;i++){
-                        if(i==currentIndex){
-                            for(var j=0;j<listOfQuoteLine[i].disPlans.length;j++){
-                                if(crtlistOfQuoteLine.isPercent){
-                                    crtlistOfQuoteLine.discountPercent=listOfQuoteLine[i].disPlans[j].Default_Discount_Percentage__c;
-                                    break;
-                                }                                	
-                                else{
-                                    crtlistOfQuoteLine.discountPercent=listOfQuoteLine[i].disPlans[j].Default_Discount_Value__c;
-                                }
-                            }                            	
-                            listOfQuoteLine[i]=crtlistOfQuoteLine;
-                        }   
-                    }                    
-                    cmp.set("v.listOfQuoteLine",listOfQuoteLine);
-                    helper.taxCalculation(cmp,event);
-                    return;
-                }else{
-                    helper.taxCalculation(cmp,event);
-                }
-            }else{
-                helper.taxCalculation(cmp,event);
-            }             
+
+        // Normalize entered discount and persist on the wrapper so helper can use it
+        var discVal = (discount === '' || discount === null || typeof discount === 'undefined') ? null : Number(discount);
+        if (discVal !== null && !isNaN(discVal)) {
+            crtlistOfQuoteLine.discountPercent = discVal;
+        } else {
+            // If user cleared the field, treat as 0
+            crtlistOfQuoteLine.discountPercent = 0;
         }
-    },
-    
-    handleDrag : function(cmp, event, helper) {
+        listOfQuoteLine[currentIndex] = crtlistOfQuoteLine;
+        cmp.set("v.listOfQuoteLine", listOfQuoteLine);
+
+        // If empty input, just recalc and return
+        if(discount === ''){
+            helper.taxCalculation(cmp,event);
+            return;
+        }
+
+        // Validate against max discount (if applicable)
+        if(crtlistOfQuoteLine.maxDiscount != 0 && discVal > crtlistOfQuoteLine.maxDiscount){
+            cmp.set("v.errorMsg","Discount was larger than Max discount");
+            // Revert to default discount from disPlans
+            for(var j=0;j<crtlistOfQuoteLine.disPlans.length;j++){
+                var plan = crtlistOfQuoteLine.disPlans[j];
+                if(crtlistOfQuoteLine.isPercent){
+                    crtlistOfQuoteLine.discountPercent = plan.Default_Discount_Percentage__c || 0;
+                    break;
+                } else {
+                    crtlistOfQuoteLine.discountPercent = plan.Default_Discount_Value__c || 0;
+                }
+            }
+            listOfQuoteLine[currentIndex] = crtlistOfQuoteLine;
+            cmp.set("v.listOfQuoteLine", listOfQuoteLine);
+            helper.taxCalculation(cmp,event);
+            return;
+        }
+
+        // Valid discount — recalculate amounts (this covers subscription products too)
+        helper.taxCalculation(cmp,event);
+    },    handleDrag : function(cmp, event, helper) {
         cmp.set("v.DragIndex", event.target.id);
     },
     

@@ -1846,7 +1846,7 @@ export default class QuoteConsoleLwc extends LightningElement {
     }
     addProducts() {
         try {
-            console.log('Inside Addproducts ------------------>');
+            console.log('Inside Addproducts ------------------>'); 
             console.log('validateSelProd():', this.validateSelProd());
             if (this.validateSelProd()) {
                 //Creating a metadata Type of OrderProduct Object
@@ -2020,20 +2020,59 @@ export default class QuoteConsoleLwc extends LightningElement {
                     //     console.log('Discount_Percent__c - 2 -- '+per);
                     // }
                     //added noww
+
+                    //   if (this.selectedProducts[i].isPercent) {
+                    //     quoteLines[i].Discount_Percent__c = this.selectedProducts[i].discountPercent;
+                    //     if (this.selectedProducts[i].pbe.Product2.Is_Subscribe__c) discount = discount = ((parseFloat(this.selectedProducts[i].pbe.UnitPrice) * parseFloat(this.selectedProducts[i].quantity) * parseFloat(No_of_Months)) + (parseFloat(this.selectedProducts[i].pbe.UnitPrice) * parseFloat(this.selectedProducts[i].quantity) * (parseFloat(this.selectedProducts[i].days) / 30)) * parseFloat(this.selectedProducts[i].discountPercent)) / 100;
+                    //     if (!this.selectedProducts[i].pbe.Product2.Is_Subscribe__c) discount = (((this.selectedProducts[i].pbe.UnitPrice * this.selectedProducts[i].quantity) * this.selectedProducts[i].discountPercent) / 100);
+
+                    //     quoteLines[i].Discount_Amount__c = discount;
+                    // } else {
+                    //     if (!this.selectedProducts[i].pbe.Product2.Is_Subscribe__c) discount = this.selectedProducts[i].quantity * this.selectedProducts[i].discountPercent;
+                    //     if (this.selectedProducts[i].pbe.Product2.Is_Subscribe__c) discount = (this.selectedProducts[i].quantity * this.selectedProducts[i].discountPercent * No_of_Months) + this.selectedProducts[i].quantity * this.selectedProducts[i].discountPercent * this.selectedProducts[i].this.selectedProducts[i].days;
+                    //     quoteLines[i].Discount_Amount__c = discount;
+                    //     let total;
+                    //     if (!this.selectedProducts[i].pbe.Product2.Is_Subscribe__c) total = quoteLines[i].List_Price__c * quoteLines[i].Quantity__c;
+                    //     if (this.selectedProducts[i].pbe.Product2.Is_Subscribe__c) total = (quoteLines[i].List_Price__c * quoteLines[i].Quantity__c * No_of_Months) + (quoteLines[i].List_Price__c * quoteLines[i].Quantity__c * this.selectedProducts[i].Days);
+                    //     let per = (discount / total) * 100;
+                    //     quoteLines[i].Discount_Percent__c = per;
+                    // }
+
+
                     if (this.selectedProducts[i].isPercent) {
                         quoteLines[i].Discount_Percent__c = this.selectedProducts[i].discountPercent;
-                        if (this.selectedProducts[i].pbe.Product2.Is_Subscribe__c) discount = discount = ((parseFloat(this.selectedProducts[i].pbe.UnitPrice) * parseFloat(this.selectedProducts[i].quantity) * parseFloat(No_of_Months)) + (parseFloat(this.selectedProducts[i].pbe.UnitPrice) * parseFloat(this.selectedProducts[i].quantity) * (parseFloat(this.selectedProducts[i].days) / 30)) * parseFloat(this.selectedProducts[i].discountPercent)) / 100;
-                        if (!this.selectedProducts[i].pbe.Product2.Is_Subscribe__c) discount = (((this.selectedProducts[i].pbe.UnitPrice * this.selectedProducts[i].quantity) * this.selectedProducts[i].discountPercent) / 100);
+                        let discount = 0;
+
+                        if (this.selectedProducts[i].pbe.Product2.Is_Subscribe__c) {
+                            // subscription base = (unitPrice * qty * months) + (unitPrice * qty * days/30)
+                            const unitPrice = parseFloat(this.selectedProducts[i].pbe.UnitPrice) || 0;
+                            const qty = parseFloat(this.selectedProducts[i].quantity) || 0;
+                            const months = parseFloat(No_of_Months) || 0;
+                            const days = parseFloat(this.selectedProducts[i].Days || this.selectedProducts[i].days) || 0;
+                            const subscriptionBase = (unitPrice * qty * months) + (unitPrice * qty * (days / 30));
+                            discount = (subscriptionBase * parseFloat(this.selectedProducts[i].discountPercent)) / 100;
+                        } else {
+                            discount = ((parseFloat(this.selectedProducts[i].pbe.UnitPrice) * parseFloat(this.selectedProducts[i].quantity)) * parseFloat(this.selectedProducts[i].discountPercent)) / 100;
+                        }
 
                         quoteLines[i].Discount_Amount__c = discount;
                     } else {
-                        if (!this.selectedProducts[i].pbe.Product2.Is_Subscribe__c) discount = this.selectedProducts[i].quantity * this.selectedProducts[i].discountPercent;
-                        if (this.selectedProducts[i].pbe.Product2.Is_Subscribe__c) discount = (this.selectedProducts[i].quantity * this.selectedProducts[i].discountPercent * No_of_Months) + this.selectedProducts[i].quantity * this.selectedProducts[i].discountPercent * this.selectedProducts[i].this.selectedProducts[i].days;
+                        let discount = 0;
+                        if (!this.selectedProducts[i].pbe.Product2.Is_Subscribe__c) {
+                            discount = (parseFloat(this.selectedProducts[i].quantity) || 0) * (parseFloat(this.selectedProducts[i].discountPercent) || 0);
+                        } else {
+                            const qty = parseFloat(this.selectedProducts[i].quantity) || 0;
+                            const months = parseFloat(No_of_Months) || 0;
+                            const days = parseFloat(this.selectedProducts[i].Days || this.selectedProducts[i].days) || 0;
+                            // flat discount treated as amount per unit per period
+                            discount = (qty * (parseFloat(this.selectedProducts[i].discountPercent) || 0) * months) + (qty * (parseFloat(this.selectedProducts[i].discountPercent) || 0) * (days / 30));
+                        }
+
                         quoteLines[i].Discount_Amount__c = discount;
-                        let total;
+                        let total = 0;
                         if (!this.selectedProducts[i].pbe.Product2.Is_Subscribe__c) total = quoteLines[i].List_Price__c * quoteLines[i].Quantity__c;
-                        if (this.selectedProducts[i].pbe.Product2.Is_Subscribe__c) total = (quoteLines[i].List_Price__c * quoteLines[i].Quantity__c * No_of_Months) + (quoteLines[i].List_Price__c * quoteLines[i].Quantity__c * this.selectedProducts[i].Days);
-                        let per = (discount / total) * 100;
+                        else total = (quoteLines[i].List_Price__c * quoteLines[i].Quantity__c * No_of_Months) + (quoteLines[i].List_Price__c * quoteLines[i].Quantity__c * (parseFloat(this.selectedProducts[i].Days || this.selectedProducts[i].days) || 0));
+                        let per = total !== 0 ? (discount / total) * 100 : 0;
                         quoteLines[i].Discount_Percent__c = per;
                     }
 

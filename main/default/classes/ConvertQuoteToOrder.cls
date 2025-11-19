@@ -595,12 +595,26 @@ qtlWprList.add(qtlWpr);
                 }
                 
                 // Add additional fields as necessary (e.g., discount, tax).
+                // Handle discount for subscription and non-subscription products
                 if (qtLine.isPercent) {
                     ordItem.Discount_Percent__c = qtLine.discountPercent;
-                    Decimal discount = ((qtLine.qtLine.List_Price__c * qtLine.qtLine.Quantity__c) * qtLine.discountPercent) / 100;
+                    Decimal discount = 0;
+                    
+                    // For subscription products: calculate discount on months/days base
+                    if (qtLine.qtLine.Product__r != null && qtLine.qtLine.Product__r.Is_Subscribe__c == true) {
+                        Decimal monthlyBase = listPrice * qty * monthDur;
+                        Decimal dailyBase = listPrice * qty * (durDays / 30);
+                        Decimal subscriptionBase = monthlyBase + dailyBase;
+                        discount = (subscriptionBase * qtLine.discountPercent) / 100;
+                    } else {
+                        // For non-subscription products: calculate discount on normal base
+                        discount = ((listPrice * qty) * qtLine.discountPercent) / 100;
+                    }
+                    
                     ordItem.Discount_Amount__c = discount;
                 } else {
-                    ordItem.Discount_Amount__c = qtLine.discountPercent * qtLine.qtLine.Quantity__c;
+                    // Flat discount amount
+                    ordItem.Discount_Amount__c = qtLine.discountPercent;
                 }
                 if (qtLine.vatAmount > 0 || qtLine.otherTax > 0) {
                     ordItem.Tax__c = qtLine.taxId;

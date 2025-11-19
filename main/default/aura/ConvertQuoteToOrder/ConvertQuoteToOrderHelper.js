@@ -282,14 +282,6 @@ taxCalculation: function (cmp, event) {
         var otherTax1 = 0;
         var discountPercent1 = parseFloat(selectedProducts[i].discountPercent);
         
-        if (selectedProducts[i].discountPercent != 0) {
-            if (selectedProducts[i].isPercent) {
-                discount = ((parseFloat(selectedProducts[i].qtLine.List_Price__c) * parseFloat(selectedProducts[i].qtLine.Quantity__c)) * parseFloat(selectedProducts[i].discountPercent)) / 100;
-            } else {
-                discount = parseFloat(selectedProducts[i].qtLine.Quantity__c) * (parseFloat(selectedProducts[i].discountPercent) / parseFloat(selectedProducts[i].qtLine.Quantity__c));
-            }
-        }
-        
         // Calculate base amount (before tax)
         var baseAmount = 0;
         
@@ -310,7 +302,20 @@ taxCalculation: function (cmp, event) {
                               parseFloat(selectedProducts[i].qtLine.Quantity__c) * 
                               (No_of_Days / 30));
             
-            baseAmount = monthlyAmount + dailyAmount - parseFloat(discount);
+            // For subscription: calculate base without discount first
+            var baseBeforeDiscount = monthlyAmount + dailyAmount;
+            
+            // Calculate discount for subscription based on months/days base
+            var discount = 0;
+            if (selectedProducts[i].discountPercent != 0) {
+                if (selectedProducts[i].isPercent) {
+                    discount = (baseBeforeDiscount * parseFloat(selectedProducts[i].discountPercent)) / 100;
+                } else {
+                    discount = parseFloat(selectedProducts[i].discountPercent);
+                }
+            }
+            
+            baseAmount = baseBeforeDiscount - discount;
             
             console.log('Monthly Amount:', monthlyAmount, 'Daily Amount:', dailyAmount, 'Base Amount:', baseAmount);
             
@@ -339,8 +344,20 @@ taxCalculation: function (cmp, event) {
         } else {
             
             // Calculate base amount for non-subscription
-            baseAmount = (parseFloat(selectedProducts[i].qtLine.List_Price__c) * 
-                         parseFloat(selectedProducts[i].qtLine.Quantity__c)) - parseFloat(discount);
+            var baseBeforeDiscount = (parseFloat(selectedProducts[i].qtLine.List_Price__c) * 
+                                     parseFloat(selectedProducts[i].qtLine.Quantity__c));
+            
+            // Calculate discount for non-subscription
+            var discount = 0;
+            if (selectedProducts[i].discountPercent != 0) {
+                if (selectedProducts[i].isPercent) {
+                    discount = (baseBeforeDiscount * parseFloat(selectedProducts[i].discountPercent)) / 100;
+                } else {
+                    discount = parseFloat(selectedProducts[i].discountPercent);
+                }
+            }
+            
+            baseAmount = baseBeforeDiscount - discount;
             
             console.log('Non-Subscription Base Amount:', baseAmount);
             
