@@ -54,16 +54,52 @@ private class SandOPTest {
         insert pbe;
         Channel__c channel = new Channel__c(Name='Channel', Active__c=true, Ship_From_Address__c=add.Id);
         insert channel;
-        RecordType custProfile_RTypes = [SELECT Id, Name FROM RecordType WHERE Name = 'Customer' AND SobjectType = 'Profiling__c' LIMIT 1]; 
-        Profiling__c custProfile = new Profiling__c(Name='test', RecordTypeId=custProfile_RTypes.Id, Tax_Sourcing_Rules__c ='Origin');
-        insert custProfile;
-        RecordType orderProfile_RTypes = [SELECT Id, Name FROM RecordType WHERE Name = 'Order Profile' AND SobjectType = 'Profiling__c' LIMIT 1];
-        Profiling__c profile = new Profiling__c(Name='AK Test', Active__c=true, Company__c=acc.Id, Channel__c=channel.Id, Price_Book__c=standardPricebook.Id, Tax_Sourcing_Rules__c ='Origin', RecordTypeId=orderProfile_RTypes.Id, Account_Profile__c=custProfile.Id);
+        // RecordType custProfile_RTypes = [SELECT Id, Name FROM RecordType WHERE Name = 'Customer' AND SobjectType = 'Profiling__c' LIMIT 1]; 
+        // Profiling__c custProfile = new Profiling__c(Name='test', RecordTypeId=custProfile_RTypes.Id, Tax_Sourcing_Rules__c ='Origin');
+        Id custProfileRT = Schema.SObjectType.Profiling__c
+                          .getRecordTypeInfosByDeveloperName()
+                          .get('Customer')
+                          .getRecordTypeId();
+
+    Profiling__c custProfile = new Profiling__c( Name='test', RecordTypeId=custProfileRT, Tax_Sourcing_Rules__c='Origin');
+    insert custProfile;
+       // insert custProfile;
+        // RecordType orderProfile_RTypes = [SELECT Id, Name FROM RecordType WHERE Name = 'Order Profile' AND SobjectType = 'Profiling__c' LIMIT 1];
+        // Profiling__c profile = new Profiling__c(Name='AK Test', Active__c=true, Company__c=acc.Id, Channel__c=channel.Id, Price_Book__c=standardPricebook.Id, Tax_Sourcing_Rules__c ='Origin', RecordTypeId=orderProfile_RTypes.Id, Account_Profile__c=custProfile.Id);
+       
+        Id orderProfileRT = Schema.SObjectType.Profiling__c
+                          .getRecordTypeInfosByDeveloperName()
+                          .get('Order_Profile')   // DeveloperName
+                          .getRecordTypeId();
+
+Profiling__c profile = new Profiling__c(
+    Name='AK Test',
+    Active__c=true,
+    Company__c=acc.Id,
+    Channel__c=channel.Id,
+    Price_Book__c=standardPricebook.Id,
+    Tax_Sourcing_Rules__c='Origin',
+    RecordTypeId=orderProfileRT,
+    Account_Profile__c=custProfile.Id
+);
+
         insert profile;
         acc.Order_Profile__c = profile.Id;
         update acc;
-        RecordType rTypeProfile = [SELECT Id, Name FROM RecordType WHERE SobjectType='Profiling__c' AND Name='Employee' LIMIT 1];
-        Profiling__c empProfile = new Profiling__c(Name='test', Active__c=true, RecordTypeId=rTypeProfile.Id);
+        //RecordType rTypeProfile = [SELECT Id, Name FROM RecordType WHERE SobjectType='Profiling__c' AND Name='Employee' LIMIT 1];
+        //Profiling__c empProfile = new Profiling__c(Name='test', Active__c=true, RecordTypeId=rTypeProfile.Id);
+
+        Id employeeProfileRT = Schema.SObjectType.Profiling__c
+                              .getRecordTypeInfosByDeveloperName()
+                              .get('Employee')     // DeveloperName
+                              .getRecordTypeId();
+
+Profiling__c empProfile = new Profiling__c(
+    Name='test',
+    Active__c=true,
+    RecordTypeId=employeeProfileRT
+);
+
         insert empProfile; 
         Employees__c emp = new Employees__c(First_Name__c='Naseer', Last_Name__c='Akhtar', Email__c='test@test.com', Company__c=orgn.Id, Employee_User__c=UserInfo.getUserId(), Employment_Status__c = 'Active', Non_Employee__c = false, Employee_Profiling__c=empProfile.Id);
         insert emp;
@@ -363,8 +399,8 @@ private class SandOPTest {
      static void testgetDemandForecastWithHistory() {
         Product2 prod = [SELECT Id FROM Product2 WHERE Name = 'Laptop X200' LIMIT 1];
         Test.startTest();
-        Map<String, Object> result = sandOP.getDemandForecastWithHistory(prod.Id,'');
-        Map<String, Object> result2 = sandOP.getDemandForecastWithHistory(prod.Id,'MOVING_AVERAGE');
+        Map<String, Object> result = sandOP.getDemandForecastWithHistory(prod.Id,'',null);
+        Map<String, Object> result2 = sandOP.getDemandForecastWithHistory(prod.Id,'MOVING_AVERAGE',null);
         Test.stopTest();
     }
      @isTest
@@ -499,7 +535,7 @@ static void testGetStockMovementData_basic() {
     Test.setCreatedDate(outOrder.Id,  DateTime.newInstance(2024, 9, 25, 0, 0, 0));
 
     Test.startTest();
-    Map<String, List<Map<String, Object>>> result = sandOP.getStockMovementData('2024');
+    Map<String, List<Map<String, Object>>> result = sandOP.getStockMovementData('2024',null);
     Test.stopTest();
 
     System.assertNotEquals(null, result, 'Result map should not be null');
@@ -570,7 +606,7 @@ static void testGetStockMovementData_Simple() {
     Test.setCreatedDate(outRec.Id, DateTime.newInstance(2024, 7, 15, 0, 0, 0));
 
     Test.startTest();
-    Map<String, List<Map<String, Object>>> res = sandOP.getStockMovementData('2024');
+    Map<String, List<Map<String, Object>>> res = sandOP.getStockMovementData('2024',null);
     Test.stopTest();
 
     System.assert(res != null);
@@ -606,7 +642,7 @@ static void testGetStockMovementData_YearFilterSimple() {
     Test.setCreatedDate(in2024.Id, DateTime.newInstance(2024, 1, 5, 0, 0, 0));
 
     Test.startTest();
-    Map<String, List<Map<String, Object>>> res = sandOP.getStockMovementData('2024');
+    Map<String, List<Map<String, Object>>> res = sandOP.getStockMovementData('2024',null);
     Test.stopTest();
 
     Boolean has2023 = false;
