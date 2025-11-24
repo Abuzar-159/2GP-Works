@@ -24,8 +24,19 @@ public with sharing class financialPlanningtestclass {
         insert salepoint;
         PO__c po = new PO__c(Vendor__c = vendor.Id);
         insert po;
-        RecordType rTypeProfile = [Select Id, Name From RecordType Where SobjectType='BILL__c' And Name='Advance to vendor' Limit 1];
-        BILL__c bill = new BILL__c(Vendor__c = vendor.Id,recordTypeId=rTypeProfile.Id, Amount_Paid__c=10);
+        // RecordType rTypeProfile = [Select Id, Name From RecordType Where SobjectType='BILL__c' And Name='Advance to vendor' Limit 1];
+        // BILL__c bill = new BILL__c(Vendor__c = vendor.Id,recordTypeId=rTypeProfile.Id, Amount_Paid__c=10);
+        Id billRTId = Schema.SObjectType.Bill__c
+                    .getRecordTypeInfosByDeveloperName()
+                    .get('Advance_to_vendor')   // <-- DeveloperName, NOT label
+                    .getRecordTypeId();
+
+BILL__c bill = new BILL__c(
+    Vendor__c = vendor.Id,
+    RecordTypeId = billRTId,
+    Amount_Paid__c = 10
+);
+
         try{ insert bill; } catch(exception e){ }
         
          
@@ -42,8 +53,20 @@ public with sharing class financialPlanningtestclass {
         insert PO1;
         Purchase_Line_Items__c poli = new Purchase_Line_Items__c(Name= 'test PO',Purchase_Orders__c = PO1.Id,Product__c=prod.Id,Quantity__c=5,Unit_Price__c=12);
         insert poli;
-        RecordType billitemRecId = [Select Id, Name From RecordType Where SobjectType='Bill_Line_Item__c' And Name='Advance to vendor' Limit 1];
-        Bill_Line_Item__c billItem1 = new Bill_Line_Item__c(Name= 'Test bill01',Purchase_Order_Line_Items__c=poli.Id,BILL__c = bill.Id, Sort_Order__c=10);
+            // RecordType billitemRecId = [Select Id, Name From RecordType Where SobjectType='Bill_Line_Item__c' And Name='Advance to vendor' Limit 1];
+            // Bill_Line_Item__c billItem1 = new Bill_Line_Item__c(Name= 'Test bill01',Purchase_Order_Line_Items__c=poli.Id,BILL__c = bill.Id, Sort_Order__c=10);
+
+            Id billItemRTId = Schema.SObjectType.Bill_Line_Item__c
+                    .getRecordTypeInfosByDeveloperName()
+                    .get('Advance_to_vendor') 
+                    .getRecordTypeId();
+        Bill_Line_Item__c billItem1 = new Bill_Line_Item__c(
+            Name= 'Test bill01',
+            Purchase_Order_Line_Items__c=poli.Id,
+            BILL__c = bill.Id,
+            Sort_Order__c=10,
+            RecordTypeId = billItemRTId
+        );
         insert billItem1;
         Invoice__c inv = new Invoice__c(Name='tst',account__c=customer.Id);
         insert inv;
@@ -68,8 +91,13 @@ public with sharing class financialPlanningtestclass {
         Chart_of_Accounts__c coa = new Chart_of_Accounts__c(Name='Inventory', Company__c = acc.Id);
         insert coa;
         
-        Id recordType = Schema.Sobjecttype.Chart_of_Accounts__c.getRecordTypeInfosByName().get('Income/Revenue').getRecordTypeId();
+        // Id recordType = Schema.Sobjecttype.Chart_of_Accounts__c.getRecordTypeInfosByName().get('Income/Revenue').getRecordTypeId();
         
+        // Chart_of_Accounts__c coa1 = new Chart_of_Accounts__c(Name='Inventory', Company__c = acc.Id, RecordTypeId=recordType);
+            Id recordType = Schema.SObjectType.Chart_of_Accounts__c
+                        .getRecordTypeInfosByDeveloperName()
+                        .get('Income_Revenue')   // <-- DeveloperName, NOT label
+                        .getRecordTypeId();
         Chart_of_Accounts__c coa1 = new Chart_of_Accounts__c(Name='Inventory', Company__c = acc.Id, RecordTypeId=recordType);
         insert coa1;
         
@@ -93,27 +121,27 @@ public with sharing class financialPlanningtestclass {
         Date toDate = Date.today();                // today
  test.startTest();
        
-         financialplanning.getMonthlyCreditDebitSummary(2024);
-         financialplanning.getMonthlyIncomeExpense(2024);
-            financialplanning.getChartOfAccountsByType('Expense');
-            financialplanning.getCustomerInvoiceSummary('Overdue');
-            financialplanning.getMonthlyIncomeExpensenew(fromDate, toDate);
-            financialplanning.getOverallIncomeAndExpenseTotals();
-            financialplanning.getOverallExpenseBreakdown();
-            financialplanning.getFilteredExpenseBreakdown(fromDate, toDate);
-            financialplanning.getChartOfAccountTotals();
+         financialplanning.getMonthlyCreditDebitSummary(2024,null);
+         financialplanning.getMonthlyIncomeExpense(2024,null);
+            financialplanning.getChartOfAccountsByType('Expense',null);
+            financialplanning.getCustomerInvoiceSummary('Overdue',null);
+            financialplanning.getMonthlyIncomeExpensenew(fromDate, toDate,null);
+            financialplanning.getOverallIncomeAndExpenseTotals(null);
+            financialplanning.getOverallExpenseBreakdown(null);
+            financialplanning.getFilteredExpenseBreakdown(fromDate, toDate,null);
+            financialplanning.getChartOfAccountTotals(null);
             financialplanning.getProjectBudgetsByChartOfAccount(coa.Id);
-            financialplanning.getProjectsByChartOfAccount(coa.Id);
-            financialplanning.getSingleProjectBudget(coa.Id, proj.Id);
-            financialplanning.getChartOfAccountsWithBudgetAccounts();
+            financialplanning.getProjectsByChartOfAccount(coa.Id,null);
+            financialplanning.getSingleProjectBudget(coa.Id, proj.Id,null);
+            financialplanning.getChartOfAccountsWithBudgetAccounts(null);
         financialplanning.getCurrencySymbol();
-        financialplanning.getGroupedInvoiceBillDetails('Overdue');
-        financialplanning.getMonthlyIncomeExpenseWithPrediction();
+        financialplanning.getGroupedInvoiceBillDetails('Overdue',null);
+        financialplanning.getMonthlyIncomeExpenseWithPrediction(null);
         financialplanning.getDefaultOrg();
-        financialplanning.getSingleProjectBudgetSimulated(proj.Id);
-        financialplanning.getMonthlyExpensesOnly(2021);
-        financialplanning.getProjectIDs();
-          Map<String, Object> result = financialplanning.getYearlyIncomeAndExpenseWithPrediction();
+        financialplanning.getSingleProjectBudgetSimulated(proj.Id,null);
+        financialplanning.getMonthlyExpensesOnly(2021,null);
+        financialplanning.getProjectIDs(null);
+          Map<String, Object> result = financialplanning.getYearlyIncomeAndExpenseWithPrediction(null);
 
   test.stopTest();
 
@@ -185,7 +213,7 @@ public with sharing class financialPlanningtestclass {
         } catch (Exception e) {
             System.debug('Expected callout exception: ' + e.getMessage());
         }
-                Map<String, Object> result = financialplanning.simulateForecastWithInputs(inputMap);
+                Map<String, Object> result = financialplanning.simulateForecastWithInputs(inputMap,null);
 
         Test.stopTest();
 
