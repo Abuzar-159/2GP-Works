@@ -1,0 +1,409 @@
+<aura:component Controller="OutboundLogisticsLightning" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global" >
+	<head>
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResources + '/assets/styles/erp_mark7_bootstrap.css', $Resource.PickPackShipResources + '/assets/styles/main-scrollers.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.Order_Console + '/assets/styles/custom.css', $Resource.Order_Console + '/assets/styles/font-awesome.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.SLDS2134 + '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+
+        <ltng:require scripts="/resource/jQuery/js/jquery_3.5.0.min.js" afterScriptsLoaded="{!c.focusTOscan}"/>
+        <!--ltng:require scripts="/resource/bootStraps/js/bootstrap.min.js" afterScriptsLoaded="{!c.setScriptLoaded}"/-->
+    	<ltng:require styles="/resource/CMP_CSS/CSS/Ship.css"/>
+        <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css"/>
+        <ltng:require styles="/resource/bootStraps/css/bootstrap-4.1.css" />
+        <ltng:require styles="/resource/ProjectWorkbench/css/main-style.css"/>
+    </head>
+    <aura:attribute name="selectedShipmentId" type="String" default=""/>
+    <aura:attribute name="showUPSRestAPIcomp" type="Boolean" default="false"/>
+
+    <aura:attribute name="showUSPScomp" type="Boolean" default="false"/>
+    <aura:attribute name="showCPcomp" type="Boolean" default="false"/>
+    <aura:attribute name="showload" type="Boolean" default="false"/>
+    <aura:attribute name="showFedExcomp" type="Boolean" default="false"/>
+    <aura:attribute name="showSendle" type="Boolean" default="false"/>
+    <aura:attribute name="enableUPSRestAPI" type="Boolean" default="false"/>
+    <aura:attribute name="Scanflow" type="Boolean" default="false"/>
+    <aura:attribute name="currentEmployee" type="Employees__c" default="{sobjectType : 'Employees__c','Name': ''}" />
+    <aura:attribute name="logisticIds" type="String" access="global" />
+    <aura:attribute name="Container" type="object"/>
+    <aura:attribute name="SiteName" type="object"/>
+    <aura:attribute name="ChannelName" type="String"/>
+    <aura:attribute name="ChannelId" type="String"/>
+    <aura:attribute name="LogisticsRecords" type="Logistic__c[]"/>
+    <aura:attribute name="selectedSite" type="String" default=""/>
+    <aura:attribute name="searchText" type="String" default=""/>
+    <aura:attribute name="show" type="String" default="25"/>
+    <aura:attribute name="checkAll" type="Boolean" default="false"/>
+    <aura:attribute name="PreventChange" type="Boolean" default="false"/>
+    <aura:attribute name="exceptionError" type="String" default=""/>
+    <aura:attribute name="showShipComponent" type="Boolean" default="false"/>
+    <aura:attribute name="showHeader" type="Boolean" default="false"/>
+    <aura:attribute name="shipId" type="String" default=""/>
+    <aura:attribute name="Redirect" type="String" default=""/>
+
+    <aura:attribute name="shipmentWrapperList" type="object"/>
+    <aura:attribute name="scanValue" type="String" default=''/>
+
+    <aura:handler name="init" value="{!this}" action="{!c.getAllDetails}" />
+    <aura:method name="Back2Outbound" action="{!c.Back2Outbound}"></aura:method>
+    <aura:method name="createPicks" action="{!c.createPicks}"></aura:method>
+    <aura:method name="createPacks" action="{!c.createPacks}"></aura:method>
+    <aura:method name="createShips" action="{!c.createShips}"></aura:method>
+    <aura:method name="createShipment" action="{!c.createShipment}"></aura:method>
+    <aura:handler name="change" value="{!v.scanValue}" action="{!c.verifyScanCode}"/>
+    <aura:attribute name="ReplaceShipSlipOrgURL" type="Boolean" default="false"/>
+    <aura:attribute name="ShowLangOptionForShipSlip" type="Boolean" default="false"/>
+    <aura:attribute name="ShowLangOptionForShipSlipModal" type="Boolean" default="false"/>
+    <aura:attribute name="Langoptions" type="List" default="[
+                                                            {'label': 'English', 'value': 'English'},
+                                                            {'label': 'French', 'value': 'French'}
+                                                            ]"/>
+    <aura:attribute name="SelectedLang" type="String" default="English"/>
+    <aura:attribute name="shIds" type="String" default=""/>
+    <aura:attribute name="showFreightView" type="Boolean" default="false"/>
+    <body aura:id="body" class="bg-white">
+    	<div class="cpq erp_mark7" id="er7">
+            <span class="spinner35">
+                <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+            </span>
+
+            <div class="theme-bg">
+                <div class="container-fluid">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box">
+                                <div class="page-title-right">
+                                    <ol class="breadcrumb m-0">
+                                        <li class="breadcrumb-item">
+                                            <div class="slds-grid">
+                                                <div class="slds-m-right--xx-small slds-truncate2 slds-p-top_x-small"> <i class="fa fa-arrow-right ship-lightblue" ></i>&nbsp;<lightning:formattedUrl label="{!v.ChannelName}" value="{!'/'+v.ChannelId}" target="_blank"/></div>
+                                                <div class="slds-m-right--xx-small slds-truncate2 slds-p-top_x-small">  <i class="fa fa-filter ship-lightblue" ></i>&nbsp;<lightning:formattedUrl label="{!v.SiteName}" value="{!'/'+v.selectedSite}" target="_blank"/></div>
+                                                <aura:if isTrue="{!and(!v.showShipComponent,v.shipmentWrapperList.length > 0)}">
+                                                    <lightning:button variant="brand"   iconName="utility:rows" class="slds-button slds-button--brand2 mobiledisplaynone slds-truncate2" iconPosition="left" label="{!$Label.c.Shipping_Slip}" onclick="{!c.createShippingSlipsforAll}"/>
+                                                </aura:if>
+                                            </div>
+                                            <div class="slds-p-left--small Pick-newClass7 ">
+                                            </div>
+                                        </li>
+                                    </ol>
+                                </div>
+                                <h4 class="page-title card-pricing headermt">
+                                    <i class="card-pricing-icon slds-icon-standard-budget-allocation" style="background: #4b90f8;"><img src="/resource/SLDS2134/assets/icons/custom/stock_disp.png" width="58"/></i>&nbsp;{!$Label.c.Outbound_logistics}&nbsp;
+                                    <lightning:buttonIcon size="medium" iconName="utility:refresh" variant="bare" onclick="{!c.Back2Outbound }" alternativeText="{!$Label.c.Refresh_Outbound_logistics}" title="Refresh" />
+                                </h4>
+                                <aura:iteration var="so" indexVar="Counter" items="{!v.LogisticsRecords}">
+                                    <div class="slds-truncate slds-p-top--xx-small" title="SLN"  id="{!so.Name}">
+                                        <lightning:formattedText value="{!so.Name}" class="ship-dark-blue" onclick="{!c.StillToFulfill}" data-target="{!so.Id}"/>
+                                        <aura:if isTrue="{!(v.LogisticsRecords.length-1 > Counter)}">,&nbsp;</aura:if>
+                                    </div>
+                                </aura:iteration>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="slds-page-header slds-page-header--object-home cl1 slds-hide" role="banner">
+                <div class="slds-grid">
+                    <div class="slds-col slds-has-flexi-truncate">
+                        <div class="slds-media slds-no-space slds-grow">
+                            <div class="slds-media__figure">
+                                <span class="slds-icon_container">
+                                    <span aria-hidden="true" class="slds-icon slds-icon-action-back  slds-icon--large icon-p195" >
+                                        <img src="/resource/SLDS2134/assets/icons/custom/stock_disp.png" width="58"/>
+                                    </span>
+                                </span>
+                            </div>
+                            <div class="slds-media__bod ship-mt-10" >
+                                <nav class="slds-context-bar__secondary" role="navigation">
+                                    <ul class="slds-grid">
+                                        <h1 class="slds-page-header__title slds-truncate cursor-pointer" title="Outbound Logistics" >{!$Label.c.Outbound_logistics}</h1>
+                                        <lightning:buttonIcon iconName="utility:refresh" variant="bare" onclick="{!c.Back2Outbound }" alternativeText="{!$Label.c.Refresh_Outbound_logistics}" title="Refresh" />
+                                    </ul>
+                                </nav>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small maqheadernavbuttons ship-pt-5" >
+                       	<div class="slds-m-right--xx-small slds-truncate2"> <i class="fa fa-arrow-right ship-lightblue" ></i>&nbsp;<lightning:formattedUrl label="{!v.ChannelName}" value="{!'/'+v.ChannelId}" target="_blank"/></div>
+                        <div class="slds-m-right--xx-small slds-truncate2">  <i class="fa fa-filter ship-lightblue" ></i>&nbsp;<lightning:formattedUrl label="{!v.SiteName}" value="{!'/'+v.selectedSite}" target="_blank"/></div>
+                    </div>
+                    <aura:if isTrue="{!and(!v.showShipComponent,v.shipmentWrapperList.length > 0)}">
+                        <lightning:button variant="brand"   iconName="utility:rows" class="slds-button slds-button--brand2 mobiledisplaynone slds-truncate2" iconPosition="left" label="{!$Label.c.Shipping_Slip}" onclick="{!c.createShippingSlipsforAll}"/>
+                    </aura:if>
+                </div>
+                <div class="slds-p-left--small slds-p-left--small ">
+                    <aura:iteration var="so" indexVar="Counter" items="{!v.LogisticsRecords}">
+                        <div class="slds-truncate slds-p-top--xx-small" title="SLN"  id="{!so.Name}">
+                            <lightning:formattedText value="{!so.Name}" class="ship-dark-blue" onclick="{!c.StillToFulfill}" data-target="{!so.Id}"/>
+                            <aura:if isTrue="{!(v.LogisticsRecords.length-1 > Counter)}">,&nbsp;</aura:if>
+                        </div>
+                    </aura:iteration>
+                </div>
+            </div>
+
+            <div class="epr_Mark7 erp_mark7 maqsood" >
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card mb-2">
+                            <div class="card-body p-1">
+                                <div  class="panel-collapse ">
+                                    <div class="panel-body ship-panel-body-extra" >
+                                        <ul class="nav nav-tabs " role="tablist">
+                                            <li class="nav-item">
+                                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.Back2Outbound}">
+                                                    <i class="fa fa-list ship-size15" aria-hidden="true"  ></i>&nbsp;{!$Label.c.List_Outbound_logistics}</a>
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.createPicks}">
+                                                    <i class="fa fa-truck ship-size15" aria-hidden="true" ></i>&nbsp;{!$Label.c.Pick_Outbound_logistics}</a>
+
+                                            </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.createPacks}">
+                                                    <i class="fa fa-archive ship-size15" aria-hidden="true" ></i>&nbsp;{!$Label.c.Pack_Outbound_logistics} </a>
+                                            </li>
+                                            <li class="nav-item active mobiledisplaynone mobiledisplaynone-landscape" >
+                                                <a class="nav-link cursor-pointer" data-toggle="tab" href="javascript:void(0);" role="tab"  onclick="{!c.createShips}">
+                                                    <i class="fa fa-plane ship-size15" aria-hidden="true" ></i> &nbsp;{!$Label.c.Ship_Outbound_logistics} </a>
+                                            </li>
+
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'slds-notify_container slds-is-fixed ship-class16','slds-notify_container slds-is-fixed ship-class17')}">
+                                    <div class="slds-notify slds-notify_toast slds-theme_error" role="status">
+                                        <span class="slds-assistive-text">{!$Label.c.error}</span>
+                                        <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                                            <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="Error" />
+                                        </span>
+                                        <div class="slds-notify__content">
+                                            <h2 class="slds-text-heading_x-small slds-text-heading_x-smallextra" >{!v.exceptionError}
+                                            </h2>
+                                        </div>
+                                        <div class="slds-notify__close ship-top25" >
+                                            <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                                                <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="Close" />
+                                                <span class="slds-assistive-text">{!$Label.c.Close_Timesheets}</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <aura:if isTrue="{!!v.showShipComponent}">
+                                    <div class="col-xs-12 ship-p0 bg-white">
+                                        <table class="table table--bordered slds-no-row-hover">
+                                            <thead>
+                                                <tr class="slds-text-heading--label">
+                                                    <th class="slds-is-sortable" title="Action" scope="col">
+                                                        <span class="slds-truncate">Action</span>
+                                                    </th>
+                                                    <th scope="col" class="slds-is-sortable" title="Name">
+                                                        <span class="slds-truncate">{!$Label.c.Name_ManageLeave}</span>
+                                                    </th>
+                                                    <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" title="{!$Label.c.Order_RMA}">
+                                                        <span class="slds-truncate">{!$Label.c.Order_RMA}</span>
+                                                    </th>
+                                                    <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" title="{!$Label.c.CreateAddress_Customer}">
+                                                        <span class="slds-truncate">{!$Label.c.CreateAddress_Customer}</span>
+                                                    </th>
+                                                    <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" title="{!$Label.c.Ship_Tracking_Number}">
+                                                        <span class="slds-truncate">{!$Label.c.Ship_Tracking_Number}</span>
+                                                    </th>
+                                                    <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" title="{!$Label.c.UPS_Setup_Stage}">
+                                                        <span class="slds-truncate">{!$Label.c.UPS_Setup_Stage}</span>
+                                                    </th>
+                                                    <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" title="{!$Label.c.ContractConsole_Type}">
+                                                        <span class="slds-truncate">{!$Label.c.ContractConsole_Type}</span>
+                                                    </th>
+                                                    <th scope="col" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" title="{!$Label.c.ShipmentManagement_Package_Line_Item_Shipment_Date}">
+                                                        <span class="slds-truncate">{!$Label.c.ShipmentManagement_Package_Line_Item_Shipment_Date}</span>
+                                                    </th>
+                                                    <th scope="col" class="slds-is-sortable" title="{!$Label.c.Ship_Shipment_Address}">
+                                                        <span class="slds-truncate">{!$Label.c.Ship_Shipment_Address}</span>
+                                                    </th>
+                                                    <th scope="col" class="slds-is-sortable" title="Action">
+                                                        <span class="slds-truncate">Action</span>
+                                                    </th> 
+                                                    <th scope="col" class="slds-is-sortable">
+                                                        <lightning:input type="checkbox" onchange="{!c.checkAll}" checked="{!v.checkAll}"/>
+                                                    </th>
+                                                    <th scope="col" class="slds-is-sortable"> &nbsp;
+
+                                                    </th>
+                                                   
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <aura:if isTrue="{!v.shipmentWrapperList.length > 0}">
+                                                    <aura:iteration var="pl" indexVar="shipCounter" items="{!v.shipmentWrapperList}">
+                                                        <tr class="slds-hint-parent">
+                                                            <td class="" data-label="Action">
+                                                                <lightning:button aura:id="assignButton" class="neutralC" title="Edit"  name="{!pl.shipM.Id}" onclick="{!c.AssignShipment}">
+                                                                    <img src="/resource/SCM/SCM/Images/slds_edit.png" class="ship-editimg" />
+                                                                </lightning:button>
+                                                                <lightning:button aura:id="assignButton" class="neutralC" name="{!pl.shipM.Id}" title="Delete" onclick="{!c.deleteShipm}">
+                                                                    <img src="/resource/SCM/SCM/Images/slds_delete.png" class="ship-editimg"/>
+
+                                                                </lightning:button>
+                                                            </td>
+
+                                                            <td class="greyheadlabel " data-label="Name">
+                                                                <aura:if isTrue="{!pl.shipM.Id != undefined}">
+                                                                    <lightning:formattedUrl label="{!pl.shipM.Name}" value="{!'/'+pl.shipM.Id}" target="_blank"/>
+                                                                </aura:if>
+                                                            </td>
+                                                            <td class="greyheadlabel  mobiledisplaynone mobiledisplaynone-landscape" data-label="Order">
+                                                                <div class="slds-truncate3">
+                                                                    <aura:if isTrue="{!pl.shipM.Sales_Order__c!=null}">
+                                                                        <lightning:formattedUrl label="{!pl.shipM.Sales_Order__r.Name}" value="{!'/'+pl.shipM.Sales_Order__c}" target="_blank"/>
+                                                                    </aura:if>
+                                                                    <aura:if isTrue="{!pl.shipM.Order__c!=null}">
+                                                                        <lightning:formattedUrl label="{!pl.shipM.Order__r.Name}" value="{!'/'+pl.shipM.Order__c}" target="_blank"/>
+
+                                                                    </aura:if>
+                                                                </div>
+                                                            </td>
+                                                            <td class="greyheadlabel  mobiledisplaynone mobiledisplaynone-landscape" data-label="Customer">
+                                                                <div class="slds-truncate3">
+                                                                    <aura:if isTrue="{!pl.shipM.Customer__c != undefined}">
+                                                                        <lightning:formattedUrl label="{!pl.shipM.Customer__r.Name}" value="{!'/'+pl.shipM.Customer__c}" target="_blank"/>
+                                                                    </aura:if>
+                                                                </div>
+                                                            </td>
+                                                            <td class="greyheadlabel  mobiledisplaynone mobiledisplaynone-landscape" data-label="Tracking No">
+                                                                <lightning:formattedRichText  value="{!pl.trackingNo}"/>
+                                                            </td>
+                                                            <td class="greyheadlabel  mobiledisplaynone mobiledisplaynone-landscape" data-label="Stage">
+                                                                <div class="slds-truncate3">
+                                                                    <lightning:formattedText value="{!pl.shipM.Status__c}"/>
+                                                                </div>
+                                                            </td>
+                                                            <td class="greyheadlabel  mobiledisplaynone mobiledisplaynone-landscape" data-label="Type">
+                                                                <div class="slds-truncate3">
+                                                                    <lightning:formattedText value="{!pl.shipmentType}"/>
+                                                                </div>
+                                                            </td>
+                                                            <td class="greyheadlabel  mobiledisplaynone mobiledisplaynone-landscape" data-label="Shipment Date">
+                                                                <div class="slds-truncate3">
+                                                                    <lightning:formattedDateTime value="{!pl.shipM.Shipment_Date__c}"/>
+                                                                </div>
+                                                            </td>
+                                                            <td class="greyheadlabel" data-label="Address">
+                                                                <div class="slds-truncate3">
+                                                                    <aura:if isTrue="{!if(pl.shipM.Shipping_Address__c != null, true, false)}">
+                                                                        <aura:if isTrue="if(pl.shipM.Shipping_Address__r.Address_Line1__c != null, true, false)"><lightning:formattedText value="{!pl.shipM.Shipping_Address__r.Address_Line1__c}"/>,<br/></aura:if>
+                                                                        <aura:if isTrue="if(pl.shipM.Shipping_Address__r.Address_Line2__c != null, true, false)"><lightning:formattedText value="{!pl.shipM.Shipping_Address__r.Address_Line2__c}"/>,<br/></aura:if>
+                                                                        <aura:if isTrue="if(pl.shipM.Shipping_Address__r.Address_Line3__c != null, true, false)"><lightning:formattedText value="{!pl.shipM.Shipping_Address__r.Address_Line3__c}"/>,<br/></aura:if>
+                                                                        <lightning:formattedText value="{!pl.shipM.Shipping_Address__r.City__c}"/>,
+                                                                        <aura:if isTrue="if(pl.shipM.Shipping_Address__r.State__c != null, true, false)"><lightning:formattedText value="{!pl.shipM.Shipping_Address__r.State__c}"/>,</aura:if><br/>
+                                                                        <lightning:formattedText value="{!pl.shipM.Shipping_Address__r.Postal_Code__c}"/>,
+                                                                        <lightning:formattedText value="{!pl.shipM.Shipping_Address__r.Country__c}"/>
+                                                                    </aura:if>
+                                                                </div>
+                                                            </td>
+
+                                                            <td  data-label="Delete">
+                                                                <div class="slds-grid">
+                                                                    <div class="slds-col ship-pt3">
+                                                                        <div class="slds-grid">
+                                                                            <i class="fa fa-bars ship-colorgreen" aria-hidden="true" ></i>&nbsp;
+                                                                            <lightning:formattedText value="{!$Label.c.Slip}"  onclick="{!c.createShippingSlips}" class="maqship" title="slip" data-ship-count="{!shipCounter}"/>
+                                                                        </div>
+                                                                        <!-- title="{!shipCounter}" -->
+                                                                    </div>
+
+                                                                    <div class="slds-col ship-pt3" >
+                                                                        <div class="slds-grid">
+                                                                            <i class="fa fa-plane ship-colorgreen" aria-hidden="true" ></i>&nbsp;
+                                                                            <!-- <lightning:formattedText value="{!$Label.c.Ship_Outbound_logistics}"  onclick="{!c.AssignShipment}" class="maqship pointer" title=" ship" data-ship-id="{!pl.shipM.Id}" /> -->
+                                                                             <a href="javascript:void(0);" onclick="{!c.AssignShipment}"    data-ship-id="{!pl.shipM.Id}"  class="maqship pointer"  title="Ship">  {!$Label.c.Ship_Outbound_logistics}</a>
+
+                                                                        </div>
+                                                                    </div>
+                                                                    <!-- title="{!pl.shipM.Id}" -->
+                                                                </div>
+                                                            </td>
+
+                                                            <td  data-label="Delete">
+                                                                <lightning:input type="checkbox" checked="{!pl.shipSelected}" />
+                                                            </td>
+
+                                                        </tr>
+                                                    </aura:iteration>
+                                                     <aura:set attribute="else">
+                                                         <tr>
+                                                             <td colspan="11">
+                                                                 <div class="no zones eb87">
+                                                                     <div class="slds-notify_container slds-is-relative warning-msg-custom">
+                                                                         <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                                                                             <div>
+                                                                                 <span class="slds-assistive-text">{!$Label.c.warning_UsersShiftMatch_New}</span>
+                                                                                 <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="No Zones">
+                                                                                     <lightning:icon iconName="utility:warning" size="small" alternativeText="{!$Label.c.warning_UsersShiftMatch_New}"/>
+                                                                                 </span>
+                                                                             </div>
+                                                                             <div class="slds-notify__content eb88">
+                                                                                 <h2 class="slds-text-heading_small eb89">{!$Label.c.No_shipment_records_to_display_click_on_the_ship_button_in_the_pack_section_to}</h2>
+                                                                             </div>
+                                                                         </div>
+                                                                     </div>
+                                                                 </div>
+                                                             </td>
+                                                         </tr>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </aura:if>
+
+                                <aura:if isTrue="{!v.showShipComponent}">
+                                    <aura:if isTrue="{!v.showUPSRestAPIcomp}">
+
+                                        <c:uPSRest shipmentIds="{!v.selectedShipmentId}"></c:uPSRest>
+                                        <aura:set attribute="else">
+                                            <body aura:id="mybody" class="bg-white"></body>
+                                        </aura:set>
+                                        <aura:if isTrue="{!v.showSendle}">
+                                          <c:sendle shipmentIds = "{!v.selectedShipmentId}"></c:sendle>
+                                        </aura:if>
+                                    </aura:if>
+                                    <aura:if isTrue="{!v.showUSPScomp}">
+                                          <c:uSPS ShipId = "{!v.selectedShipmentId}"></c:uSPS>
+                                        </aura:if>
+                                    <aura:if isTrue="{!v.showCPcomp}">
+                                          <c:canadapost ShipId = "{!v.selectedShipmentId}"></c:canadapost>
+                                        </aura:if>
+                                    <aura:if isTrue="{!v.showFedExcomp}">
+                                          <c:fedexRestAPI shipmentIds = "{!v.selectedShipmentId}"></c:fedexRestAPI>
+                                        </aura:if>
+                                    <aura:if isTrue="{!v.showFreightView}">
+                                        <c:freightview shipmentIds="{!v.selectedShipmentId}" />
+                                    </aura:if>
+                                </aura:if>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <aura:if isTrue="{!v.ShowLangOptionForShipSlipModal}">
+                <section role="dialog" tabindex="-1" aria-modal="true" aria-label="Meaningful description of the modal content" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container">
+                        <div class="slds-modal__content slds-p-around_medium slds-modal__content_headless" id="modal-content-id-1">
+                            <lightning:radioGroup name="radioGroup"
+                                                  label="Select Language"
+                                                  options="{! v.Langoptions }"
+                                                  value="{! v.SelectedLang }"
+                                                  type="radio"/>
+                        </div>
+                        <div class="slds-modal__footer">
+                            <lightning:button label="Cancel" onclick="{!c.goBackShipSlip}"/>
+                            <lightning:button variant="brand" label="Next" onclick="{!c.ShipSlipNext}"/>
+                        </div>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open" role="presentation"></div>
+            </aura:if>
+        </div>
+    </body>
+</aura:component>

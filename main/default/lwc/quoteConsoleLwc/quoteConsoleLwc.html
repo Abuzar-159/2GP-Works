@@ -101,7 +101,8 @@
                 <div class="container-fluid bg-white">
                     <div class="slim-pageheader">
                         <ol class="breadcrumb slim-breadcrumb">
-                            <li if:true={quote.opportunities__c}><c-input-lookup obj-name="Opportunity"
+                            <li if:true={quote.opportunities__c}>
+                                <c-input-lookup obj-name="Opportunity"
                                     icon-name="standard:opportunity" selected-record-id={quote.opportunities__c}
                                     hide-remove="true" style="right:12px;"> </c-input-lookup> </li>
                             <li if:true={showCloneIcon}><lightning-button icon-name="utility:form" variant="Neutral"
@@ -189,14 +190,22 @@
                                                 placeholder="Select Status..." options={quoteStatus}
                                                 onchange={statusSelection} data-id="qtStatus"></lightning-combobox>
                                         </div>
-
+<!-- this 2 below fields are controlled by the custom setting "Apply Discount on Whole Quote" -->
                                         <!--WHOLE QUOTE DISCOUNT-->
                                         <div if:true={applywholeQuoteDiscount}
                                             class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
-                                            <label class="slds-form-element__label">DISCOUNT %</label>
+                                            <label class="slds-form-element__label">Quote Discount %</label>
                                             <lightning-input type="number" variant="label-hidden"
                                                 onchange={handleDiscountQuote} maxlength="15" value={discountPercent}
                                                 disabled={isOrderActivated} step=".01"></lightning-input>
+                                        </div>
+                                        <!-- QUOTE AMOUNT (sum of all gross amounts - quote % discount) -->
+                                        <div if:true={applywholeQuoteDiscount}
+                                            class="slds-col slds-size_1-of-1 slds-large-size_6-of-12 slds-p-right--small slds-p-left--small slds-p-bottom--small">
+                                            <label class="slds-form-element__label">Quote Amount</label>
+                                            <lightning-input type="number" variant="label-hidden"
+                                                            value={quoteFinalAmount}
+                                                            disabled step=".01"></lightning-input>
                                         </div>
 
                                     </div>

@@ -1,0 +1,775 @@
+<template>
+    <!-- start header-->
+    <div class="erp_mark7" style="background:#F7F8F9;min-height: 81vh;">
+    <div class="spinner">
+        <template if:true={isLoading}>
+            <lightning-spinner alternative-text="Loading" variant="brand"  size="large">
+            </lightning-spinner>
+        </template>
+    </div>
+    <div class="slds-page-header">
+        <div class="slds-page-header__row">
+            <div class="slds-page-header__col-title">
+                <div class="slds-media">
+                    <img src={UpsImg} style="height:55px;" />
+                    <div class="slds-media__body">
+                        <div class="slds-page-header__name">
+                            <div class="slds-page-header__name-title">
+                                <h1>
+                                    <div if:true={isReturnShipment}>
+                                        Return Shipment 
+                                    </div>
+                                </h1>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-page-header__col-actions slds-p-top_small">
+                <div class="slds-page-header__controls">
+                    <div class="slds-page-header__control">
+                        <ul class="slds-button-group-list">
+                            <li>
+                                <div if:true={isReturnShipment}>
+                                    <button class="slds-button slds-button_brand" onclick={backToOldShipment}>Back</button>
+                                </div>
+                              <!--  <div if:true={ShowAddressbutton}>
+                                    <button label="Validate Address" onclick={validateAddressCall}></button>
+                                </div>-->
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+     <!-- End header-->
+      <!-- start Body-->
+    <div class="epr_Mark7" style="background:#fff;">
+        <div class="slds-grid">  
+            <div if:true={isErrorList} > <!--class="yourDiv"-->
+                <div class="slds-notify_container slds-is-absolute">
+                    <div class="slds-notify slds-notify_toast slds-theme_error" role="status">
+                        <span class="slds-assistive-text">warning</span>
+                        <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top" title="Close">
+                            <lightning-icon icon-name="utility:error" alternative-text="Close" size="x-small" variant="bare"></lightning-icon>                      
+                        </span>
+                        <div class="slds-notify__content">                    
+                            <template for:each={errorList} for:item="error" for:index='ind' >
+                                <h2 class="slds-text-heading_small color-white" key={error}>{error}</h2>                                
+                            </template>
+                        </div>
+                        <div class="slds-notify__close">
+                            <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close">
+                                <lightning-icon icon-name="utility:close" alternative-text="Close" size="x-small" class="clickableIcon" variant="bare" onclick={closeErrorList}></lightning-icon>                        
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 slds-m-top--small">
+                <div class=" slds-m-bottom_small">
+                    <div class="slds-page-header  fedex-class3" onclick={sectionOne}>
+                        <section class="slds-clearfix">
+                            <div class="slds-float--left ">
+                                <lightning-icon class="slds-hide" id="articleOne" icon-name="utility:right" size="x-small"></lightning-icon>
+                            </div>
+                            
+                            <div class="slds-m-left_small" ><strong>{label.shipmentGoing}</strong></div>
+                        </section>
+                    </div>
+                    
+                    <div id="firstArticle">
+                        <div class="epr_Mark7 fedex-class4">
+                            <div class="slds-grid slds-wrap slds-m-around--small fedex-class5">
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>To Address</label><div class="required">*</div></div>
+                                        <c-custom-input-lookup-l-w-c obj-name="Address__c" search-placeholder="Search address" icon-name="standard:address"  is-value-selected={toAddressSelected} selected-value={toAddress.Id} selected-name={toAddress.Name} selected-name-url={toAddressUrl} hide-remove="true"> </c-custom-input-lookup-l-w-c> <!--onremove={handleToAddressRemove} onlookupselected={selectAddress} -->
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <!-- <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Company</label><div class="required">*</div></div>
+                                        <div lwc:if={toContact.Company__c}>
+                                            <lightning-input type="text" label={label.CompanyLabel} value={toContact.Company__c} variant="label-hidden"></lightning-input>
+                                        </div>
+                                        <div lwc:else>
+                                            <lightning-input type="text" label={label.CompanyLabel} value={toContact.Account.Name} variant="label-hidden"></lightning-input>
+                                        </div>
+                                    </div> -->
+                                     <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Company</label><div class="required">*</div></div>
+                                        
+                                            <template lwc:if={toContact.Company__c}>
+                                            <lightning-input type="text" label={label.CompanyLabel} value={toContact.Company__r.Name} variant="label-hidden"></lightning-input>   
+                                        </template>   
+                                        <template lwc:elseif={toAddress.Customer__r.Company_txt__c}>
+                                            <lightning-input type="text" label={label.CompanyLabel} value={toAddress.Customer__r.Company_txt__c} variant="label-hidden"></lightning-input> 
+                                        </template>
+                                      <template lwc:else>
+                                            <lightning-input type="text" label={label.CompanyLabel} value={toContact.Account.Name} variant="label-hidden"></lightning-input>                                    
+                                      </template>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Contact</label><div class="required">*</div></div>
+                                        <div lwc:if={toContact.Name}>
+                                            <lightning-input type="text" label={label.ContactLabel} value={toContact.Name} variant="label-hidden"></lightning-input>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Email</label><div class="required">*</div></div>
+                                        <div lwc:if={toContact.Email}>
+                                            <lightning-input type="text" label="Email" value={toContact.Email} variant="label-hidden"></lightning-input>
+                                        </div>
+                                        <div lwc:else>
+                                            <lightning-input type="text" label="Email" value={toContact.Account.Email__c} variant="label-hidden"></lightning-input>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>{label.PhoneLabel}</label><div class="required">*</div></div>
+                                        <div lwc:if={toContact.Email}>
+                                            <lightning-input type="text" label={label.PhoneLabel} value={toContact.Phone} variant="label-hidden"></lightning-input>
+                                        </div>
+                                        <div lwc:else>                                            
+                                            <lightning-input type="text" label={label.PhoneLabel} value={toContact.Account.Phone} variant="label-hidden"></lightning-input>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Address Line 1</label><div class="required">*</div></div>
+                                        <lightning-input type="text" label="Address Line 1" value={toAddress.Address_Line1__c} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Address Line 2</label></div>
+                                        <lightning-input type="text" label="Address Line 1" value={toAddress.Address_Line2__c} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>City/town</label></div>
+                                        <lightning-input type="text" label="City/town" value={toAddress.City__c} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>State/county</label></div>
+                                        <lightning-input type="text" label="State/country" value={toAddress.State__c} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Zip/postal code                                        </label></div>
+                                        <lightning-input type="text" label="Zip/postal code" value={toAddress.Postal_Code__c} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Country                                       </label></div>
+                                        <lightning-input type="text" label="Country" value={toAddress.Country__c} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Is Residential                                       </label></div>
+                                        <lightning-input type="checkbox" label="Is Residential" onclick ={setToShipmentType} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+               <div class=" slds-m-bottom_small">
+                    <div class="slds-page-header  fedex-class3" onclick={sectionOne}>
+                        <section class="slds-clearfix">
+                            
+                            <div class="slds-m-left_small" ><strong>2.Where is this shipment coming from?</strong></div>
+                        </section>
+                    </div>
+                    
+                    <div id="SecondArticle">
+                        <div class="epr_Mark7 fedex-class4">
+                            <div class="slds-grid slds-wrap slds-m-around--small fedex-class5">
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>From Address</label><div class="required">*</div></div>
+                                        <c-custom-input-lookup-l-w-c obj-name="Address__c" search-placeholder="Search address" icon-name="standard:address"  is-value-selected={FromAddressSelected} selected-value={fromAddress.Id} selected-name={fromAddress.Name} selected-name-url={fromAddressUrl} hide-remove="true"> </c-custom-input-lookup-l-w-c> <!--onremove={handleToAddressRemove} onlookupselected={selectAddress} -->
+                                    </div>
+                                </div>
+                                <!-- <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Company</label><div class="required">*</div></div>
+                                        <div lwc:if={fromContact.Company__c}>
+                                            <lightning-input type="text" label={label.CompanyLabel} value={fromContact.Company__c} variant="label-hidden"></lightning-input>                                    
+                                        </div>
+                                        <div lwc:else>
+                                            <lightning-input type="text" label={label.CompanyLabel} value={fromContact.Account.Name} variant="label-hidden"></lightning-input>                                    
+                                        </div>
+                                    </div>
+                                </div> -->
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Company</label><div class="required">*</div></div>
+                                        
+                                            <template lwc:if={fromContact.Company__c}>
+                                            <lightning-input type="text" label={label.CompanyLabel} value={fromContact.Company__r.Name} variant="label-hidden"></lightning-input>   
+                                        </template>   
+                                        <template lwc:elseif={fromAddress.Customer__r.Company_txt__c}>
+                                            <lightning-input type="text" label={label.CompanyLabel} value={fromAddress.Customer__r.Company_txt__c} variant="label-hidden"></lightning-input> 
+                                        </template>
+                                      <template lwc:else>
+                                            <lightning-input type="text" label={label.CompanyLabel} value={fromContact.Account.Name} variant="label-hidden"></lightning-input>                                    
+                                      </template>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Contact</label><div class="required">*</div></div>
+                                        <div lwc:if={fromContact.Name}>
+                                            <lightning-input type="text" label={label.ContactLabel} value={fromContact.Name} variant="label-hidden"></lightning-input>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Email</label><div class="required">*</div></div>
+                                        <div lwc:if={fromContact.Email}>
+                                        <lightning-input type="text" label="Email" value={fromContact.Email} variant="label-hidden"></lightning-input>
+                                        </div>
+                                        <div lwc:else>
+                                            <lightning-input type="text" label="Email" value={fromContact.Account.Email__c} variant="label-hidden"></lightning-input>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>{label.PhoneLabel}</label><div class="required">*</div></div>
+                                        <div lwc:if={fromContact.Phone}>
+                                            <lightning-input type="text" label={label.PhoneLabel} value={fromContact.Phone} variant="label-hidden" ></lightning-input>
+                                        </div>
+                                        <div lwc:else>
+                                            <lightning-input type="text" label={label.PhoneLabel} value={fromContact.Account.Phone} variant="label-hidden" ></lightning-input>
+
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Address Line 1</label><div class="required">*</div></div>
+                                        <lightning-input type="text" label="Address Line 1" value={fromAddress.Address_Line1__c} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Address Line 2</label></div>
+                                        <lightning-input type="text" label="Address Line 1" value={fromAddress.Address_Line2__c} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>City/town</label></div>
+                                        <lightning-input type="text" label="City/town" value={fromAddress.City__c} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>State/county</label></div>
+                                        <lightning-input type="text" label="State/country" value={fromAddress.State__c} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Zip/postal code                                        </label></div>
+                                        <lightning-input type="text" label="Zip/postal code" value={fromAddress.Postal_Code__c} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Country                                       </label></div>
+                                        <lightning-input type="text" label="Country" value={fromAddress.Country__c} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <div><label>Is Residential                                       </label></div>
+                                        <lightning-input type="checkbox" label="Is Residential" onclick ={setFromShipmentType} variant="label-hidden"></lightning-input>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="slds-m-bottom_small">
+                    <div class="slds-page-header Message  fedex-class3" >
+                        <section class="slds-clearfix">
+                            
+                            <div class="slds-m-left_small" ><strong>3.What are you shipping?</strong></div>
+                        </section>
+                    </div>
+                    <div class="slds-show slds-m-top_small" id="aThirdSection">
+                        <table class="slds-table slds-table--bordered slds-table--cell-buffer slds-p-bottom_small">
+                            <thead>
+                                <tr class="slds-text-title--caps">
+                                    <th scope="col"> <div class="slds-truncate2" title="Package">Package</div> </th>
+                                    <th scope="col"> <div class="slds-truncate2" title="Order">Order</div> </th>
+                                    <th scope="col"> <div class="slds-truncate2" title="Weight">Weight</div> </th>
+                                    <th scope="col"> <div class="slds-truncate2" title="Length">Length</div> </th>
+                                    <th scope="col"> <div class="slds-truncate2" title="Width">Width</div> </th>
+                                    <th scope="col"> <div class="slds-truncate2" title="Height">Height</div> </th>
+                                    <th scope="col"> <div class="slds-truncate2" title="Declared Value">Declared Value ups</div> </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template if:true={packageList} for:each={packageList} for:item="pck" for:index="index" >
+                                    <tr key={pck.Id}>
+                                        <td class="greyheadlabel">
+                                            <div class="slds-truncate2">
+                                                <lightning-formatted-url label={pck.Name} value={pck.packUrl} target="_blank"></lightning-formatted-url>
+                                            </div>
+                                        </td>
+                                        <td class="greyheadlabel">
+                                            <div class="slds-truncate2">
+                                                <div if:true={pck.Sales_Order__c}>
+                                                    <lightning-formatted-text value={pck.Sales_Order__r.Name}></lightning-formatted-text>
+                                                </div>
+                                                <div if:true={pck.Transfer_Order__c}>
+                                                    <lightning-formatted-text value={pck.Transfer_Order__r.Name}></lightning-formatted-text>
+                                                </div>
+                                                <div if:true={pck.Order__c}>
+                                                    <lightning-formatted-text value={pck.Order__r.Name}></lightning-formatted-text>
+                                                </div>
+                                                <div if:true={pck.Return_Merchandise_Authorisation__c}>
+                                                    <lightning-formatted-text value={pck.Return_Merchandise_Authorisation__r.Name}></lightning-formatted-text>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="greyheadlabel">
+                                            <div class="slds-truncate2">
+                                                {pck.Weight__c}
+                                            </div>
+                                        </td>
+                                        <td class="greyheadlabel">
+                                            <div class="slds-truncate2">
+                                                {pck.Length__c}  
+                                            </div>
+                                        </td>
+                                        <td class="greyheadlabel">
+                                            <div class="slds-truncate2">
+                                                {pck.Width__c}
+                                            </div>
+                                        </td>
+                                        <td class="greyheadlabel">
+                                            <div class="slds-truncate2">
+                                                {pck.Height__c}  
+                                            </div>
+                                        </td>
+                                        <td class="greyheadlabel">
+                                            <div class="slds-truncate2">
+                                                <lightning-input type="number" formatter="currency" step="0.01" value={pck.Declared_Value__c}></lightning-input>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                                    </div>
+                   <div class=" slds-m-bottom_small">
+                        <div class="slds-page-header Message  fedex-class3" >
+                            <section class="slds-clearfix">
+                                
+                                <div class="slds-m-left_small" ><strong>4.Optional Details</strong></div>
+                            </section>
+                        </div>
+                        <div class="slds-show slds-m-top_small" id="FourthSection">
+                            <div class="slds-grid slds-wrap  slds-m-around--small fedex-class5">
+                                <div class="col-xs-12 col-sm-4 col-md-4">
+                                    <div class="slds-form-element">
+                                        <div><label>Quantum View Notification</label></div>
+                                        <lightning-combobox  class='no-input-lable' value={shipment.QV_Notification__c} placeholder="Quantum View Notification" options={defaulWrap.qvNotification} onchange={handleqvNotification} ></lightning-combobox>
+                                    </div>
+                                </div>
+                                <div class="col-xs-12 col-sm-4 col-md-4">
+                                    <div class="slds-form-element">
+                                        <div><label>Carbon Neutral</label></div>
+                                        <lightning-combobox  class='no-input-lable' value={shipment.Carbon_Neutral__c} placeholder="Carbon Neutral" options={defaulWrap.CarbonNeutral} onchange={handleCarbonNeutral} ></lightning-combobox>
+                                    </div>
+                                </div>
+                                <div class="col-xs-12 col-sm-4 col-md-4">
+                                    <div class="slds-form-element">
+                                        <div><label>Collect On Delivery (COD)</label></div>
+                                        <lightning-combobox  class='no-input-lable' value={shipment.COD__c} placeholder="Collect On Delivery (COD)" options={defaulWrap.COD} onchange={handleCOD} ></lightning-combobox>
+                                    </div>
+                                </div> 
+                                <div class="col-xs-12 col-sm-4 col-md-4">
+                                    <div class="slds-form-element">
+                                        <div><label>Dry Ice</label></div>
+                                        <lightning-combobox  class='no-input-lable' value={shipment.Dry_Ice__c} placeholder="Dry Ice" options={defaulWrap.DryIce} onchange={handleDryIce} ></lightning-combobox>
+                                    </div>
+                                </div> 
+                                <div class="col-xs-12 col-sm-4 col-md-4">
+                                    <div class="slds-form-element">
+                                        <div><label>Return Services</label></div>
+                                        <lightning-combobox  class='no-input-lable' value={shipment.Return_Service__c} placeholder="Return Service" options={defaulWrap.ReturnService} onchange={handleReturnService} ></lightning-combobox>
+                                    </div>
+                                </div> 
+                                <div class="col-xs-12 col-sm-4 col-md-4">
+                                    <div class="slds-form-element">
+                                        <div><label> Additional Handling</label></div>
+                                        <lightning-combobox  class='no-input-lable' value={shipment.Additional_Handling__c} placeholder="Additional Handling" options={defaulWrap.AdditionalHandling} onchange={handleAdditionalHandling} ></lightning-combobox>
+                                    </div>
+                                </div>
+                                <div class="col-xs-12 col-sm-4 col-md-4">
+                                    <div class="slds-form-element">
+                                        <div><label>Verbal Confirmation</label></div>
+                                        <lightning-combobox  class='no-input-lable' value={shipment.Verbal_Confirmation__c} placeholder="Verbal Confirmation" options={defaulWrap.VerbalConfirmation} onchange={handleVerbalConfirmation} ></lightning-combobox>
+                                    </div>
+                                </div>
+                                
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row UPS-class3">
+                        <div class="col-md-12 UPS-class20" >
+                            <h4 class="UPS-class21">UPS, the UPS Shield trademark, the UPS Ready mark, the UPS Developer Kit mark and the Color Brown are trademarks of United Parcel Service of America, Inc. All Rights Reserved.</h4>
+                        </div>
+                    </div>
+            </div>
+            <div class="col-md-6 slds-m-top--small">
+                		
+                <div>
+                    <lightning-tabset>
+                        <lightning-tab label="Shipping Services / Cost" icon-class="fa fa-file-text" >
+                            <div class="slds-grid slds-wrap slds-wrap slds-m-around--small fedex-class5">
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                  <lightning-input
+                                    type="date"
+                                    label="Shipment Date"
+                                    value={shipment.Shipment_Date__c}
+                                    onchange={handleShipDate}>
+                                </lightning-input>
+
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control">
+                                        <lightning-combobox  label='Saturday Delivery' value={shipment.Saturday_Delivery__c} placeholder="Saturday Delivery" options={defaulWrap.SaturdayDelivery} onchange={handleSaturdayDelivery} ></lightning-combobox>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control">
+                                        <lightning-combobox  label='Delivery Confirmation' value={shipment.Delivery_Confirmation__c} placeholder="Delivery Confirmation" options={defaulWrap.DeliveryConfirmation} onchange={handleDeliveryConfirmation} ></lightning-combobox>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control">
+                                        <lightning-combobox  label='International Forms' value={shipment.International_Forms__c} placeholder="International Forms" options={defaulWrap.IfConfirmation} onchange={handleIfConfirmation} ></lightning-combobox>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control">
+                                        <lightning-combobox  label='Product Unit Code' value={shipment.Product_Unit_Code__c} placeholder="Product Unit Code" options={defaulWrap.PucConfirmation} onchange={handlePucConfirmation} ></lightning-combobox>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <lightning-input label="Description" value={shipment.Description__c} onchange={handleDescription}></lightning-input>
+                                    </div>
+                                </div>
+                              
+                               <!-- <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control">
+                                        <lightning-combobox  label='FedEx® Delivery Signature Options' value={shipment.Signature_Services__c} placeholder="Signature Services" options={signatureserviceOptions} onchange={handlesignatureService} ></lightning-combobox>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control">
+                                        <lightning-combobox  label='FedEx® Special Services' value={shipment.Fedex_Special_Services__c} placeholder="Fedex Special Services" options={specialServices} onchange={handlespecialServicesChange} ></lightning-combobox>
+                                    </div>
+                                </div>
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control">
+                                        <lightning-combobox  label='Label Options' value={shipment.Label_options__c} placeholder="Label Options" options={LabelOptions} onchange={handleLabelChange} ></lightning-combobox>
+                                    </div>
+                                </div>-->
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control">
+                                        
+                                        <lightning-combobox  label='Billing Options' value={shipment.Shipment_Billing_options__c} placeholder="Billing Options" options={defaulWrap.BillingOptions} onchange={handlebillOptionsChange} disabled={disableBillingOption}></lightning-combobox>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <lightning-input type="text" label="Billing Account Number" value={shipment.Billing_Account_Number__c} onchange={handleBillAccNum} disabled={disableBillingOption}></lightning-input>
+                                    </div>
+                                </div>
+                              
+                                <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label>Billing Contact</label>
+                                        <c-custom-input-lookup-l-w-c obj-name="Contact" search-placeholder="Search Contact" icon-name="standard:contact"  is-value-selected={billContactSelected} selected-value={shipment.Billing_Contact__c} selected-name={shipment.Billing_Contact__r.Name} hide-remove ={disableBillingOption}> </c-custom-input-lookup-l-w-c> 
+                                    </div>
+                                </div>
+                                 <div class="col-md-4 col-xs-4 slds-p-bottom_x-small">
+                                    <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right">
+                                        <label>Billing Address</label>
+                                        <c-custom-input-lookup-l-w-c obj-name="Address__c" search-placeholder="Search address" icon-name="standard:address"  is-value-selected={billingAddressSelected} selected-value={shipment.Billing_Address__c} selected-name={shipment.Billing_Address__r.Name}  hide-remove={disableBillingOption}> </c-custom-input-lookup-l-w-c> 
+
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="slds-grid slds-wrap slds-m-around--small fedex-class5 text-center">
+
+                                <template if:true={ShowGetRate}>
+                                    <div class="col-xs-12 col-sm-12 col-md-12 fedex-class6">
+                                        <button class="button-getrates slds-button slds-button_brand" onclick={Shipping_Rate} >Get Rates</button>
+                                    </div>
+                                </template>
+                               
+                                <template if:true={ShowInitiateShipment}>
+                                    <div class="col-xs-12 col-sm-12 col-md-12 fedex-class6">
+                                        <button class="slds-button slds-button_brand" onclick={Shipping_Request}>Initiate Shipment</button>
+                                    </div>
+                                </template>
+                                <div class="col-xs-12 col-sm-12 col-md-12 fedex-class6">
+                                <template if:true={showLabel}>
+                                    <button class="slds-button slds-button_brand" onclick={viewLabels}>View Label</button>
+                                    <button class="slds-button slds-button_brand" onclick={viewcommercialLabels}>Commercial Invoice</button>
+                                </template>
+                                <template if:true={showReturnLabel}>
+                                    <button class="slds-button slds-button_brand" onclick={viewReturnLabels}>Generate Return Label</button>
+                                    <button class="slds-button slds-button_brand" onclick={sendReturnLabels}>Send Return Label</button>
+                                        
+                                </template>
+                                <template if:true={ShowCancelShipment}>
+                                    
+                                        <button class="slds-button slds-button_brand" onclick={cancelShipment}>Cancel Shipment</button>
+                                    
+                                </template>
+                                <template if:true={showReturnShipment}>
+                                    <template if:true={showUPSReturnType}>
+                                        <button class="slds-button slds-button_brand" onclick={generateReturnShipment}>Generate Return Shipment</button>
+                                    </template>
+                                    <template if:true={showFedexReturnType}>
+                                        <button class="slds-button slds-button_brand" onclick={generateFedexReturnShipment}>Generate Fedex Return Shipment</button>
+                                    </template>
+                                </template>
+                                </div>
+                            </div>
+                                <div class="slds-grid slds-wrap slds-m-around--small fedex-class5 text-center">
+                                    <template if:true={sucessMsg}>
+                                        <h4 style="text-align: center; color: rgb(83, 199, 83);">{sucessMsg}</h4>	
+                                    </template>
+                                <template if:true={rateResponse}>
+                                    <table class="slds-table slds-table--bordered slds-table--cell-buffer">
+                                        <thead>
+                                            <tr class="slds-text-title--caps">
+                                                <th scope="col"> <div class="slds-truncate2" title="Sl No.">Sl No.</div> </th>
+                                                <th scope="col"> <div class="slds-truncate2" title="Service Type">Service Type</div> </th>
+                                                <th scope="col"> <div class="slds-truncate2" title="Total Charges">Total Charges</div> </th>
+                                                <th scope="col"> <div class="slds-truncate2" title="Total Charges">Delivery date</div> </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <template for:each={rateResponse} for:item="rate" for:index="ind">
+                                                <tr key={rate.index}>
+                                                    <td class="greyheadlabel">
+                                                        <div class="slds-truncate2"><!--label={rate.index}-->
+                                                            <lightning-input type="radio" name="selectedService"  label={rate.code} value={rate.service} data-index={ind} onchange={handleServiceTypeChange} variant="label-hidden"></lightning-input>
+                                                        </div>
+                                                    </td>
+                                                    <td class="greyheadlabel">
+                                                        <div class="slds-truncate2">
+                                                            {rate.service}
+                                                        </div>
+                                                    </td>
+                                                    <td class="greyheadlabel">
+                                                        <div class="slds-truncate2">
+                                                            {rate.totalCharges} &nbsp; {rate.currencycode}
+                                                        </div>
+                                                    </td>
+                                                    <td class="greyheadlabel">
+                                                        <div class="slds-truncate2">
+                                                            {rate.deliverydate} 
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </template>
+                                <template if:true={ShowRateMsg}>
+                                    <template for:each={RateMsg} for:item="msg" for:index='ind' >
+                                        <h6 class="slds-text-heading_small" key={msg}>{msg}</h6>  <br key={msg}/>                              
+                                    </template>
+                                </template>
+                            </div>
+                            <div class="slds-m-top--small"></div>
+					 </lightning-tab>
+                     <lightning-tab label="PROCESS SHIPMENT" > 
+                        <div class="col-md-4 col-xs-4">
+                            <label> Shipment Name</label><br/>
+                            <lightning-formatted-text type="text" label="Shipment Name" value={shipment.Name} ></lightning-formatted-text>
+                        </div>
+                        <div class="col-md-4 col-xs-4">
+
+                       
+                        <lightning-combobox  label='Shipment Status' value={shipment.Status__c} placeholder="Status" options={defaulWrap.StatusConfirmation} onchange={handleStatusChange} ></lightning-combobox>
+                        </div>
+                        <template if:true={isShipmentShipped}><!--1-->
+                            <div class="panel panel-default slds-m-top--small">
+                                <div class="panel-heading">
+                                    <h4 class="panel-title">
+                                        <a data-toggle="collapse" data-parent="#accordion" href="#collapse4" class="UPS-class14">{UPS_Pickup_Details}</a><!--pull in all labels-->
+                                    </h4>
+                                </div>
+                                <div id="collapse4" class="panel-collapse collapse in">
+                                    <div class="panel-body UPS-class15">
+                                        <div class="col-md-8 UPS-class16">
+                                            <div class="row">
+                                                <div class="col-xs-12 col-sm-6 col-md-6">
+                                                    <div class="slds-form-element">
+                                                        <label class="slds-form-element__label" for="text-input-01">Pickup Ready Time</label>
+                                                        <div class="slds-form-element__control">
+                                                            <lightning-input type="date" onchange={handleDateChange} ></lightning-input>
+                                                            <lightning-input type="time" onchange={handleTimeChange} ></lightning-input>
+                                                            <!--lightning-input type="datetime" variant="label-hidden" value={shipment.Package_Ready_Time__c} class="display-lable font12m"></lightning-input-->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-xs-12 col-sm-6 col-md-6">
+                                                    <div class="slds-form-element">
+                                                        <label class="slds-form-element__label" for="text-input-01">Pickup Close Time</label>
+                                                        <div class="slds-form-element__control">
+                                                            <input type="datetime-local" id="customerCloseTime" value={shipment.Customer_Close_Time__c} class="display-label font12m" onchange={handleDatetimeChange}></input>
+                                                            <!--lightning-input type="datetime" variant="label-hidden" value={shipment.Customer_Close_Time__c} class="display-lable font12m"></lightning-input-->
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="row slds-m-top--xxx-small">
+                                                <div class="col-xs-12 col-sm-6 col-md-6">
+                                                    <div class="slds-form-element">
+                                                        <label class="slds-form-element__label slds-m-top--small slds-m-bottom--small" for="text-input-01"> UPS Pickup Reference No</label>
+                                                        <div class="slds-form-element__control">
+                                                            <lightning-input type="text" variant="label-hidden" value={shipment.Pickup_Confirmation_Number__c}></lightning-input>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <template if:true={isShipmentShipped}>
+                                                <div class="col-sm-12 slds-m-top--xxx-small">
+                                                    <button class="width100 slds-button slds-button_brand" onclick={handlePickupRate}>UPS Pickup Rate</button>
+                                                </div>
+                                            </template>
+                                            <template if:true={isShipmentShipped}>
+                                                <div class="col-sm-12 slds-m-top--xxx-small">
+                                                    <button class="width100 slds-button slds-button_brand" onclick={handleCreatePickup}>Create Pick Up</button>
+                                                </div>
+                                            </template>
+                                            <template if:true={isShipmentShipped}>
+                                                <div class="col-sm-12 slds-m-top--xxx-small">
+                                                    <button class="width100 slds-button slds-button_brand" onclick={handleCancelPickup}>Cancel Pick Up</button>
+                                                </div>
+                                            </template>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </lightning-tab>
+                        <lightning-tab label="TRACK SHIPMENT" > 
+                           
+                            <div class="col-md-12 col-xs-12">
+                                <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon--right slds-p-bottom_small">
+                                    Tracking no.
+                                    <div lwc:if={shipment.TrackingNumber__c}>
+                                        <lightning-formatted-text value={shipment.TrackingNumber__c}></lightning-formatted-text>
+                                    </div>
+                                    <div lwc:else>
+                                        <lightning-formatted-text value={shipment.Shipment_Identification_Number__c}></lightning-formatted-text>
+                                    </div>
+                                </div>
+                                <template if:true={ShowCancelShipment}>
+                                    <br/>
+                                   <div class="slds-grid">
+                                        <button class="button-getrates slds-button slds-button_brand" onclick={cancelShipment} >Cancel Shipment</button> &nbsp;&nbsp;<!--cancelSelectedShipment-->
+                                
+                                        <button class="button-getrates slds-button slds-button_brand" onclick={trackingShipment} >Track Shipment</button>
+                                    </div>
+                                </template>
+                            </div>
+                           <br/>
+                           <template if:true={sucessMsg}>
+                            <h4 style="text-align: center; color: rgb(83, 199, 83);">{sucessMsg}</h4>	
+                        </template>
+                            <template if:true={shipmentFlows}>
+                                <div style="text-align: center;">
+                                    <h3>Tracking Details of the Shipment</h3>
+                                </div>
+                                <br/>
+                                <table class="slds-table slds-table--bordered slds-table--cell-buffer">
+                                    <thead>
+                                        <tr class="slds-text-title--caps">
+                                            <th scope="col"> <div class="slds-truncate2" title="Location">Location</div> </th>
+                                            <th scope="col"> <div class="slds-truncate2" title="Date/Time">Date/Time</div> </th>
+                                            <th scope="col"> <div class="slds-truncate2" title="Decription">Decription</div> </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>  
+                                     <template if:true={shipmentFlows} for:each={shipmentFlows} for:item="ShipFlows" >
+                                        <tr key={ShipFlows.Id} style="width: 20px;">
+                                            <td class="greyheadlabel">
+                                                <div class="slds-truncate2"><!--label={rate.index}-->
+                                                    <lightning-formatted-text   value={ShipFlows.Location__c} ></lightning-formatted-text> &nbsp; &nbsp;
+                                                </div>
+                                            </td>
+                                            <td class="greyheadlabel">
+                                                <div class="slds-truncate2">
+                                                    {ShipFlows.Shipment_DateTime__c} &nbsp; &nbsp;
+                                                </div>
+                                            </td>
+                                            <td class="greyheadlabel">
+                                                <div class="slds-truncate">
+                                                    {ShipFlows.Description__c}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                   
+                                    
+                                    </template>
+                                </tbody>
+                                    </table>
+                                </template>
+                            
+                             </lightning-tab>
+                    </lightning-tabset>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    <div lwc:if={isforRMA}>
+    <div class="slds-docked-form-footer">
+        <button class="slds-button slds-button_brand" onclick={navigateToAura}>Go Back</button>
+        </div>
+    </div>
+    
+
+</div>
+</template>

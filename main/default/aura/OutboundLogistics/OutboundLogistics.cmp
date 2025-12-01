@@ -1,0 +1,580 @@
+<aura:component Controller="OutboundLogisticsLightning" implements="force:appHostable,flexipage:availableForAllPageTypes,flexipage:availableForRecordHome,force:hasRecordId,forceCommunity:availableForAllPageTypes,force:lightningQuickAction" access="global">
+    <head>
+
+
+        <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css"/>
+        <ltng:require styles="{!join(',',$Resource.PickPackShipResources + '/assets/styles/erp_mark7_bootstrap.css', $Resource.PickPackShipResources + '/assets/styles/main-scrollers.css')}"  />
+        <ltng:require styles="{!join(',',$Resource.Order_Console + '/assets/styles/font-awesome.css')}"  /> <!--$Resource.ERP7__Order_Console + '/assets/styles/custom.css',-->
+        <ltng:require styles="{!join(',',$Resource.SLDS2134 + '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+        <ltng:require scripts="/resource/jQuery/js/jquery_3.5.0.min.js" afterScriptsLoaded="{!c.focusTOscan}"/>
+        <ltng:require styles="/resource/CMP_CSS/CSS/OutboundLogistics.css"/>
+        <!--<ltng:require styles="/resource/ERP7__maqcustom/css/maqmain-min.css" />-->
+        <ltng:require styles="/resource/ProjectWorkbench/css/main-style.css"/>
+        <ltng:require styles="/resource/CMP_CSS/CSS/Manufacturing_orders.css"/>
+        <ltng:require styles="/resource/axoltmain/Assets/css/axolt-main.css" />
+    </head>
+
+    <aura:attribute name="showShipFilters" type="Boolean" default="false"/>
+     <aura:attribute name="ShipOptions" type="List"/>
+    <aura:attribute name="selectedShipment" type="String"/>
+
+    <aura:attribute name="currentEmployee" type="Map" default="{sobjectType : 'Employees__c','Name': ''}" />
+    <aura:attribute name="filtertype" type="String" default="{!$Label.c.DefaultFilterForOutbound}"/>
+    <aura:attribute name="logisticId" type="String" default=""/>
+    <aura:attribute name="Container" type="object"/>
+    <aura:attribute name="Logistics" type="object[]"/>
+    <aura:attribute name="selectedSite" type="String" default=""/>
+    <aura:attribute name="searchText" type="String" default=""/>
+    <aura:attribute name="show" type="String" default="50"/>
+    <aura:attribute name="checkAll" type="Boolean" default="false"/>
+    <aura:attribute name="allowChannelRemove" type="Boolean" default="false"/>
+    <aura:attribute name="PreventChange" type="Boolean" default="false"/>
+    <aura:attribute name="exceptionError" type="String"/>
+    <aura:attribute name="scanValue" type="String" default=''/>
+    <aura:attribute name="Order" type="String" default="DESC"/>
+    <aura:attribute name="OrderBy" type="String" default="Name"/>
+    <aura:attribute name="TotalOrdersToBeShipped" type="Integer" default="0"/>
+    <aura:attribute name="TotalPartiallyShippedOrders" type="Integer" default="0"/>
+    <aura:attribute name="TotalDeliveredOrders" type="Integer" default="0"/>
+    <aura:attribute name="TotalNewOrders" type="Integer" default="0"/>
+    <aura:attribute name="TotalShippedOrders" type="Integer" default="0"/>
+    <aura:attribute name="showAllfilters" type="Boolean" default="false"/>
+    <aura:handler name="init" value="{!this}" action="{!c.getAllDetails}" />
+    <aura:method name="Back2Outbound" action="{!c.Back2Outbound}"></aura:method>
+    <aura:method name="createPicks" action="{!c.createPicks}"></aura:method>
+    <aura:method name="createPacks" action="{!c.createPacks}"></aura:method>
+    <aura:method name="createShips" action="{!c.createShips}"></aura:method>
+    <aura:handler name="change" value="{!v.scanValue}" action="{!c.verifyScanCode}"/>
+    <aura:method name="LoadNow" action="{!c.LoadNow}"></aura:method>
+    <aura:handler name="change" value="{!v.currentEmployee.Channel__c}" action="{!c.LoadChannelChange}"/>
+
+    <aura:attribute name="SiteOptions" type="List"/>
+
+    <body aura:id="body" class="outbound-class1">
+        <div class="erp_mark7 colcontrol outbound-class5 maqsood" id="er7" >
+            <span class="outbound-class2">
+                <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+            </span>
+
+            <div class="cpq theme-bg">
+                <div class="container-fluid">
+
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="page-title-box">
+                                <div class="{!v.showShipFilters ? 'page-title-right slds-m-right_small' : 'page-title-right slds-m-right_small'}">
+                                    <ol class="slds-p-around_x-small m-0">
+                                        <li class="breadcrumb-item">
+                                            <div class="slds-grid slds-wrap slds-align-center">
+                                                <!-- Channel Input -->
+                                                <div class="slds-button-group outbound-class7 slds-m-right_xx-small" role="group">
+                                                    <c:CustomInputLookUp
+                                                                         objectAPIName="Channel__c"
+                                                                         aura:id="emp"
+                                                                         IconName="standard:user"
+                                                                         selectedRecordId="{!v.currentEmployee.Channel__c}"
+                                                                         hideRemove="{!v.allowChannelRemove}"
+                                                                         label="{!$Label.c.Channel_StockTake}"
+                                                                         />
+                                                </div>
+
+                                                <!-- Site Selection -->
+                                                <div class="slds-form-element slds-m-right_xx-small">
+                                                    <label class="slds-form-element__label">{!$Label.c.Site}</label>
+                                                    <div class="slds-form-element__control">
+                                                        <div class="slds-button-group outbound-class9" role="group">
+                                                            <a href="javascript:void(0);" class="slds-button slds-button--neutral nuetral-f outbound-class10">
+                                                                <i class="fa fa-filter outbound-class11" aria-hidden="true"></i>
+                                                            </a>
+                                                            <lightning:select aura:id="Site" value="{!v.selectedSite}" title="" onchange="{!c.Load}" label="Site" class="display-lable width200 border-0">
+                                                                <aura:iteration items="{!v.SiteOptions}" var="option">
+                                                                    <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.selectedSite, option.value)}"/>
+                                                                </aura:iteration>
+                                                            </lightning:select>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- PO Shipment Type, if applicable -->
+                                                <aura:if isTrue="{!v.showShipFilters}">
+                                                    <div class="slds-form-element slds-m-right_xx-small">
+                                                        <label class="slds-form-element__label">{!$Label.c.PO_Shipment_Type}</label>
+                                                        <div class="slds-form-element__control">
+                                                            <lightning:select aura:id="shipType" value="{!v.selectedShipment}" title="{!v.selectedShipment}" label="Shipment Type" class="display-lable width200 border-1" onchange="{!c.Load}">
+                                                                <aura:iteration items="{!v.ShipOptions}" var="option">
+                                                                    <option text="{!option}" value="{!option}" selected="{!equals(v.selectedShipment, option)}"/>
+                                                                </aura:iteration>
+                                                            </lightning:select>
+                                                        </div>
+                                                    </div>
+                                                </aura:if>
+                                            </div>
+                                        </li>
+                                    </ol>
+
+
+                                </div>
+
+                                <h4 class="page-title card-pricing headermt">
+
+                                    <i class="card-pricing-icon slds-icon-standard-budget-allocation" style="background: #4b90f8;"><img src="/resource/SLDS2134/assets/icons/custom/stock_disp.png" width="58"/></i>&nbsp;{!$Label.c.Outbound_logistics}&nbsp;<lightning:buttonIcon size="medium" iconName="utility:refresh" variant="bare" onclick="{!c.Back2Outbound }" alternativeText="{!$Label.c.Refresh_Outbound_logistics}" title="Refresh" />
+                                </h4>
+
+                            </div>
+                        </div>
+                    </div>
+
+
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12">
+                    <div class="card mb-2 shadow-sm">
+                        <div class="card-body p-1">
+                            <div class="slds-page-header slds-page-header--object-home slds-hide" role="banner" >
+                                <div class="slds-grid">
+                                    <div class="slds-col slds-has-flexi-truncate">
+                                        <div class="slds-media slds-no-space slds-grow">
+                                            <div class="slds-media__figure">
+                                                <span class="slds-icon_container">
+                                                    <span aria-hidden="true" class="slds-icon slds-icon-action-back  slds-icon--large outbound-class3">
+                                                        <img src="/resource/SLDS2134/assets/icons/custom/stock_disp.png" width="58"/>
+                                                    </span>
+                                                </span>
+                                            </div>
+                                            <div class="slds-media__bod outbound-class4">
+                                                <nav class="slds-context-bar__secondary" role="navigation">
+                                                    <ul class="slds-grid">
+                                                        <h1 class="slds-page-header__title slds-truncate outbound-class6" title="Outbound Logistics" >{!$Label.c.Outbound_logistics}</h1><!--onclick="{!c.Back2Outbound}"-->
+                                                        &nbsp;&nbsp; <lightning:buttonIcon size="medium" iconName="utility:refresh" variant="bare" onclick="{!c.Back2Outbound }" alternativeText="{!$Label.c.Refresh_Outbound_logistics}" title="Refresh" />
+
+                                                    </ul>
+                                                </nav>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="slds-col slds-no-flex slds-grid slds-align-top slds-p-bottom--xx-small maqheadernavbuttons">
+                                        <div class="slds-button-group outbound-class7 slds-m-right_small" role="group" >
+                                            <lightning:layout>
+                                                <lightning:layoutItem padding="around-small" flexibility="auto">
+                                                    <lightning:formattedText value="Channel" />
+                                                </lightning:layoutItem>
+                                            <c:CustomInputLookUp objectAPIName="Channel__c" aura:id="emp" IconName="standard:user" label="" selectedRecordId="{!v.currentEmployee.Channel__c}"  hideRemove="{!v.allowChannelRemove}"/>
+
+                                                </lightning:layout>
+                                        </div>
+
+                                        <ul class="slds-grid--vertical-align-left outbound-class8">
+                                            <div class="slds-button-group outbound-class9" role="group" >
+                                                <a href="javascript:void(0);" class="slds-button slds-button--neutral nuetral-f outbound-class10" ><i class="fa fa-filter outbound-class11" aria-hidden="true" ></i></a>
+                                                <li>
+                                                    <lightning:select aura:id="Site" value="{!v.selectedSite}" onchange="{!c.Load}" variant="label-hidden"  label="Site" title="Site" class="display-lable width200">
+                                                        <aura:iteration items="{!v.SiteOptions}" var="option">
+                                                            <option text="{!option.label}" value="{!option.value}" selected="{!equals(v.selectedSite, option.value)}"/>
+                                                        </aura:iteration>
+                                                    </lightning:select>
+                                                </li>
+                                                <aura:if isTrue="{!v.showShipFilters}">
+                                                    <li>
+
+                                                        <lightning:select aura:id="shipType" value="{!v.selectedShipment}" onchange="{!c.Load}" variant="label-hidden" label="Shipment Type" title="Shipment Type" class="display-lable width200 border-0">
+                                                            <aura:iteration items="{!v.ShipOptions}" var="option">
+                                                                <option text="{!option}" value="{!option}" selected="{!equals(v.selectedShipment, option)}"/>
+                                                            </aura:iteration>
+                                                        </lightning:select>
+
+                                                    </li>
+                                                </aura:if>
+                                            </div>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="epr_Mark7 erp_mark7 maqsood" >
+                                <div class="row">
+                                    <div class="col-12">
+                                        <div class="card mb-2">
+                                            <div class="card-body p-0">
+                                                <div  class="panel-collapse ">
+                                                    <div class="panel-body outbound-class12">
+                                                        <!-- Nav tabs -->
+                                                        <ul class="nav nav-tabs " role="tablist">
+                                                            <li class="nav-item active"><!-- /lightning/n/Outbound_Logistic -->
+                                                                <a class="nav-link outbound-class13" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.Back2Outbound}">
+                                                                    <i class="fa fa-list outbound-class14" aria-hidden="true"  ></i>&nbsp;{!$Label.c.List_Outbound_logistics}</a>
+                                                            </li>
+                                                            <li class="nav-item">
+                                                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.createPicks}">
+                                                                    <i class="fa fa-truck outbound-class14" aria-hidden="true" ></i>&nbsp;{!$Label.c.Pick}</a>
+
+                                                            </li>
+                                                            <li class="nav-item">
+                                                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.createPacks}">
+                                                                    <i class="fa fa-archive outbound-class14" aria-hidden="true"  ></i>&nbsp;{!$Label.c.Pack_Outbound_logistics} </a>
+                                                            </li>
+                                                            <li class="nav-item mobiledisplaynone mobiledisplaynone-landscape" >
+                                                                <a class="nav-link" data-toggle="tab" href="javascript:void(0);" role="tab" onclick="{!c.createShips}">
+                                                                    <i class="fa fa-plane outbound-class14" aria-hidden="true"  ></i> &nbsp;{!$Label.c.Ship_Outbound_logistics} </a>
+                                                            </li>
+
+                                                        </ul>
+
+                                                    </div>
+                                                </div>
+                                                <div class="{!if(and(v.exceptionError != '', v.exceptionError != undefined),'slds-notify_container slds-is-fixed outbound-class16','slds-notify_container slds-is-fixed outbound-class17')}">
+
+                                                    <div class="slds-notify slds-notify_toast slds-theme_error outbound-class18" role="status">
+                                                        <span class="slds-assistive-text">{!$Label.c.Error_UsersShiftMatch}</span>
+                                                        <span class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top">
+                                                            <lightning:icon iconName="utility:error" variant="inverse" size="x-small" alternativeText="{!$Label.c.Error_UsersShiftMatch}" title="error" />
+                                                        </span>
+                                                        <div class="slds-notify__content">
+                                                            <h2 class="slds-text-heading_x-small outbound-class19" >{!v.exceptionError}
+                                                            </h2>
+                                                        </div>
+                                                        <div class="slds-notify__close outbound-class20" >
+                                                            <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close" onclick="{!c.closeError}">
+                                                                <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="Error_UsersShiftMatch}" title="close" />
+                                                                <span class="slds-assistive-text">{!$Label.c.Close_ProjectScheduler}</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+
+                                                </div>
+                                                <div class="slds slds-form--inline slds-p-around--small outbound-class15" >
+
+                                                    <div  >
+                                                        <table border="0" width="100%" cellpadding="0" cellspacing="0" >
+                                                            <tr>
+                                                                <td align="left" valign="middle">
+                                                                    <table>
+                                                                        <tr >
+                                                                            <td width="15%"> <lightning:input type="search" class="slds-float_right" variant="label-hidden"  value="{!v.searchText}" placeholder="{!$Label.c.SalesOrderConsole_Search}" /></td>
+                                                                            <td width="10%"> <lightning:button variant="brand" onclick="{!c.Load}"  label="{!$Label.c.Find_StockTake}"/></td>
+                                                                            <td width="12%">&nbsp;</td>
+                                                                            <td class="text-right">
+                                                                                <aura:if isTrue="{!v.showAllfilters}">
+                                                                                    <button aura:id="NewOrders" label="New Orders" iconName="fa fa-plane" iconPosition="left" class="slds-button slds-button_neutral new-order-receive" onclick="{!c.showNewOrders}" data-record="NewOrders">
+                                                                                        <i class="fa fa-plane" aria-hidden="true" data-logisticId="NewOrders"></i>&nbsp;{!$Label.c.New_Orders}&nbsp; {!v.TotalNewOrders}
+                                                                                    </button>
+                                                                                    <button aura:id="OrdersToBeShipped" label="Orders to be shipped" iconName="fa fa-plane" iconPosition="left" class="slds-button slds-button_neutral grey-receive" onclick="{!c.showOrdersToBeShipped}" data-record="OrdersToBeShipped">
+                                                                                        <i class="fa fa-plane" aria-hidden="true" data-logisticId="OrdersToBeShipped"></i>&nbsp;{!$Label.c.Orders_to_be_shipped} &nbsp;{!v.TotalOrdersToBeShipped}
+                                                                                    </button>
+                                                                                    <button aura:id="PartiallyShippedOrders" label="Partially Shipped Orders" iconName="fa fa-plane" iconPosition="left" class="slds-button slds-button_neutral orange-receive" onclick="{!c.PartiallyShippedOrders}" data-record="PartiallyShippedOrders">
+                                                                                        <i class="fa fa-plane" aria-hidden="true" data-logisticId="PartiallyShippedOrders"></i>&nbsp;{!$Label.c.Partially_Shipped_Orders}&nbsp; {!v.TotalPartiallyShippedOrders}
+                                                                                    </button>
+                                                                                    <button aura:id="DeliveredOrders" label="Delivered Orders" iconName="fa fa-plane" iconPosition="left" class="slds-button slds-button_neutral blue-receive" onclick="{!c.showDeliveredOrders}" data-record="DeliveredOrders">
+                                                                                        <i class="fa fa-plane" aria-hidden="true" data-logisticId=""></i>&nbsp;{!$Label.c.Delivered_Orders}&nbsp; {!v.TotalDeliveredOrders}
+                                                                                    </button>
+                                                                                    <aura:set attribute="else">
+                                                                                        <button aura:id="OrdersToBeShipped" label="Orders to be shipped" iconName="fa fa-plane" iconPosition="left" class="slds-button slds-button_neutral grey-receive" onclick="{!c.showOrdersToBeShipped}" data-record="OrdersToBeShipped">
+                                                                                            <i class="fa fa-plane" aria-hidden="true" data-logisticId="OrdersToBeShipped"></i>&nbsp;{!$Label.c.Orders_to_be_shipped}&nbsp; {!v.TotalOrdersToBeShipped}
+                                                                                        </button>
+                                                                                        <button aura:id="ShippedOrders" label="Shipped Orders" iconName="fa fa-plane" iconPosition="left" class="slds-button slds-button_neutral blue-receive" onclick="{!c.showShippedOrders}" data-record="ShippedOrders">
+                                                                                            <i class="fa fa-plane" aria-hidden="true" data-logisticId=""></i>&nbsp;{!$Label.c.Shipped_Orders} &nbsp;{!v.TotalShippedOrders}
+                                                                                        </button>
+                                                                                    </aura:set>
+                                                                                </aura:if>
+
+                                                                            </td>
+
+                                                                        </tr>
+                                                                    </table>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="epr_Mark7" >
+                                                <div class="outbound-class21">
+                                                    <table id="example" class="table table-bordered  slds-no-row-hover outbound-class22" >
+                                                        <thead>
+                                                            <tr bgcolor="#f3f3f3" class="slds-text-heading--label">
+                                                                <th class="slds-cell-shrink" scope="col">
+                                                                    <lightning:input type="checkbox" checked="{!v.checkAll}" onchange="{!c.checkAll}"/>
+                                                                </th>
+                                                                <th class="slds-is-sortable" scope="col">
+                                                                    <div class="slds-truncate" title="Name" onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="Name">
+                                                                        <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small" class="cursor-pointer" />{!$Label.c.Name_ManageLeave}
+
+                                                                    </div>
+                                                                </th>
+                                                                <th class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" scope="col">
+                                                                    <div class="slds-truncate" title="Order" onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="Order__c">
+                                                                        <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small" class="cursor-pointer" />{!$Label.c.Order_RMA}
+
+
+                                                                    </div>
+                                                                </th>
+                                                                <th class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" scope="col">
+                                                                    <div class="slds-truncate" title="Expected Date" onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="Expected_Date_Unified__c">
+                                                                        <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small" class="cursor-pointer" />{!$Label.c.Expected_Date}
+
+
+                                                                    </div>
+                                                                </th>
+                                                                <th class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" scope="col" title="{!$Label.c.Barcode_Outbound_logistics}">{!$Label.c.Barcode_Outbound_logistics}</th>
+                                                                <th width="10%" class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" scope="col" title="{!$Label.c.Account_Outbound_logistics}">
+                                                                    <div class="slds-truncate"  onclick="{!c.getSortedRecords}" data-service="{!v.Order}" id="Account__r.Name">
+                                                                        <lightning:icon iconName="utility:sort" alternativeText="{!$Label.c.Sort_Outbound_logistics}" title="Sort" size="xx-small" class="cursor-pointer" />{!$Label.c.Account_Outbound_logistics}
+
+                                                                    </div>
+                                                                </th>
+                                                                <th class="slds-is-sortable mobiledisplaynone mobiledisplaynone-landscape" scope="col" title="{!$Label.c.CreateCustomer_Shipping_Address}">{!$Label.c.CreateCustomer_Shipping_Address}</th>
+                                                                <!--<th class="slds-is-sortable no-sort mobiledisplaynone mobiledisplaynone-landscape" scope="col">Tracking</th>-->
+                                                                <th class="slds-is-sortable " title="Action" scope="col">Action</th>
+
+                                                            </tr>
+                                                        </thead>
+
+                                                        <tbody>
+                                                            <aura:iteration var="sos" indexVar="SOCounter" items="{!v.Container.Logistics}">
+                                                                <tr class="slds-hint-parent">
+                                                                    <td class="slds-cell-shrink" data-label="Action" role="row">
+                                                                        <lightning:input type="checkbox" checked="{!sos.soSelected}"/>
+                                                                    </td>
+                                                                    <td data-label="Name" scope="row">
+                                                                        <!--<aura:if isTrue="{!sos.Logistic.Sales_Order__c}">-->
+                                                                        <div class="slds-truncate outbound-class23" title="{!sos.Logistic.Name}" id="{!sos.Logistic.Id}">
+                                                                            <aura:if isTrue="{!(sos.Logistic.Purchase_Order__r.Closed__c == true)}">
+                                                                                <i class="fa fa-check-circle outbound-class24" aria-hidden="true"></i>
+                                                                            </aura:if>
+                                                                            <aura:if isTrue="{!(sos.Logistic.Purchase_order__r.Closed__c == false)}">
+                                                                                <i class="fa fa-check-circle outbound-class25" aria-hidden="true" ></i>
+                                                                            </aura:if>
+                                                                            <aura:if isTrue="{!(sos.Logistic.Order_S__r.Is_Back_Order__c == true)}">
+                                                                                <i class="fa fa-check-circle outbound-class24" aria-hidden="true" ></i>
+                                                                            </aura:if>
+                                                                            <aura:if isTrue="{!(sos.Logistic.Order_S__r.Is_Back_Order__c == false)}">
+                                                                                <i class="fa fa-check-circle outbound-class25" aria-hidden="true" ></i>
+                                                                            </aura:if>
+                                                                            <aura:if isTrue="{!(sos.Logistic.Transfer_Order__r.Is_Closed__c == true)}">
+                                                                                <i class="fa fa-check-circle outbound-class24" aria-hidden="true" ></i>
+                                                                            </aura:if>
+                                                                            <aura:if isTrue="{!(sos.Logistic.Transfer_Order__r.Is_Closed__c == false)}">
+                                                                                <i class="fa fa-check-circle outbound-class25" aria-hidden="true" ></i>
+                                                                            </aura:if>
+
+                                                                            &nbsp;<lightning:formattedText value="{!sos.Logistic.Name}" onclick="{!c.NavRecord}" id="{!sos.Logistic.Id}" />
+                                                                        </div>
+
+                                                                    </td>
+
+                                                                    <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Order">
+                                                                        <div class="slds-truncate InboundLog-class22">
+                                                                            <aura:iteration var="orderWrap" indexVar="orderCounter" items="{!sos.orderWrapperList}">
+                                                                                <aura:if isTrue="{!orderCounter>0}">,&nbsp;</aura:if>
+                                                                                <lightning:formattedUrl value="{!'/'+orderWrap.OrderId}" label="{!orderWrap.OrderName}" tooltip="{!orderWrap.OrderName}" target="_blank" />
+                                                                            </aura:iteration>
+                                                                        </div>
+                                                                    </td>
+                                                                    <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Expected Date">
+                                                                        <span class="slds-truncate"></span>
+                                                                        <aura:if isTrue="{!and(sos.Logistic.Logistic_Expected_Date__c != '',sos.Logistic.Logistic_Expected_Date__c != null)}">
+                                                                            <lightning:formattedDateTime value="{!sos.Logistic.Logistic_Expected_Date__c}" />
+                                                                            <aura:set attribute="else">
+                                                                                <aura:if isTrue="{!!sos.Logistic.Order_S__c}">
+                                                                                    <lightning:formattedDateTime value="{!sos.Logistic.Expected_Date__c}" />
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!sos.Logistic.Order_S__c}">
+                                                                                    <lightning:formattedDateTime value="{!sos.Logistic.Expected_Date_S__c}" />
+                                                                                </aura:if>
+
+                                                                            </aura:set>
+                                                                        </aura:if>
+
+                                                                    </td>
+                                                                    <td class="mobiledisplaynone mobiledisplaynone-landscape outbound-class27" data-label="Barcode" >
+                                                                        <div class="slds-truncate outbound-class28">
+                                                                            <!--  <aura:if isTrue="{!sos.Logistic.Sales_Order__c}">-->
+                                                                            <aura:if isTrue="{!and(sos.Logistic.Logistic_Barcode__c != '',sos.Logistic.Logistic_Barcode__c != null)}">
+                                                                                <c:AQBarcodeZoneLC aura:id="brcd128" BrcdHeight="35" BrcdType="code128" Value="{!sos.Logistic.Logistic_Barcode__c}"/>
+                                                                                <aura:set attribute="else">
+                                                                                    <aura:if isTrue="{!!sos.Logistic.Order_S__c}">
+                                                                                        <c:AQBarcodeZoneLC aura:id="brcd128" BrcdHeight="35" BrcdType="code128" Value="{!sos.Logistic.Barcode__c}"/>
+                                                                                    </aura:if>
+                                                                                    <aura:if isTrue="{!sos.Logistic.Order_S__c}">
+                                                                                        <c:AQBarcodeZoneLC aura:id="brcd128" BrcdHeight="35" BrcdType="code128" Value="{!sos.Logistic.Barcode_S__c}"/>
+                                                                                    </aura:if>
+
+                                                                                </aura:set>
+                                                                            </aura:if>
+
+                                                                        </div>
+                                                                    </td>
+                                                                    <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Account">
+                                                                        <span class="slds-truncate"> </span>
+                                                                        <div class="slds-truncate" title="{!sos.Logistic.Account__r.Name}" ><!--outbound-class29-->
+                                                                            <lightning:formattedText value="{!sos.Logistic.Account__r.Name}" onclick="{!c.NavRecord}" id="{!sos.Logistic.Account__c}" />
+                                                                        </div>
+                                                                    </td>
+                                                                    <td class="mobiledisplaynone mobiledisplaynone-landscape" data-label="Shipping Address">
+                                                                        <aura:if isTrue="{!(sos.Logistic.To_Address__c != undefined)}">
+                                                                            <div class="slds-truncate outbound-class28" >
+                                                                                <aura:if isTrue="{!(sos.Logistic.To_Address__r.Address_Line1__c != undefined)}">
+                                                                                    <lightning:formattedText value="{!sos.Logistic.To_Address__r.Address_Line1__c}" />,<br/>
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!(sos.Logistic.To_Address__r.Address_Line2__c != undefined)}">
+                                                                                    <lightning:formattedText value="{!sos.Logistic.To_Address__r.Address_Line2__c}"  />,
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!(sos.Logistic.To_Address__r.Address_Line3__c != undefined)}">
+                                                                                    <lightning:formattedText value="{!sos.Logistic.To_Address__r.Address_Line3__c}"/>,<br/>
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!(sos.Logistic.To_Address__r.City__c != undefined)}">
+                                                                                    <lightning:formattedText value="{!sos.Logistic.To_Address__r.City__c}" />,
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!(sos.Logistic.To_Address__r.State__c != undefined)}">
+                                                                                    <lightning:formattedText value="{!sos.Logistic.To_Address__r.State__c}" /><br/>
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!(sos.Logistic.To_Address__r.Postal_Code__c != undefined)}">
+                                                                                    <lightning:formattedText value="{!sos.Logistic.To_Address__r.Postal_Code__c}" />,
+                                                                                </aura:if>
+                                                                                <aura:if isTrue="{!(sos.Logistic.To_Address__r.Country__c != undefined)}">
+                                                                                    <lightning:formattedText value="{!sos.Logistic.To_Address__r.Country__c}" />
+                                                                                </aura:if>
+                                                                            </div>
+                                                                        </aura:if>
+                                                                    </td>
+                                                                    <td data-label="Action" class="outbound-class29">
+                                                                        <span class="slds-truncate">
+                                                                            <table class="outbound-class22">
+                                                                                <tr>
+                                                                                    <td width="35%">
+                                                                                        <div class="slds-truncate-ol" title="{!$Label.c.Pick}">
+                                                                                            <aura:if isTrue="{!and(sos.Logistic.Picked_Quantity__c == 0, sos.Logistic.Total_Quantity__c > 0)}"> <i class="fa fa-shopping-cart outbound-class31" aria-hidden="true"></i></aura:if>
+                                                                                            <aura:if isTrue="{!and(sos.Logistic.Picked_Quantity__c > 0, sos.Logistic.Total_Quantity__c > sos.Logistic.Picked_Quantity__c, sos.Logistic.Total_Quantity__c > 0)}"> <i class="fa fa-shopping-cart outbound-class32" aria-hidden="true" ></i></aura:if>
+                                                                                            <aura:if isTrue="{!and(sos.Logistic.Total_Quantity__c == sos.Logistic.Picked_Quantity__c, sos.Logistic.Total_Quantity__c > 0)}"> <i class="fa fa-shopping-cart outbound-class33" aria-hidden="true" ></i></aura:if>
+                                                                                            &nbsp;
+                                                                                            <aura:if isTrue="{!(sos.Logistic.Total_Quantity__c == sos.Logistic.Picked_Quantity__c)}">
+                                                                                                <lightning:formattedText value="{!$Label.c.Pick}" class="blackcolor" />
+                                                                                            </aura:if>
+                                                                                            <aura:if isTrue="{!(sos.Logistic.Total_Quantity__c != sos.Logistic.Picked_Quantity__c)}">
+                                                                                                <a class="outbound-class34" onclick="{!c.createPicks}" data-logisticId="{!sos.Logistic.Id}">{!$Label.c.Pick}</a>
+                                                                                            </aura:if>
+
+                                                                                        </div>
+
+                                                                                        <div class="slds-truncate outbound-class35"  title="{!sos.Logistic.Total_Quantity__c}">
+                                                                                            {!sos.Logistic.Picked_Quantity__c}/{!sos.Logistic.Total_Quantity__c}
+                                                                                        </div>
+                                                                                    </td>
+                                                                                    <td width="35%" >
+                                                                                        <div class="slds-truncate-ol" title="{!$Label.c.Pack_Outbound_logistics}">
+                                                                                            <aura:if isTrue="{!and(sos.Logistic.Packed_Quantity__c == 0, sos.Logistic.Total_Quantity__c > 0)}"> <i class="fa fa-archive outbound-class31" aria-hidden="true" ></i></aura:if>
+                                                                                            <aura:if isTrue="{!and(sos.Logistic.Packed_Quantity__c > 0, sos.Logistic.Total_Quantity__c > sos.Logistic.Packed_Quantity__c, sos.Logistic.Total_Quantity__c > 0)}"> <i class="fa fa-archive outbound-class32" aria-hidden="true" ></i></aura:if>
+                                                                                            <aura:if isTrue="{!and(sos.Logistic.Total_Quantity__c == sos.Logistic.Packed_Quantity__c, sos.Logistic.Total_Quantity__c > 0)}"> <i class="fa fa-archive outbound-class33" aria-hidden="true" ></i></aura:if>
+                                                                                            &nbsp;<aura:if isTrue="{!!sos.isAvailablePackages}"><lightning:formattedText value="{!$Label.c.Pack_Outbound_logistics}" /></aura:if>
+                                                                                            <aura:if isTrue="{!sos.isAvailablePackages}">
+                                                                                                <a value="Pack" class="outbound-class34" onclick="{!c.createPacks}" data-logisticId="{!sos.Logistic.Id}">{!$Label.c.Pack_Outbound_logistics}</a>
+                                                                                            </aura:if>
+                                                                                        </div>
+                                                                                        <div class="slds-truncate outbound-class35"  title="{!sos.Logistic.Total_Quantity__c}">{!sos.Logistic.Packed_Quantity__c}/{!sos.Logistic.Total_Quantity__c}</div>
+                                                                                    </td>
+
+                                                                                    <td width="40%" class="mobiledisplaynone mobiledisplaynone-landscape">
+                                                                                        <div class="slds-truncate-ol" title="{!$Label.c.Ship_Outbound_logistics}">
+                                                                                            <aura:if isTrue="{!and(sos.Logistic.Ready_To_Ship__c == true,sos.Logistic.Packed_Quantity__c > 0)}">
+                                                                                                <aura:if isTrue="{!and(sos.Logistic.Shipped_Quantity__c == 0.00, sos.Logistic.Ready_To_Ship__c == true, sos.Logistic.Total_Quantity__c > 0)}"><i class="fa fa-plane outbound-class31" aria-hidden="true" ></i></aura:if>
+                                                                                                <aura:if isTrue="{!and(sos.Logistic.Ready_To_Ship__c == false, sos.Logistic.Total_Quantity__c > 0, sos.Logistic.Shipped_Quantity__c == 0.00)}"><i class="fa fa-plane outbound-class36" aria-hidden="true" ></i></aura:if>
+                                                                                                <aura:if isTrue="{!and(sos.Logistic.Shipped_Quantity__c > 0, sos.Logistic.Total_Quantity__c > sos.Logistic.Shipped_Quantity__c, sos.Logistic.Ready_To_Ship__c == true, sos.Logistic.Total_Quantity__c > 0)}"><i class="fa fa-plane outbound-class32" aria-hidden="true" ></i></aura:if>
+                                                                                                <aura:if isTrue="{!and(sos.Logistic.Total_Quantity__c == sos.Logistic.Shipped_Quantity__c, sos.Logistic.Ready_To_Ship__c == true, sos.Logistic.Total_Quantity__c > 0)}"><i class="fa fa-plane outbound-class33" aria-hidden="true" ></i></aura:if>
+                                                                                                <aura:set attribute="else">
+                                                                                                    <i class="fa fa-plane outbound-class36" aria-hidden="true" ></i>
+                                                                                                </aura:set>
+                                                                                            </aura:if>
+                                                                                            &nbsp;<!--aura:if isTrue="{!sos.isAvailableShipments == false}"><lightning:formattedText value="Ship"/></aura:if-->
+                                                                                            <aura:if isTrue="{!and(sos.Logistic.Ready_To_Ship__c == true,sos.Logistic.Packed_Quantity__c > 0)}"> <!--!sos.isAvailableShipments == true-->
+                                                                                                <a value="Ship" class="outbound-class34" onclick="{!c.createShips}" data-logisticId="{!sos.Logistic.Id}">{!$Label.c.Ship_Outbound_logistics}</a>
+                                                                                                <aura:set attribute="else">
+                                                                                                    <lightning:formattedText value="{!$Label.c.Ship_Outbound_logistics}"/>
+                                                                                                </aura:set>
+                                                                                            </aura:if>
+                                                                                        </div>
+                                                                                        <div class="slds-truncate outbound-class35"  title="{!sos.Logistic.Total_Quantity__c}">{!sos.Logistic.Shipped_Quantity__c}/{!sos.Logistic.Total_Quantity__c}</div>
+                                                                                    </td>
+                                                                                </tr>
+                                                                            </table>
+                                                                        </span>
+                                                                    </td>
+                                                                </tr>
+                                                            </aura:iteration>
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="epr_Mark7 outbound-class37">
+                                <div class="slds-grid outbound-class38">
+                                    <aura:if isTrue="{!(v.Container.Logistics.length>0)}">
+                                        <div class="col-md-2 outbound-class39" >
+                                            <div class="slds-grid" >
+                                                <div class="slds-col outbound-class40">
+                                                    {!$Label.c.Acc_Recev_Show}&nbsp;&nbsp;
+                                                </div>
+                                                <div class="slds-col" >
+                                                    <lightning:select value="{!v.show}" onchange="{!c.SetShow}" variant="label-hidden" class="display-lable" label="show">
+                                                        <option value="10">10</option>
+                                                        <option value="25">25</option>
+                                                        <option value="50">50</option>
+                                                        <option value="100">100</option>
+                                                    </lightning:select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3 outbound-class41" >
+                                            {!$Label.c.Acc_Recev_Showing} &nbsp;<span class="text-lightblue">{!v.Container.startCount}-{!v.Container.endCount}</span>&nbsp; {!$Label.c.Acc_Recev_of_total} <span class="text-lightblue"> &nbsp;{!v.Container.recSize} </span> &nbsp;{!$Label.c.Acc_Recev_Records}
+                                        </div>
+
+                                        <div class="col-md-5 outbound-class42">
+                                            <nav aria-label="Page navigation example" >
+                                                <ul class="pagination outbound-class43" >
+                                                    <li class="outbound-class44" >
+                                                        <lightning:button class="border-o" disabled= "{!(1 >= v.Container.startCount)}" onclick="{!c.PreviousFirst}">&lt;&lt; </lightning:button>
+                                                        <!-- <a  class="{!if(,'outbound-class47','outbound-class48')}"  > &lt;&lt; </a> -->
+                                                    </li>
+                                                    <li class="outbound-class45">
+                                                        <lightning:button class="border-o" disabled= "{!(1 >= v.Container.startCount)}" onclick="{!c.Previous}">{!$Label.c.Previous} </lightning:button>
+                                                        <!-- <a class="{!if(1 >= v.Container.startCount,'color: #b5b7b9;cursor: not-allowed;padding-right:10px;border:0px;','padding-right:10px;border:0px;border-radius:0px;')}"  onclick="{!c.Previous}">  Previous</a>  -->
+                                                    </li>
+
+                                                    <li class="outbound-class45">
+                                                        <lightning:button class="border-o" disabled= "{!(v.Container.endCount == v.Container.recSize)}" onclick="{!c.Next}">{!$Label.c.Next_UsersShiftMatch} </lightning:button>
+                                                        <!--  <a class="{!if(v.Container.endCount == v.Container.recSize,'color: #b5b7b9;cursor: not-allowed;padding-left:10px;border:0px;','padding-left:10px;border:0px;border-radius:0px;')}" onclick="{!c.Next}">Next </a> -->
+                                                    </li>
+                                                    <li class="outbound-class46">
+                                                        <lightning:button class="border-o" disabled= "{!(v.Container.endCount == v.Container.recSize)}" onclick="{!c.NextLast}">&gt;&gt; </lightning:button>
+                                                        <!--  <a class="{!if(v.Container.endCount == v.Container.recSize,'color: #b5b7b9;cursor: not-allowed;padding-left:10px;border:0px;','padding-left:10px;border:0px;border-radius:0px;')}" onclick="{!c.NextLast}"> </a> -->
+                                                    </li>
+                                                </ul>
+                                            </nav>
+                                        </div>
+
+
+                                        <div class="col-md-2" >
+                                            <div class="slds-grid">
+                                                <div class="slds-col outbound-class49">
+                                                    Page
+                                                </div>
+                                                <div class="slds-col outbound-class50">
+                                                    <lightning:input type="number" variant="label-hidden" value="{!v.Container.PageNum}" oncommit="{!c.OfsetChange}" class="width100"/>
+                                                </div>
+                                                <div class="slds-col outbound-class49"><span class="text-lightblue"> of {!v.Container.PNS.length}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                    </aura:if>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </body>
+</aura:component>

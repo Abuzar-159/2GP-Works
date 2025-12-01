@@ -1,0 +1,303 @@
+.page-background {
+    background: #f5f7fb;
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+/* modern cards */
+.modern-card {
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
+    border: 1px solid #e5e7eb;
+}
+
+.collapsible-header {
+    padding: 0.75rem 1rem;
+}
+
+/* tabs at top */
+.tab-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.tab-icon {
+    margin-right: 0.05rem;
+}
+
+/* invoice & products table hover */
+.modern-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+/* pill-ish invoice search */
+.invoice-search-wrapper .slds-input {
+    border-radius: 999px;
+}
+
+/* "View All" link */
+.view-all-link {
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* Base tile layout */
+.payment-summary-tile {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    background: #f5f7fb;
+    border: 1px solid transparent;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+/* Hover animation */
+.payment-summary-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16);
+}
+
+/* icon wrapper (keeps icon same size) */
+.payment-summary-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* text block */
+.payment-summary-text {
+    display: flex;
+    flex-direction: column;
+}
+
+/* label/value */
+.payment-summary-label {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 0.15rem;
+}
+
+.payment-summary-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+/* GREEN tile (Paid) */
+.payment-summary-tile--green {
+    background: #ecfdf5;       /* light green */
+    border-color: #34d399;     /* medium green border */
+}
+/* BLUE tiles */
+.payment-summary-tile--blue {
+    background: #eff6ff;
+    border-color: #60a5fa;
+}
+/* accent colours */
+.payment-summary-tile--warning {
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+}
+.payment-summary-tile--info {
+    background: #eff6ff;
+    border: 1px solid #93c5fd;
+}
+.payment-summary-tile--neutral {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+}
+
+/* ===== PAYMENT: method tabs ===== */
+.payment-method-tab {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: #f3f4f6;
+    cursor: pointer;
+    font-size: 0.9rem;
+    justify-content: flex-start;
+}
+.payment-method-tab_active {
+    background: #ffffff;
+    border-color: #1b96ff;
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.25);
+    font-weight: 600;
+}
+.payment-method-icon {
+    flex-shrink: 0;
+}
+
+/* Invoice link style */
+.link-highlight {
+    color: #1b75ff;
+    font-weight: 500;
+    text-decoration: none;
+}
+.link-highlight:hover {
+    text-decoration: underline;
+}
+
+/* Gray read-only boxes */
+.input-gray-box {
+    background: #f3f4f6;
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    font-size: 1rem;
+    border: 1px solid #e5e7eb;
+    color: #333;
+}
+
+/* Required label */
+.form-label-required {
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    display: block;
+}
+
+/* Table rounding */
+.slds-table {
+    border-radius: 12px;
+    overflow: hidden;
+}
+/* blue invoice link */
+.bank-link {
+    color: #1b75ff;
+    font-weight: 500;
+    text-decoration: none;
+}
+.bank-link:hover {
+    text-decoration: underline;
+}
+
+/* red Posted pill */
+.posted-pill {
+    display: inline-block;
+    padding: 0.1rem 0.75rem;
+    border-radius: 999px;
+    background: #ef4444;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* read-only payment amount text */
+.bank-amount-static {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.25rem;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+}
+/* Custom CSS for the Modern Card Look */
+
+.modern-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+    transition: box-shadow 0.3s ease-in-out;
+    border: none; /* Remove default SLDS borders */
+}
+
+/* --- Shipping Options (Card 3) Styling --- */
+
+.shipping-option-card {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    background: #fdfdfd;
+}
+
+.shipping-option-card:hover {
+    border-color: #0070d2;
+    box-shadow: 0 0 5px rgba(0, 112, 210, 0.2);
+}
+
+.shipping-option-card .slds-radio_faux {
+    /* Style radio button to look like the screenshot */
+    border: 1px solid #888;
+}
+
+/* Style for Sub-options */
+.sub-options-container {
+    padding-left: 3.5rem; /* Indent to align with radio button */
+    padding-top: 10px;
+}
+
+.sub-option-row {
+    border-top: 1px solid #f0f0f0;
+    margin-top: 5px;
+    padding-left: 0.5rem;
+}
+
+/* --- Tag Styling (Matching Screenshot Colors) --- */
+.shipping-tag {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    white-space: nowrap;
+}
+
+.most-affordable {
+    background-color: #e6f3ff; /* Light Blue */
+    color: #0070d2; /* Salesforce Blue */
+}
+
+.reliable-delivery {
+    background-color: #e7ffe7; /* Light Green */
+    color: #16b716; /* Dark Green */
+}
+
+.best-selection {
+    background-color: #fff1e6; /* Light Orange */
+    color: #ff8c00; /* Dark Orange */
+}
+
+/* --- Filter Chip Styling --- */
+.filter-chip {
+    display: inline-block;
+    padding: 4px 12px;
+    border: 1px solid #d8d8d8;
+    border-radius: 20px;
+    margin-right: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-chip:hover {
+    background-color: #f4f4f4;
+}
+
+.filter-chip.selected {
+    background-color: #0070d2;
+    color: white;
+    border-color: #0070d2;
+}
+
+.filter-chip .slds-icon_container {
+    margin-left: 5px;
+}
+
+/* Adjust combobox alignment for sorting */
+.sort-combobox {
+    width: 150px;
+}
+.slds-table th, .slds-table td {
+    padding: .5rem;
+    white-space: nowrap;
+    position: relative;
+}
+.cursor-pointer{
+	cursor:pointer;
+}

@@ -1,0 +1,367 @@
+.THIS .outbound-class3 {
+    padding: 19px 5px !important;
+}
+.THIS .Pack-newClass5{
+    padding: 19px 5px !important;
+}
+.THIS .ship-dark-blue{
+    color:#0070d2;cursor:pointer;
+}
+.THIS .ship-top25{
+    top:.25rem;
+}
+.THIS .outbound-class34{
+    text-decoration: underline;
+    text-decoration-color: blue;
+}
+.THIS .ship-colorgreen{
+    color:#00c6b7;
+}
+.THIS .eb87{
+    height:4rem
+}
+.THIS .eb88{
+    padding-left: 50px;
+}
+.THIS .eb89{
+    font-size:16px;margin-bottom:0px;
+}
+.THIS .ship-color-orange{
+    color:#00c6b7;
+}
+.THIS .ship-p0{
+    padding:0px;
+}
+.THIS .ship-pt3{
+    padding-top: 3px;
+}
+.THIS .ship-editimg{
+    cursor:pointer;width:20px;height:20px; 
+}
+.THIS .bg-white{
+    background:#fff;
+}
+.THIS .slds-text-heading_x-smallextra{
+    margin-bottom:0px;font-size:13px;margin-right:30px;
+}
+.THIS .ship-class17{
+    top: 15%;display:none;
+}
+.THIS .ship-class16{
+    top: 15%;display:;
+}
+.THIS .ship-panel-body-extra{
+    padding:0px !important;margin-top:5px;
+}
+.THIS .ship-size15{
+    font-size: 15px;
+}
+
+.THIS .cursor-pointer{
+    cursor:pointer;
+}
+
+.THIS .ship-pt-5{
+    padding-top: 5px;
+}
+.THIS .ship-lightblue{
+    color: #65d6e5;
+}
+.THIS .icon-p195{
+    padding: 19px 5px;
+}
+.THIS .ship-mt-10{
+    margin-top: 10px;
+}
+.THIS .bg-white{
+    background:#ffffff;
+}
+.THIS .spinner35{
+    cursor:pointer;width:35px;height:35px;
+}
+/* The Loader css Starts here */
+
+.THIS .mainSpinClass{
+    width: 100%;
+    height: 100%;
+}
+
+
+/* The Loader css ends here */
+
+.THIS .slds-truncate3 {
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: normal!important;
+    word-wrap: break-word;
+}
+.THIS .neutralC{padding:0px !important; border:0px !important;}
+.THIS .neutralC:hover{padding:0px; border:0px;background-color:#fff !important;}
+.THIS .neutralC:active{outline: none !important;    border: none !important;}
+.THIS .maqship{line-height: 1;
+    padding-left: 2px;color:#006dcc;}
+.THIS .height30{height:30px !important;}
+.THIS .pointer{
+    cursor: pointer;
+}
+.THIS .width12{width: 12%;}
+.THIS .maq7{
+    color:black !important;
+}
+@media (min-width: 992px){
+    .THIS .epr_Mark7 .col-md-2 {
+        width: 16.66666667%;
+        height: 70px;
+    }
+}
+.THIS .epr_Mark7 output {
+    display: block;
+    padding-top: 0px;
+    font-size: 14px;
+    line-height: .9;
+    color: #555;
+    padding-left: 5px;
+}
+.THIS .slds-truncate3{
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: clip;
+    white-space: normal !important;
+    word-wrap: break-word;
+}
+@media only screen and (max-width: 480px) {
+    .THIS .nav-tabs > li > a {
+        margin-right: 10px !important;
+        line-height: 1.42857143;
+        border: 1px solid transparent;
+        border-radius: 4px 4px 0 0;
+        color: #0070d2;
+        text-transform: uppercase;
+    }
+    .THIS .epr_Mark7 .nav > li > a {
+        position: relative;
+        display: block;
+        padding: 10px 10px;
+    }
+    .THIS .mobiledisplaynone{
+        
+        display:none !important;
+        
+    }
+    .THIS .maqheadernavbuttons{
+        margin-top: 16% !important;
+    }  
+    .THIS .slds-truncate3{
+        max-width: 70px;
+        overflow: hidden;
+        text-overflow: clip;
+        white-space: normal !important;
+        word-wrap: break-word;
+    }
+    
+}
+
+
+@media only screen and (max-width: 768px) {
+    .THIS .nav-tabs > li > a {
+        margin-right: 10px !important;
+        line-height: 1.42857143;
+        border: 1px solid transparent;
+        border-radius: 4px 4px 0 0;
+        color: #0070d2;
+        text-transform: uppercase;
+    }
+    
+    .THIS .mobiledisplaynone-landscape{
+        
+        display:none !important;
+        
+    }
+    .THIS .maqheadernavbuttons{
+        margin-top: 1%;
+    }  
+    
+}     
+
+.THIS .erp_mark7 .slds-theme--info {
+    background-color: #5BD6E3;
+}
+.THIS .epr_Mark7 .row {
+    margin-right: 0px;
+    margin-left: 0px;
+}
+.THIS .erp_mark7 .slds-button--neutral {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    text-align: center;
+    vertical-align: middle;
+    border: 1px solid #d8dde6 !important;
+    background-color: #fff;
+}
+.THIS .erp_mark7 .slds-table--bordered:not(.slds-no-row-hover) tbody tr:hover>td:not(.slds-is-selected), 
+.THIS .erp_mark7 .slds-table--bordered:not(.slds-no-row-hover) tbody tr:hover>th:not(.slds-is-selected) {
+    box-shadow:none;
+}
+.THIS .erp_mark7 .slds-table {
+    background-color: transparent;
+}
+.THIS .erp_mark7 a, 
+.THIS .erp_mark7 button {
+    cursor: pointer;
+    text-decoration:none !important;
+}
+.THIS .erp_mark7 .slds-button--brand2 {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    text-align: center;
+    vertical-align: middle;
+    background-color: #65d6e5;
+    border: 1px solid #65d6e5;
+    color: #fff;
+    height: 34px;
+    box-shadow:none;
+    text-shadow:none;
+}
+.THIS .erp_mark7 .slds-button--brand2:hover, 
+.THIS .erp_mark7 .slds-button--brand2:focus {
+    background-color: #31d0e5;
+    color: white;
+}
+.THIS .epr_Mark7 h1,  
+.THIS .epr_Mark7 .h1, 
+.THIS .epr_Mark7 h2, 
+.THIS .epr_Mark7 .h2, 
+.THIS .epr_Mark7 h3, 
+.THIS .epr_Mark7 .h3 {
+    margin-top: 0px;
+    margin-bottom: 10px;
+}
+
+.THIS .epr_Mark7 .table-bordered > thead > tr > th, 
+.THIS .epr_Mark7 .table-bordered > tbody > tr > th,  
+.THIS .epr_Mark7 .table-bordered > tfoot > tr > th, 
+.THIS .epr_Mark7 .table-bordered > thead > tr > td, 
+.THIS .epr_Mark7 .table-bordered > tbody > tr > td, 
+.THIS .epr_Mark7 .table-bordered > tfoot > tr > td{
+    border:1px solid #ffffff;
+}
+.THIS .epr_Mark7 .table-bordered {
+    border: 1px solid #ffffff;
+}
+.THIS .epr_Mark7 .nav-tabs > li > a {
+    margin-right: 70px;
+    line-height: 1.42857143;
+    border: 1px solid transparent;
+    border-radius: 4px 4px 0 0;
+    color:#0070d2;
+    text-transform:uppercase;
+}
+.THIS .epr_Mark7 .nav>li>a:hover,
+.THIS .epr_Mark7 .nav>li>a:focus {        
+    text-decoration: none;
+    background-color: #fff;
+    border-bottom: 2px solid #0070d2!important;
+}   
+.THIS .epr_Mark7 .nav-tabs > li.active > a,  
+.THIS .epr_Mark7 .nav-tabs > li.active > a:hover, 
+.THIS .epr_Mark7 .nav-tabs > li.active > a:focus {
+    color: #2196f3;
+    cursor: default!important;
+    background-color: #fff!important;
+    border: 0;
+    border-bottom: 3px solid #2196f3!important;
+}        
+.THIS .epr_Mark7 .nav-tabs > li > a:hover {
+    border-color: #fff #fff #fff;    
+}
+
+.THIS table.dataTable thead th,
+.THIS table.dataTable thead td {
+    padding: 10px 18px;
+    border-bottom: 1px solid #fff;
+}
+
+.THIS .slds .slds-table--bordered td {
+    border-top: 1px solid #f7f7f7;
+}
+/*.THIS .epr_Mark7 .table > thead > tr > th, 
+.THIS .epr_Mark7 .table > tbody > tr > th, 
+.THIS .epr_Mark7 .table > tfoot > tr > th, 
+.THIS .epr_Mark7 .table > thead > tr > td, 
+.THIS .epr_Mark7 .table > tbody > tr > td,
+.THIS .epr_Mark7 .table > tfoot > tr > td {
+padding: 5px;
+line-height: 1.42857143;
+vertical-align: top;
+border-top: 1px solid #f7f7f7;
+max-width:150px;
+word-wrap: break-word;
+}*/
+.THIS .epr_Mark7 .table > thead > tr > th {
+    vertical-align: bottom;
+    border-bottom: 1px solid #f7f7f7;
+    max-width: 100px;
+    word-wrap: break-word;
+}
+.THIS .slds .slds-text-heading--label {
+    font-size: 12px;
+    line-height: 1.25;
+    text-transform: uppercase;
+    letter-spacing: .0625em;
+    color: #54698d;
+    font-weight:lighter;
+}
+@media (max-width: 48em){
+    .THIS .epr_Mark7 .table > thead > tr > th {
+        vertical-align: bottom;
+        border-bottom: 1px solid #f7f7f7;
+        max-width: 100% !important;
+        word-wrap: break-word;
+    }
+    .THIS .epr_Mark7 .table > thead > tr > th, 
+    .THIS .epr_Mark7 .table > tbody > tr > th, 
+    .THIS .epr_Mark7 .table > tfoot > tr > th, 
+    .THIS .epr_Mark7 .table > thead > tr > td, 
+    .THIS .epr_Mark7 .table > tbody > tr > td, 
+    .THIS .epr_Mark7 .table > tfoot > tr > td {
+        padding: 5px;
+        line-height: 1.42857143;
+        vertical-align: top;
+        border-top: 1px solid #f7f7f7;
+        max-width:100%;
+        word-wrap: break-word;
+    }
+}
+.THIS table.dataTable.no-footer {
+    border-bottom: 1px solid #fff;
+}
+
+@media (min-width: 48em){
+    .THIS .erp_mark7 .slds-page-header {
+        padding: .5rem 1rem;
+    }   
+}
+.THIS .erp_mark7 th.slds-is-sortable {
+    cursor: pointer;
+    
+}
+
+.THIS input {
+    padding-top: 0;
+    border: 1px solid #ddd;
+    border-radius : 5px;
+    padding: 5px;
+} 
+.THIS .slds .slds-table--bordered td {
+    border-top: 1px solid #f7f7f7;
+}
+.THIS .cl1{
+    padding-bottom:0px;
+}
+.THIS .cl2{
+    min-width: 20rem;padding: 5px;
+}
+.THIS .erp_mark7 .slds-button{
+    border-radius:1.25rem;
+}

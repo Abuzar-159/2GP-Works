@@ -1,0 +1,203 @@
+.page-background {
+    background: #f5f7fb;
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+/* modern cards */
+.modern-card {
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
+    border: 1px solid #e5e7eb;
+}
+
+.collapsible-header {
+    padding: 0.75rem 1rem;
+}
+
+/* tabs at top */
+.tab-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+.tab-icon {
+    margin-right: 0.05rem;
+}
+
+/* invoice & products table hover */
+.modern-table tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+/* pill-ish invoice search */
+.invoice-search-wrapper .slds-input {
+    border-radius: 999px;
+}
+
+/* "View All" link */
+.view-all-link {
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* Base tile layout */
+.payment-summary-tile {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-radius: 12px;
+    padding: 0.85rem 1rem;
+    background: #f5f7fb;
+    border: 1px solid transparent;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+    transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+}
+
+/* Hover animation */
+.payment-summary-tile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.16);
+}
+
+/* icon wrapper (keeps icon same size) */
+.payment-summary-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+/* text block */
+.payment-summary-text {
+    display: flex;
+    flex-direction: column;
+}
+
+/* label/value */
+.payment-summary-label {
+    font-size: 0.8rem;
+    color: #6b7280;
+    margin-bottom: 0.15rem;
+}
+
+.payment-summary-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+/* GREEN tile (Paid) */
+.payment-summary-tile--green {
+    background: #ecfdf5;       /* light green */
+    border-color: #34d399;     /* medium green border */
+}
+/* BLUE tiles */
+.payment-summary-tile--blue {
+    background: #eff6ff;
+    border-color: #60a5fa;
+}
+/* accent colours */
+.payment-summary-tile--warning {
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+}
+.payment-summary-tile--info {
+    background: #eff6ff;
+    border: 1px solid #93c5fd;
+}
+.payment-summary-tile--neutral {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+}
+
+/* ===== PAYMENT: method tabs ===== */
+.payment-method-tab {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.7rem 1rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    background: #f3f4f6;
+    cursor: pointer;
+    font-size: 0.9rem;
+    justify-content: flex-start;
+}
+.payment-method-tab_active {
+    background: #ffffff;
+    border-color: #1b96ff;
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.25);
+    font-weight: 600;
+}
+.payment-method-icon {
+    flex-shrink: 0;
+}
+
+/* Invoice link style */
+.link-highlight {
+    color: #1b75ff;
+    font-weight: 500;
+    text-decoration: none;
+}
+.link-highlight:hover {
+    text-decoration: underline;
+}
+
+/* Gray read-only boxes */
+.input-gray-box {
+    background: #f3f4f6;
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    font-size: 1rem;
+    border: 1px solid #e5e7eb;
+    color: #333;
+}
+
+/* Required label */
+.form-label-required {
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+    display: block;
+}
+
+/* Table rounding */
+.slds-table {
+    border-radius: 12px;
+    /*overflow: hidden;*/
+}
+/* blue invoice link */
+.bank-link {
+    color: #1b75ff;
+    font-weight: 500;
+    text-decoration: none;
+}
+.bank-link:hover {
+    text-decoration: underline;
+}
+
+/* red Posted pill */
+.posted-pill {
+    display: inline-block;
+    padding: 0.1rem 0.75rem;
+    border-radius: 999px;
+    background: #ef4444;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* read-only payment amount text */
+.bank-amount-static {
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.25rem;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+}
+.menu-left {
+    margin-right: auto; /* in a flex row, this pushes it to the left */
+}

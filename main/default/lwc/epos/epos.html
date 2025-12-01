@@ -1,0 +1,1166 @@
+<template>
+    <div class="bg-theme erp_mark7 ">
+        <template if:true={spinner}>
+            <lightning-spinner variant="brand" size="large"
+                alternative-text="Please wait while loading..."></lightning-spinner>
+        </template>
+
+        <div if:true={isErrorList}> <!--class="yourDiv"-->
+            <div class="slds-notify_container slds-is-absolute">
+                <div class="slds-notify slds-notify_toast slds-theme_error" role="status">
+                    <span class="slds-assistive-text">warning</span>
+                    <span
+                        class="slds-icon_container slds-icon-utility-error slds-m-right_small slds-no-flex slds-align-top"
+                        title="Close">
+                        <lightning-icon icon-name="utility:error" alternative-text="Close" size="x-small"
+                            variant="bare"></lightning-icon>
+                    </span>
+                    <div class="slds-notify__content">
+                        <template for:each={errorList} for:item="error" for:index='ind' key={error}>
+                            <p class="slds-text-heading_small  mb-0" key={error}>{error}</p>
+                        </template>
+                    </div>
+                    <div class="slds-notify__close">
+                        <button class="slds-button slds-button_icon slds-button_icon-inverse" title="Close">
+                            <lightning-icon icon-name="utility:close" alternative-text="Close" size="x-small"
+                                class="clickableIcon" variant="bare" onclick={closeErrorList}></lightning-icon>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div if:true={showMainPage}> <!--<div if:true={mainPage}>-->
+            <!-- Begin page -->
+            <div class="slds-grid slds-wrap">
+                <div
+                    class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-p-around_x-small pr-1 pb-0">
+
+
+                    <div id="wrapper" class="bg-white">
+                        <div class="slds-grid slds-wrap slds-p-left_small">
+                            <!-- Navigation Bar-->
+                            <header id="topnav">
+                                <div class="topbar-menu">
+                                    <div class="container-fluid">
+                                        <div id="navigation">
+                                            <!-- Navigation Menu-->
+                                            <ul class="navigation-menu">
+                                                <li class="has-submenu">
+                                                    <a class={orderTabClass} onclick={showOrderTab}><i
+                                                            class="mdi mdi-file-document"></i>Order</a>
+                                                </li>
+                                                <li class="has-submenu">
+                                                    <a class={discountTabClass} onclick={showDiscountTab}> <i
+                                                            class="mdi mdi-percent"></i>Discount <div
+                                                            class="arrow-down"></div>
+                                                    </a>
+                                                </li>
+                                                <li class="has-submenu">
+                                                    <a class={paymentTabClass} onclick={showPaymentTab}> <i
+                                                            class="mdi mdi-credit-card"></i>Payment <div
+                                                            class="arrow-down">
+                                                        </div></a>
+                                                </li>
+                                              <!--  <li class="has-submenu">
+                                                    <a class={deliveryTabClass} onclick={showDeliveryTab}> <i
+                                                            class="mdi mdi-truck-fast"></i>Delivery <div
+                                                            class="arrow-down">
+                                                        </div></a>
+                                                </li> -->
+                                                <li class="has-submenu">
+                                                    <a class={chatterTabClass} onclick={showChatterTab}> <i
+                                                            class="mdi mdi-wechat"></i>Chatter <div class="arrow-down">
+                                                        </div>
+                                                    </a>
+                                                </li>
+                                                <li class="has-submenu">
+                                                    <a class={accountTabClass} onclick={showAccountTab}> <i
+                                                            class="mdi mdi-book-account"></i>Account <div
+                                                            class="arrow-down">
+                                                        </div></a>
+                                                </li>
+                                            </ul>
+                                            <!-- End navigation menu -->
+                                            <div class="clearfix"></div>
+                                        </div>
+                                        <!-- end #navigation -->
+                                    </div>
+                                    <div class="clone-icon-static" if:true={isOrderHasId}>
+                                        <template if:true={isRefresh}>
+                                            <lightning-spinner variant="brand" size="small"
+                                                alternative-text="Please wait while loading..."></lightning-spinner>
+                                        </template>
+                                        <lightning-button-icon icon-name="utility:refresh"
+                                            alternative-text="Refresh Order" title="Fetch latest Order data"
+                                            class="slds-m-left_xx-small clickableIcon slds-m-right_small"
+                                            onclick={RefreshOrder}></lightning-button-icon>
+                                        <!--<lightning-icon icon-name="utility:refresh" alternative-text="Refresh Order" title="Fetch latest Order data" size="x-small" class="clickableIcon" onclick={RefreshOrder}></lightning-icon>&nbsp;&nbsp;-->
+                                        <lightning-button-icon icon-name="action:clone" variant="brand"
+                                            alternative-text="Clone Order" title="Clone Order" class="clickableIcon"
+                                            onclick={openCloneConfirmation}></lightning-button-icon>
+                                    </div>
+                                    <!-- end container -->
+                                </div>
+                            </header>
+                            <!-- end navbar-custom -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="slds-grid slds-wrap">
+                <div
+                    class="slds-col slds-size_1-of-1 slds-medium-size_5-of-12 slds-large-size_5-of-12 slds-p-around_x-small pr-1 pb-0">
+                    <div class="card-box mb-1 min-height301">
+                        <!--Account and Contacts Area-->
+                        <div class="erp_Mark7">
+                            <div class="row m-0">
+                                <div class='col-md-4 slds-p-bottom_small slds-p-top_small'>
+                                    <div><label>Account Name</label>
+                                        <div class="required">*</div>
+                                    </div>
+                                    <c-input-lookup obj-name="Account" search-placeholder="Search..."
+                                        icon-name="standard:account" onremove={handleRefreshComponent}
+                                        onlookupselected={selectAccount} is-value-selected={accountSelected}
+                                        selected-value={order.Account.Id} selected-name={order.Account.Name}
+                                        selected-name-url={customerUrl} qry="AND Account_Type__c ='Customer'">
+                                    </c-input-lookup>
+                                </div>
+
+                                <div class='col-md-4 slds-p-bottom_small slds-p-top_small'>
+                                    <div><label>Account Number</label></div>
+                                    <lightning-input value={order.Account.AccountNumber} variant="label-hidden"
+                                        class='no-input-label' disabled></lightning-input>
+                                </div>
+
+                                <div class='col-md-4 slds-p-bottom_small slds-p-top_small'>
+                                    <div><label>Title</label></div>
+                                    <lightning-input class='no-input-label' disabled placeholder="Title..."
+                                        variant="label-hidden" value={order.Contact__r.Title}></lightning-input>
+                                </div>
+
+                                <div class='col-md-4 slds-p-bottom_small '>
+                                    <div><label>Contact Name</label>
+                                        <div class="required">*</div>
+                                    </div>
+                                    <c-input-lookup obj-name="Contact" search-placeholder="Search..."
+                                        icon-name="standard:contact" onremove={removeContact}
+                                        onlookupselected={selectContact} is-value-selected={contactSelected}
+                                        qry={contactFilter} selected-value={order.Contact__r.Id}
+                                        selected-name={order.Contact__r.Name} selected-name-url={contactUrl}>
+                                    </c-input-lookup>
+                                </div>
+
+                                <div class='col-md-4 slds-p-bottom_small'>
+                                    <div><label>Contact Email</label></div>
+                                    <lightning-input value={order.Contact__r.Email} disabled="true"
+                                        class='no-input-label' placeholder="Email..."
+                                        variant="label-hidden"></lightning-input>
+                                </div>
+                                <div class='col-md-4 slds-p-bottom_small'>
+                                    <div><label>Contact Phone</label></div>
+                                    <lightning-input value={order.Contact__r.Phone} disabled="true"
+                                        class='no-input-label' placeholder="Phone..."
+                                        variant="label-hidden"></lightning-input>
+                                </div>
+                                <!-- <div class='col-md-4 slds-p-bottom_small'>
+                                    <div><label>Contact Mobile</label></div>
+                                    <lightning-input value={order.Contact__r.MobilePhone} disabled="true" class='no-input-lable' placeholder='Mobile...'></lightning-input>
+                                </div> -->
+                                <div class='col-md-6 slds-p-bottom_small'>
+                                    <div><label>Bill To</label>
+                                        <div class="required">*</div>
+                                    </div>
+                                    <c-input-lookup obj-name="Address__c" search-placeholder="Search..."
+                                        icon-name="standard:address" onremove={removeBillTo}
+                                        onlookupselected={selectBillTo} is-value-selected={billToSelected}
+                                        qry={billToFilter} selected-value={order.Bill_To_Address__r.Id}
+                                        selected-name={order.Bill_To_Address__r.Name} filter={billToFilter}
+                                        selected-name-url={billToAddUrl}>
+                                    </c-input-lookup>
+                                </div>
+                                <div class='col-md-6 slds-p-bottom_small'>
+                                    <div><label>Ship To</label>
+                                        <div class="required">*</div>
+                                    </div>
+                                    <c-input-lookup obj-name="Address__c" search-placeholder="Search..."
+                                        icon-name="standard:address" onremove={removeShipTo}
+                                        onlookupselected={selectShipTo} is-value-selected={shipToSelected}
+                                        qry={shipToFilter} selected-value={order.Ship_To_Address__r.Id}
+                                        selected-name={order.Ship_To_Address__r.Name} filter={shipToFilter}
+                                        selected-name-url={shipToAddUrl}>
+                                    </c-input-lookup>
+                                </div>
+                                <div class='col-md-6 slds-p-bottom_small'>
+                                    <lightning-textarea placeholder="Bill To Address..." class='no-input-label'
+                                        disabled="true" value='{billToAddFull}'
+                                        variant="label-hidden"></lightning-textarea>
+                                </div>
+                                <div class='col-md-6 slds-p-bottom_small'>
+                                    <lightning-textarea placeholder="Ship To Address..." class='no-input-label'
+                                        disabled="true" value={shipToAddFull}
+                                        variant="label-hidden"></lightning-textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!--Account and Contacts Area ends-->
+                <div
+                    class="slds-col slds-size_1-of-1 slds-medium-size_7-of-12 slds-large-size_7-of-12 slds-p-around_x-small pl-0 pb-0 ">
+                    <!--Order Tabs starts-->
+                    <div class="card-box mb-1 min-height301 p-1">
+                        <template if:true={isShowOrder}>
+                            <div class="erp_Mark7">
+                                <div class="row m-0">
+                                    <div class='col-md-12 pl-0 pr-0'>
+
+                                        <div class="row m-0 slds-p-top_small">
+                                            <div class='col-md-3 slds-p-bottom_xx-small slds-p-top_xx-small'>
+                                                <div><label>Order</label></div>
+                                                <c-input-lookup obj-name="Order" search-placeholder="Search..."
+                                                    icon-name="standard:orders" onremove={handleRefreshComponent}
+                                                    onlookupselected={selectOrder} is-value-selected={orderSelected}
+                                                    selected-value={order.Id} selected-name={order.Name} qry={OrderFilter}
+                                                    selected-name-url={orderUrl}> </c-input-lookup>
+                                                <!--onremove={removeOrder}-->
+                                            </div>
+                                            <div class='col-md-3 slds-p-bottom_xx-small slds-p-top_xx-small'>
+                                                <div><label>Order Profile</label>
+                                                    <div class="required">*</div>
+                                                </div>
+
+                                                <c-input-lookup obj-name="Profiling__c" search-placeholder="Search..."
+                                                    icon-name="standard:user_role" onremove={removeOrderProfile}
+                                                    onlookupselected={selectOrderProfile}
+                                                    is-value-selected={OrderProfileSelected} qry={OrderProfileFilter}
+                                                    selected-value={order.Order_Profile__r.Id}
+                                                    selected-name={order.Order_Profile__r.Name}
+                                                    selected-name-url={OrderPofileUrl} hide-remove={isProdSelected}>
+                                                </c-input-lookup>
+                                            </div>
+                                            <div class='col-md-3 slds-p-bottom_xx-small slds-p-top_xx-small'>
+                                                <div><label>Employee</label>
+                                                    <div class="required">*</div>
+                                                </div>
+                                                <c-input-lookup obj-name="Employees__c" search-placeholder="Search..."
+                                                    icon-name="standard:user" onremove={removeEmployee}
+                                                    onlookupselected={selectEmployee}
+                                                    is-value-selected={employeeSelected} qry={employeeqry}
+                                                    selected-value={order.Employee__r.Id}
+                                                    selected-name={order.Employee__r.Name}
+                                                    selected-name-url={employeeUrl}> </c-input-lookup>
+                                            </div>
+                                            <div class='col-md-3 slds-p-bottom_xx-small slds-p-top_medium-custom'>
+                                                <div if:true={isOrderHasId}>
+                                                    <button onclick={openOrderDoc}
+                                                        class="btn btn-lighten-primary waves-effect waves-primary width-100p"><i
+                                                            class="mdi mdi-file-document mr-1"></i>&nbsp;Order
+                                                        Document</button>
+                                                </div> <!--icon-name="action:record" label='Order Document'-->
+                                            </div>
+                                            <div class='col-md-3 slds-p-bottom_xx-small slds-p-top_xx-small'>
+                                                <template if:true={isMultiCurrency}>
+
+                                                </template>
+                                                <div><label>Order Currency</label></div>
+                                                <lightning-combobox class='no-input-lable' value={order.CurrencyIsoCode}
+                                                    placeholder="Select Currency..." options={allCurrencies}
+                                                    onchange={handleCurrency}></lightning-combobox>
+                                            </div>
+                                            <div class='col-md-3 slds-p-bottom_xx-small slds-p-top_xx-small'>
+                                                <div><label>Payment Status</label></div>
+                                                <lightning-input value={order.Payments_Status__c} class='no-input-lable'
+                                                    disabled="true" variant="label-hidden"></lightning-input>
+                                            </div>
+                                            <div class='col-md-3 slds-p-bottom_xx-small slds-p-top_xx-small'>
+                                                <div><label>Project</label></div>
+                                                <c-input-lookup obj-name="Project__c" search-placeholder="Search..."
+                                                    icon-name="custom:custom33" onremove={removeProject}
+                                                    onlookupselected={selectProject} is-value-selected={projectSelected}
+                                                    selected-value={order.Project__r.Id}
+                                                    selected-name={order.Project__r.Name}
+                                                    selected-name-url={selectProjectUrl}> </c-input-lookup>
+                                            </div>
+                                            <div class='col-md-3 slds-p-bottom_xx-small slds-p-top_xx-small'>
+                                                <div><label>Order Reference</label></div>
+                                                <lightning-input value={order.OrderReferenceNumber}
+                                                    class='no-input-lable' oncommit={handleOrdRef} maxlength="200"
+                                                    message-when-too-long="Order Reference must not be more than 10 characters."
+                                                    variant="label-hidden"></lightning-input>
+                                            </div>
+                                            <div class='col-md-3 slds-p-bottom_xx-small slds-p-top_xx-small'>
+                                                <div><label>Order Start Date</label>
+                                                    <div class="required">*</div>
+                                                </div>
+                                                <lightning-input type="date" value={order.EffectiveDate}
+                                                    class='no-input-lable' onchange={handleEffDate}
+                                                    variant="label-hidden"></lightning-input>
+                                            </div>
+                                            <div class='col-md-3 slds-p-bottom_xx-small slds-p-top_xx-small'>
+                                                <div><label>Expected Date</label></div>
+                                                <lightning-input type="date" value={order.Expected_Date__c}
+                                                    class='no-input-lable' onchange={handleExpDate}
+                                                    variant="label-hidden"></lightning-input>
+                                            </div>
+                                            <div class='col-md-3 slds-p-bottom_xx-small slds-p-top_xx-small'>
+                                                <div><label>Shipment Type</label></div>
+                                                <lightning-combobox class='no-input-lable'
+                                                    value={order.Shipment_Type__c} placeholder="Select Shipment..."
+                                                    options={shipmentType}
+                                                    onchange={handleChangeShipment}></lightning-combobox>
+                                            </div>
+                                            <div class='col-md-3 slds-p-bottom_xx-small slds-p-top_xx-small'>
+                                                <div><label>Status</label>
+                                                    <div class="required">*</div>
+                                                </div>
+                                                <lightning-combobox class='no-input-lable' value={order.Status}
+                                                    placeholder="Select Status..." options={ordStatus}
+                                                    onchange={handleChangeStatus}></lightning-combobox>
+                                            </div>
+
+                                            <div class='col-md-6 slds-p-bottom_xx-small slds-p-top_xx-small'>
+                                                <div><label>Special Instructions</label></div>
+                                                <lightning-textarea class='no-input-lable' placeholder="Description..."
+                                                    value={order.Special_Instructions__c} onblur={handleOrdDescription}
+                                                    maxlength="250"
+                                                    message-when-too-long="Special Instructions must not be more than 250 characters."
+                                                    variant="label-hidden"></lightning-textarea>
+                                            </div>
+                                            <div class='col-md-3 slds-p-bottom_xx-small slds-p-top_xx-small'>
+                                                <lightning-input type='checkbox' label='Is Back Order'
+                                                    checked={order.Is_Back_Order__c} disabled></lightning-input>
+                                                <lightning-input type='checkbox' label='Is Pre Order'
+                                                    checked={order.Is_Pre_Order__c} disabled></lightning-input>
+                                            </div>
+                                            <div class="col-md-3 slds-p-bottom_xx-small slds-p-top_xx-small">
+                                                <!--<lightning-input type='checkbox' label='Authorized' checked={order.Authorised__c} disabled={order.Authorised__c} onchange={handleAuthorize}></lightning-input>    -->
+                                                <lightning-input type='checkbox' label='Issue Invoice'
+                                                    checked={order.Issue_Invoice__c}
+                                                    onchange={handleIssInv} disabled={isIssueInvoiceDisabled}></lightning-input><!--disabled={order.Issue_Invoice__c}--><!--disabled={isIssueInvoiceDisabled} fix giih 524 by matheen-->
+                                                <lightning-input type='checkbox' label='Is Closed'
+                                                    checked={order.Is_Closed__c}
+                                                    onchange={handleIsClose}></lightning-input><!--disabled={order.Is_Closed__c}-->
+
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        </template>
+                        <template if:true={isShowDiscount}>
+                            <div class="card-box mb-1 p-1">
+                                <h4 class="header-title mb-1"><strong>Order Discount</strong></h4>
+                                <div class="row m-0">
+                                    <div
+                                        class='col-md-4 slds-p-bottom_xx-small slds-p-top_xx-small slds-p-left_xxx-small'>
+                                        <div><label>Order Discount Amount</label></div>
+                                        <lightning-input variant="label-hidden" type=number formatter=currency
+                                            value={order.Order_Discount__c} oncommit={handleDisAmt}
+                                            step='.01'></lightning-input>
+                                    </div>
+
+                                    <div class='col-md-4 slds-p-bottom_xx-small slds-p-top_xx-small'>
+                                        <div><label>Order Discount Description</label></div>
+                                        <lightning-textarea variant="label-hidden" placeholder="Description..."
+                                            value={order.Order_Discount_Description__c} onblur={handleDistDesc}
+                                            maxlength="250"
+                                            message-when-too-long="Discount Description must not be more than 250 characters."></lightning-textarea>
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div class="card-box mb-1 p-1">
+                                <h4 class="header-title mb-1"><strong>Coupon Discount</strong></h4>
+                                <div class='slds-p-bottom_xx-small slds-p-top_xx-small'>
+
+                                    <div><label>Coupon Codes</label></div>
+                                    <div class="slds-grid">
+                                        <lightning-input variant="label-hidden" value={couponCode}
+                                            onchange={handlecouponCode} class="slds-p-right_small"></lightning-input>
+                                        <lightning-button label="Apply" variant="brand" onclick={ApplyCoupon}
+                                            disabled={disableApply}></lightning-button>
+                                    </div>
+                                </div>
+                                <table class="slds-table slds-table_bordered slds-m-top_small">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Coupon</th>
+                                            <th>Applied Date</th>
+                                            <th>Amount</th>
+                                            <!--<th></th>-->
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template if:true={iscouponRemList} for:each={couponRemList} for:item="cpn"
+                                            for:index="index">
+                                            <tr key={cpn.Id}>
+                                                <td>
+                                                    <lightning-formatted-url label={cpn.Name} value={cpn.nameUrl}
+                                                        target="_blank"></lightning-formatted-url>
+                                                </td>
+                                                <td>
+                                                    <lightning-formatted-url label={cpn.Coupon__r.Name}
+                                                        value={cpn.Coupon__r.CPUrl}
+                                                        target="_blank"></lightning-formatted-url>
+                                                </td>
+                                                <td>
+                                                    {cpn.Redemption_Date__c}
+                                                </td>
+                                                <td>
+                                                    <lightning-formatted-number value={cpn.Value__c}
+                                                        format-style="currency"></lightning-formatted-number>
+                                                </td>
+                                                <!--<td>
+                                                    <lightning-icon icon-name="action:delete" alternative-text="Delete" size="xx-small" onclick={DeleteCoupon} class="clickableIcon" data-index={index}></lightning-icon>
+                                                </td>-->
+                                            </tr>
+                                        </template>
+                                        <template if:false={iscouponRemList}>
+                                            <tr>
+                                                <td colspan="4">
+                                                    <div class="alert alert-warning d-flex align-items-center mb-0 p-1"
+                                                        role="alert">
+                                                        <i class="mdi mdi-alert-circle-check icon-size-warning"></i>
+                                                        <div>
+                                                            No Coupon Redeem
+                                                        </div>
+                                                    </div>
+
+                                                </td>
+                                            </tr>
+                                        </template>
+                                        <!--<template if:true={couponList} for:each={couponList} for:item="cpn" for:index="index">
+                                            <tr key={cpn.Id}>
+                                                <td>
+                                                    <lightning-formatted-url label={cpn.Name} value={cpn.nameUrl} target="_blank"></lightning-formatted-url>
+                                                </td>
+                                                <td>
+                                                    <lightning-formatted-url label={cpn.Coupon_Redemption__r.Coupon__r.Name} value={cpn.Coupon_Redemption__r.Coupon__r.nameUrl} target="_blank"></lightning-formatted-url>
+                                                </td>
+                                                <td>
+                                                    {cpn.Applied_Date__c}
+                                                </td>
+                                                <td>
+                                                    <lightning-formatted-number value={cpn.Amount__c} format-style="currency"></lightning-formatted-number>
+                                                </td>
+                                                <td>
+                                                    <lightning-icon icon-name="action:delete" alternative-text="Delete" size="xx-small" onclick={DeleteCoupon} class="clickableIcon" data-index={index}></lightning-icon>
+                                                </td>
+                                            </tr>
+                                        </template>-->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </template>
+                        <template if:true={isShowPayment}>
+                            <c-epos-payment onpayment={RefreshOrder} order={order} order-currency={orderCurrency}
+                                invoice-list={invoiceList} is-invoice-list={isInvoiceList} payment-list={paymentList}
+                                is-payment-list={isPaymentList}></c-epos-payment>
+                        </template>
+                        <template if:true={isShowDelivery}>
+                            <c-epos-delivery onshipment={RefreshOrder} order={order} shipments-list={shipmentsList}
+                                is-shipments-list={isShipmentsList} is-order-has-id={isOrderHasId}></c-epos-delivery>
+                        </template>
+                        <template if:true={isShowChatter}>
+                            <iframe src="/apex/ChatterLC?core.apexpages.devmode.url=1" width="100%" height="300px;"
+                                frameborder="0" align="top"></iframe>
+                        </template>
+                        <template if:true={isShowAccount}>
+                            <c-epos-account order={order} onaccountcreated={selectNewAccount}
+                                oncontactcreated={selectNewContact} onaddresscreated={selectNewAddress}
+                                accountid={GetAccountId} contactid={GetContactId} accountname={accountname}
+                                contactname={contactname}></c-epos-account>
+                        </template>
+
+
+                    </div>
+
+                    <template if:true={isCloneConfirmation}>
+                        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open" aria-modal="true"
+                            aria-describedby="modal-content-id-1">
+                            <div class="slds-modal__container">
+                                <div class="slds-modal__content slds-p-around_medium tcenter">
+                                    <p>Do you want to clone this order?</p>
+                                    <lightning-icon icon-name="action:clone"
+                                        alternative-text="Clone_Icon"></lightning-icon>
+                                </div>
+                                <footer class="slds-modal__footer text-center">
+                                    <lightning-button label="No" variant="neutral"
+                                        onclick={closeCloneConfirmation}></lightning-button>
+                                    <lightning-button variant="brand" label="Yes" onclick={cloneOrder}
+                                        class="slds-m-left_x-small"></lightning-button>
+                                </footer>
+                            </div>
+                        </section>
+                        <div class="slds-backdrop slds-backdrop_open"></div>
+                    </template>
+                </div>
+            </div>
+
+            <!--Order Tabs ends-->
+
+            <div class="slds-grid slds-wrap paddinbtm">
+                <div
+                    class="slds-col slds-size_1-of-1 slds-medium-size_12-of-12 slds-large-size_12-of-12 slds-p-around_x-small pt-0">
+                    <!--Line Items starts-->
+                    <div class="card-box" style="min-height:300px;">
+                        <!-- {lineitems_Gap}is class for adding a space between orderlineitems and the total fields table-->
+                        <table class="slds-table slds-table_bordered slds-m-top_small">
+                            <thead>
+                                <tr class="slds-text-title--caps">
+                                    <th>
+                                        <div if:true={showAddButton}><lightning-button label="Add"
+                                                onclick={showAddProductsPage}
+                                                disabled={isOrderActivated}></lightning-button></div>
+                                    </th>
+                                    <th>
+                                        <span class="slds-truncate" title="Code">Code</span>
+                                    </th>
+                                    <th>
+                                        <span class="slds-truncate" title="Product">Product</span>
+                                    </th>
+                                    <th>
+                                        <span class="slds-truncate" title="UOM">UOM</span>
+                                    </th>
+                                    <th>
+                                        <span class="slds-truncate" title="Price">Price/Unit</span>
+                                    </th>
+                                    <th>
+                                        <span class="slds-truncate" title="Quantity">Quantity</span>
+                                    </th>
+                                    <!--<th>
+                                        <span class="slds-truncate" title="Discount Plan">Discount Plan</span>
+                                    </th>-->
+                                    <th>
+                                        <span class="slds-truncate" title="Discount/Unit">Discount</span>
+                                    </th>
+                                    <th>
+                                        <span class="slds-truncate" title="Tax">Tax</span>
+                                    </th>
+                                    <th>
+                                        <span class="slds-truncate" title="Net">Net</span>
+                                    </th>
+                                    <th>
+                                        <span class="slds-truncate" title="Gross">Gross</span>
+                                    </th>
+                                    <th>
+                                        <span class="slds-truncate" title="Description">Description</span>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <template if:true={selectedProducts} for:each={selectedProducts} for:item="prod"
+                                    for:index="index">
+                                    <tr key={prod.keyId}>
+                                        <td>
+                                            <div>
+                                                <lightning-icon icon-name="action:delete" alternative-text="Remove Item" title="Delete"
+                                                    size="xx-small" onclick={openDeleteModal} class={iconDisableOrNot}
+                                                    data-index={index}></lightning-icon> &nbsp;&nbsp;
+                                                <lightning-icon icon-name="action:edit" alternative-text="Edit Item" title="Edit"
+                                                    size="xx-small" onclick={orderItemEditModal}
+                                                    class={iconDisableOrNot} data-index={index}></lightning-icon>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="slds-truncate slds-truncate-epos" > 
+                                                <lightning-formatted-text
+                                                    value={prod.pbe.Product2.ProductCode}></lightning-formatted-text>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="slds-truncate slds-truncate-epos">
+                                                <!-- <lightning-formatted-url value={prod.pbe.Product2.Id} onclick={selProdURL} data-index={index} label={prod.pbe.Product2.Name} target="_blank"></lightning-formatted-url>  -->
+                                                <a onclick={selProdURL} data-index={index} target="_blank"
+                                                    class="blueActive" title={prod.pbe.Product2.Name}>
+                                                    <lightning-formatted-text
+                                                        value={prod.pbe.Product2.Name}></lightning-formatted-text>
+                                                </a>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <lightning-formatted-text
+                                                    value={prod.pbe.Product2.QuantityUnitOfMeasure}></lightning-formatted-text>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <lightning-formatted-number value={prod.pbe.UnitPrice}
+                                                    format-style="currency" minimum-fraction-digits="4"
+                                                    currency-code={orderCurrency}
+                                                    currency-display-as="symbol"></lightning-formatted-number>
+                                                <!--<lightning-input type="number" formatter="currency" value={prod.pbe.UnitPrice} step=".0001" onchange={handleUnitPrice} data-index={index} class={prod.UnitPriceClass} variant="label-hidden"></lightning-input>-->
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <lightning-formatted-number value={prod.quantity}
+                                                    maxlength="10" maximum-fraction-digits="3"></lightning-formatted-number>
+                                                <!--<lightning-input type="number" value={prod.quantity} onchange={handleQuantity} data-index={index} data-prodid={prod.pbe.Product2.Id} step=".01" variant="label-hidden" class={prod.quantityClass}></lightning-input>-->
+                                            </div>
+                                        </td>
+                                        <!--<td>
+                                            <div>
+                                                <lightning-combobox class='no-input-lable' value={prod.discountPlan} options={prod.CurrentDiscounts} onchange={handleDiscPlan} data-index={index} data-prodid={prod.pbe.Product2.Id}></lightning-combobox>
+                                            </div>
+                                        </td>-->
+                                        <td>
+                                            <div>
+                                                <lightning-formatted-number value={prod.totalDiscount}
+                                                    format-style="currency" minimum-fraction-digits="4"
+                                                    currency-code={orderCurrency}
+                                                    currency-display-as="symbol"></lightning-formatted-number>
+                                            </div>
+                                            <!--<div class="slds-grid">
+                                                <lightning-input type="number" value={prod.discountPercent} onchange={handleDiscount} data-index={index} variant="label-hidden" class={prod.discountClass}></lightning-input>
+                                                <div class="min-discount">
+                                                    <div if:true={prod.isPercent}>[{prod.minDiscount}-{prod.maxDiscount}]%</div>
+                                                    <div if:false={prod.isPercent}>
+                                                        [<lightning-formatted-number value={prod.minDiscount} format-style="currency" minimum-fraction-digits="0" currency-code={orderCurrency} currency-display-as="symbol"></lightning-formatted-number>-<lightning-formatted-number value={prod.maxDiscount} format-style="currency" minimum-fraction-digits="0" currency-code={orderCurrency} currency-display-as="symbol"></lightning-formatted-number>]
+                                                    </div>
+                                                </div>
+                                            </div>   -->
+                                        </td>
+                                        <td>
+                                            <lightning-formatted-number value={prod.totalTaxAmount}
+                                                format-style="currency" maximum-fraction-digits="3"
+                                                currency-code={orderCurrency}
+                                                currency-display-as="symbol"></lightning-formatted-number>
+                                        </td>
+                                        <td>
+                                            <lightning-formatted-number value={prod.NetAmount} format-style="currency"
+                                                maximum-fraction-digits="3" currency-code={orderCurrency}
+                                                currency-display-as="symbol"></lightning-formatted-number>
+                                        </td>
+                                        <td>
+                                            <lightning-formatted-number value={prod.GrossAmount} format-style="currency"
+                                                maximum-fraction-digits="3" currency-code={orderCurrency}
+                                                currency-display-as="symbol"></lightning-formatted-number>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <lightning-textarea variant="label-hidden"
+                                                    value={prod.pbe.Product2.Description} data-index={index}
+                                                    class='no-input-lable' disabled="true" maxlength="250"
+                                                    message-when-too-long="Description must not be more than 250 characters."></lightning-textarea>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div id="bottom">
+                        <table
+                            class="slds-table slds-table--condensed slds-m-top--medium slds-max-medium-table--stacked-horizontal slds-no-row-hover mb-30">
+                            <tbody>
+                                <tr class="rtext epos-class46">
+                                    <td align="left">Sub Total: </td>
+                                    <td align="left">
+                                        <!-- <lightning-input disabled="true" class='no-input-lable' placeholder="Sub Total..." value={order.subTotal}></lightning-input> -->
+                                        <lightning-formatted-number value={order.Sub_Total__c} format-style="currency"
+                                            maximum-fraction-digits="3" currency-code={orderCurrency}
+                                            currency-display-as="symbol" class="total-bg"></lightning-formatted-number>
+                                    </td>
+                                    <td align="left">Taxes:</td>
+                                    <td align="left">
+                                        <!-- <lightning-input disabled="true" class='no-input-lable' placeholder="Taxes..." value={order.Total_Tax_Amount__c}></lightning-input> -->
+                                        <lightning-formatted-number value={order.Total_Tax_Amount__c}
+                                            format-style="currency" maximum-fraction-digits="3"
+                                            currency-code={orderCurrency} currency-display-as="symbol"
+                                            class="total-bg"></lightning-formatted-number>
+                                    </td>
+                                    <td align="left">Shipping Amount:</td>
+                                    <td align="left">
+                                        <!-- <lightning-input disabled="true" class='no-input-lable' placeholder="Shipping Amount..." value={order.Total_Shipping_Amount__c}></lightning-input> -->
+                                        <lightning-formatted-number value={order.Total_Shipping_Amount__c}
+                                            format-style="currency" maximum-fraction-digits="3"
+                                            currency-code={orderCurrency} currency-display-as="symbol"
+                                            class="total-bg"></lightning-formatted-number>
+                                    </td>
+                                    <td align="left">Discounts:</td>
+                                    <td align="left">
+                                        <!-- <lightning-input disabled="true" class='no-input-lable' placeholder="Discounts..." value=""></lightning-input> -->
+                                        <lightning-formatted-number value={order.TotalDiscount__c}
+                                            format-style="currency" maximum-fraction-digits="3"
+                                            currency-code={orderCurrency} currency-display-as="symbol"
+                                            class="total-bg"></lightning-formatted-number>
+                                    </td>
+                                </tr>
+                                <tr class="rtext">
+                                    <td align="left">Shipping Discount:</td>
+                                    <td align="left">
+                                        <!-- <lightning-input disabled="true" class='no-input-lable' placeholder="Shipping Discount..." value={order.Shipping_Discount__c}></lightning-input> -->
+                                        <lightning-formatted-number value={order.Shipping_Discount__c}
+                                            format-style="currency" maximum-fraction-digits="3"
+                                            currency-code={orderCurrency} currency-display-as="symbol"
+                                            class="total-bg"></lightning-formatted-number>
+                                    </td>
+                                    <td align="left">Total Amount:</td>
+                                    <td align="left">
+                                        <!-- <lightning-input disabled="true" class='no-input-lable' placeholder="Total Amount..." value={order.Order_Amount__c} format-style="currency" currency-code={orderCurrency} currency-display-as="symbol"></lightning-input> -->
+                                        <lightning-formatted-number value={order.Order_Amount__c}
+                                            format-style="currency" maximum-fraction-digits="3"
+                                            currency-code={orderCurrency} currency-display-as="symbol"
+                                            class="total-bg"></lightning-formatted-number>
+                                    </td>
+                                    <td align="left">Amount Paid:</td>
+                                    <td align="left">
+                                        <!-- <lightning-input disabled="true" class='no-input-lable' placeholder="Amount Paid..." value={order.Amount_Paid__c}></lightning-input> -->
+                                        <lightning-formatted-number value={order.Amount_Paid__c} format-style="currency"
+                                            maximum-fraction-digits="3" currency-code={orderCurrency}
+                                            currency-display-as="symbol" class="total-bg"></lightning-formatted-number>
+                                    </td>
+                                    <td align="left" class="fweight-bold">Total Due:</td>
+                                    <td align="left" width="13%">
+                                        <!-- <lightning-input disabled="true" class='no-input-lable' placeholder="Total Due..." value={order.finalDue}></lightning-input> -->
+                                        <lightning-formatted-number value={order.Due_Amount__c} format-style="currency"
+                                            maximum-fraction-digits="3" currency-code={orderCurrency}
+                                            currency-display-as="symbol" class="total-bg"></lightning-formatted-number>
+                                    </td>
+                                </tr>
+                                <tr class="rtext height50">
+                                    <td align="left" class="fweight-bold">&nbsp;</td>
+                                    <td align="left" width="13%">&nbsp;</td>
+                                    <td align="left">&nbsp;</td>
+                                    <td align="left">&nbsp; </td>
+                                    <td align="left">&nbsp;</td>
+                                    <td align="left">&nbsp; </td>
+                                    <td align="left">&nbsp;</td>
+                                    <td align="left">&nbsp; </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+
+
+            <div class="slds-docked-form-footer">
+                <button onclick={handleRefreshComponent}
+                    class="slds-button slds-button_neutral">Reset</button>&nbsp;&nbsp;
+                <button onclick={saveOrder} class="slds-button slds-button_brand"
+                    disabled={showSaveButton}>Save</button>
+            </div>
+        </div>
+
+        <div if:true={showAddProducts}> <!--<div if:true={adProd}>-->
+            <div class="slds-page-header erp_Mark7">
+                <div class="media">
+                    <div class="avatar-lg mr-1">
+                        <lightning-icon icon-name="standard:products" size="large"></lightning-icon>
+                    </div>
+                    <div class="media-body overflow-hidden">
+                        <p class="mt-0 mb-1 slds-text-title--caps"><strong>Add Products</strong></p>
+                        <div class="slds-grid slds-wrap">
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right--small">
+                                <div class="slds-form-element">
+                                    <!--<label class="slds-form-element__label" for="name">{SearchName}</label>-->
+                                    <div class="slds-form-element__control">
+                                        <lightning-input type="text" variant="label-hidden" value={searchItem}
+                                            oncommit={fetchProducts} class="no-input-lable" placeholder={SearchName}
+                                            maxlength="200"
+                                            message-when-too-long="Product Name must not be more than 200 characters."></lightning-input><!--onchange={assignSearchValue}-->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div>
+                <div class="paddinbtm">
+                    <table class="slds-table slds-table_bordered slds-table_fixed-layout slds-m-top_small">
+                        <thead>
+                            <tr class="slds-text-title--caps">
+                                <th width="6%">
+
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Code">PRODUCT CODE</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Product">Product</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="UOM">UOM</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Stock">Stock</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Price">Price/Unit</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Quantity">Quantity</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Discount Plan">Discount Plan</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Discount">Discount/Unit</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Description">Description</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template if:true={listOfProducts} for:each={listOfProducts} for:item="prod1"
+                                for:index="index">
+                                <tr key={prod1.pbe.Product2.Id}>
+                                    <td scope="row" class="slds-text-align--right">
+                                        <div class="slds-form-element">
+                                            <div class="slds-form-element__control">
+                                                <lightning-input type="checkbox" variant="label-hidden"
+                                                    checked={prod1.checkSelected} onchange={handleCheckbox}
+                                                    data-index={index}></lightning-input><!-- onchange={checkboxSelect}-->
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="slds-truncate">
+                                            <lightning-formatted-text
+                                                value={prod1.pbe.Product2.ProductCode}></lightning-formatted-text>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="slds-truncate">
+                                            <!-- <lightning-formatted-url value={prod1.pbe.Product2.Id} onclick={prodURL} data-index={index} label={prod1.pbe.Product2.Name} target="_blank"></lightning-formatted-url> -->
+                                            <a onclick={prodURL} data-index={index} target="_blank" class="blueActive" title={prod1.pbe.Product2.Name}>
+                                                <lightning-formatted-text
+                                                    value={prod1.pbe.Product2.Name}></lightning-formatted-text>
+                                            </a>
+                                            <!--<div if:true={prod.pbe.Product2.Configure__c}>
+                                                    &nbsp;<lightning-icon icon-name="utility:settings" alternative-text="Configure Product" size="xx-small"></lightning-icon>
+                                                </div>-->
+                                        </div>
+                                        <!--<aura:if isTrue="{!(v.resVersion == pro.version)}">
+                                                <aura:if isTrue="{!v.selConfiguration.length > 0}">
+                                                    <a onmouseover="{!c.showToolTip}" onmouseout="{!c.HideToolTip}"><lightning:icon iconName="utility:info" alternativeText="Configuration icon" size='x-small' />
+                                                    </a>
+                                                    <aura:if isTrue="{!v.tooltip}" >
+                                                        <div class="slds-popover slds-popover_tooltip slds-nubbin_bottom-left " role="tooltip" id="help">
+                                                            <div class="slds-popover__body">
+                                                                <aura:iteration items="{!v.selConfiguration}" var="sc">
+                                                                    <lightning:formattedText value="{!sc}" />&nbsp;<br />
+                                                                </aura:iteration>
+                                                            </div>
+                                                        </div>
+                                                    </aura:if>
+                                                </aura:if>
+                                            </aura:if>-->
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <lightning-formatted-text
+                                                value={prod1.pbe.Product2.QuantityUnitOfMeasure}></lightning-formatted-text>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="stock-pill">
+                                           {prod1.stock}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <lightning-input type="number" formatter="currency"
+                                                value={prod1.pbe.UnitPrice} step=".0001" oncommit={handleUnitPrice}
+                                                data-index={index} class={prod1.UnitPriceClass} variant="label-hidden"
+                                                maxlength="6"
+                                                message-when-too-long="UnitPrice must not be more than 6 Digits."></lightning-input>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <lightning-input type="number" value={prod1.quantity}
+                                                oncommit={handleQuantity} data-index={index}
+                                                data-prodid={prod1.pbe.Product2.Id} step=".01" variant="label-hidden"
+                                                maxlength="10" maximum-fraction-digits="3"
+                                                message-when-too-long="Quantity must not be more than 10 Digits."></lightning-input><!--class="{!pro.quantity == '' ? 'hasError1 inputWidth no-display' : 'inputWidth no-display'}"-->
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <lightning-combobox class='no-input-lable' value={prod1.discountPlan}
+                                                options={prod1.CurrentDiscounts} onchange={handleDiscPlan}
+                                                data-index={index}
+                                                data-prodid={prod1.pbe.Product2.Id}></lightning-combobox>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="slds-grid">
+                                            <lightning-input type="number" value={prod1.discountPercent}
+                                                oncommit={handleDiscount} data-index={index} variant="label-hidden"
+                                                class={prod1.discountClass} maxlength="2"
+                                                message-when-too-long="Discount percentage must not be more than 2 fraction Digits."></lightning-input><!-- class="{!pro.discountPercent == '' ? 'hasError1 inputWidth1 no-display' : 'inputWidth1 no-display'}"-->
+                                            <div class="min-discount slds-p-top_xx-small slds-p-left_xx-small">
+                                                <div if:true={prod1.isPercent}>
+                                                    [{prod1.minDiscount}-{prod1.maxDiscount}]%</div>
+                                                <div if:false={prod1.isPercent}>
+                                                    [<lightning-formatted-number value={prod1.minDiscount}
+                                                        format-style="currency" minimum-fraction-digits="0"
+                                                        currency-code={orderCurrency}
+                                                        currency-display-as="symbol"></lightning-formatted-number>-<lightning-formatted-number
+                                                        value={prod1.maxDiscount} format-style="currency"
+                                                        minimum-fraction-digits="0" currency-code={orderCurrency}
+                                                        currency-display-as="symbol"></lightning-formatted-number>]
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <lightning-textarea variant="label-hidden"
+                                                value={prod1.pbe.Product2.Description} data-index={index}
+                                                onblur={handleDescription} class='no-input-lable' maxlength="250"
+                                                message-when-too-long="Description must not be more than 250 characters."></lightning-textarea>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                            <template if:false={islistOfProdAvbl}>
+
+                                <tr>
+                                    <td colspan="10">
+                                        <div class="alert alert-warning d-flex align-items-center" role="alert">
+                                            <i class="mdi mdi-alert-circle-check icon-size-warning mr-2"></i>
+                                            <div>Product Not Available</div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+            <div class="slds-docked-form-footer">
+                <lightning-button label="Back" onclick={backToMainPage}></lightning-button>&nbsp;&nbsp;
+                <lightning-button label="Add Products" onclick={addProducts} variant="brand"></lightning-button>
+            </div>
+        </div>
+    </div>
+
+    <!--Delete Order Item start-->
+    <template if:true={deleteConfirmation}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open" aria-modal="true"
+            aria-describedby="modal-content-id-1">
+            <div class="slds-modal__container">
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                    <p>Do you want to delete line item?</p>
+                    <!--<lightning-icon icon-name="standard:recycle_bin" alternative-text="Delete Icon"></lightning-icon>-->
+                </div>
+                <footer class="slds-modal__footer">
+                    <lightning-button label="Cancel" variant="neutral" onclick={closeDeleteModal}></lightning-button>
+                    <lightning-button variant="destructive" label="Delete" title="Delete" onclick={removeLineItem}
+                        class="slds-m-left_x-small"></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+    <!--Edit Order Item start-->
+    <template if:true={isEditOrderItem}>
+        <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open slds-modal_large"
+            aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-2">
+            <div class="slds-modal__container">
+                <header class="slds-modal__header">
+                    <h6 id="modal-heading-01" class="slds-modal__title slds-hyphenate">Edit Order Item</h6>
+                </header>
+                <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-2">
+                    <div if:true={error} class="required">
+                        * {error}
+                    </div>
+                    <table class="slds-table slds-table_bordered">
+                        <thead>
+                            <tr class="slds-text-title--caps">
+                                <th>
+                                    <span class="slds-truncate" title="Code">Code</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Product">Product</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="UOM">UOM</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Stock">Stock</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Price">Price/Unit</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Quantity">Quantity</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Discount Plan">Discount Plan</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Discount">Discount/Unit</span>
+                                </th>
+                                <th>
+                                    <span class="slds-truncate" title="Description">Description</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr key={orderItemToEdit.pbe.Product2.Id}>
+                                <td>
+                                    <div class="slds-truncate slds-truncate-epos">
+                                        <lightning-formatted-text
+                                            value={orderItemToEdit.pbe.Product2.ProductCode}></lightning-formatted-text>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="slds-truncate slds-truncate-epos">
+                                        <!-- <lightning-formatted-url value={orderItemToEdit.pbe.Product2.Id} onclick={editURL} label={orderItemToEdit.pbe.Product2.Name} target="_blank"></lightning-formatted-url> -->
+                                        <a onclick={editURL} data-index={index} target="_blank" class="blueActive">
+                                            <lightning-formatted-text
+                                                value={orderItemToEdit.pbe.Product2.Name}></lightning-formatted-text>
+                                        </a>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <lightning-formatted-text
+                                            value={orderItemToEdit.pbe.Product2.QuantityUnitOfMeasure}></lightning-formatted-text>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        {orderItemToEdit.stock}
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <lightning-input type="number" formatter="currency"
+                                            value={orderItemToEdit.pbe.UnitPrice} step=".0001" oncommit={EditUnitPrice}
+                                            class={orderItemToEdit.UnitPriceClass} variant="label-hidden" maxlength="9"
+                                            message-when-too-long="UnitPrice must not be more than 6 Digits."></lightning-input>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <lightning-input type="number" value={orderItemToEdit.quantity}
+                                            oncommit={editQuantity} data-prodid={orderItemToEdit.pbe.Product2.Id}
+                                            step=".01" variant="label-hidden" class={orderItemToEdit.quantityClass}
+                                            maxlength="10" maximum-fraction-digits="3"
+                                            message-when-too-long="Quantity must not be more than 10 Digits."></lightning-input>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <lightning-combobox class='no-input-lable' value={orderItemToEdit.discountPlan}
+                                            options={orderItemToEdit.CurrentDiscounts}
+                                            onchange={editDiscPlan}></lightning-combobox>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="slds-grid">
+                                        <lightning-input type="number" value={orderItemToEdit.discountPercent}
+                                            oncommit={editDiscount} variant="label-hidden"
+                                            class={orderItemToEdit.discountClass} step=".01" maxlength="2"
+                                            message-when-too-long="Discount percentage must not be more than 5 fraction Digits."></lightning-input>
+                                        <div class="min-discount">
+                                            <div if:true={orderItemToEdit.isPercent}>
+                                                [{orderItemToEdit.minDiscount}-{orderItemToEdit.maxDiscount}]%</div>
+                                            <div if:false={orderItemToEdit.isPercent}>
+                                                [<lightning-formatted-number value={orderItemToEdit.minDiscount}
+                                                    format-style="currency" minimum-fraction-digits="0"
+                                                    currency-code={orderCurrency}
+                                                    currency-display-as="symbol"></lightning-formatted-number>-<lightning-formatted-number
+                                                    value={orderItemToEdit.maxDiscount} format-style="currency"
+                                                    minimum-fraction-digits="0" currency-code={orderCurrency}
+                                                    currency-display-as="symbol"></lightning-formatted-number>]
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div>
+                                        <lightning-textarea variant="label-hidden"
+                                            value={orderItemToEdit.pbe.Product2.Description} onblur={editDescription}
+                                            class='no-input-label' maxlength="250"
+                                            message-when-too-long="Description must not be more than 250 characters."></lightning-textarea>
+                                    </div>
+                                </td>
+                            </tr>
+                            <!--<template if:true={orderItemToEdit} for:each={orderItemToEdit} for:item="prod" for:index="index">
+                                        <tr key={prod.pbe.Product2.Id}>
+                                            <td>
+                                                <div class="slds-truncate">
+                                                    <lightning-formatted-text value={prod.pbe.Product2.ProductCode}></lightning-formatted-text>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="slds-truncate">
+                                                    <lightning-formatted-url value={prod.pbe.Product2.Id} onclick={prodURL} data-index={index} label={prod.pbe.Product2.Name} target="_blank"></lightning-formatted-url>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <lightning-formatted-text value={prod.pbe.Product2.QuantityUnitOfMeasure}></lightning-formatted-text>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    {prod.stock}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <lightning-input type="number" formatter="currency" value={prod.pbe.UnitPrice} step=".0001" onchange={handleUnitPrice} data-index={index} class={prod.UnitPriceClass} variant="label-hidden"></lightning-input>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <lightning-input type="number" value={prod.quantity} onchange={handleQuantity} data-index={index} data-prodid={prod.pbe.Product2.Id} step=".01" variant="label-hidden" class={prod.quantityClass}></lightning-input>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <lightning-combobox class='no-input-lable' value={prod.discountPlan} options={prod.CurrentDiscounts} onchange={handleDiscPlan} data-index={index} data-prodid={prod.pbe.Product2.Id}></lightning-combobox>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div class="slds-grid">
+                                                    <lightning-input type="number" value={prod.discountPercent} onchange={handleDiscount} data-index={index} variant="label-hidden" class={prod.discountClass}></lightning-input>
+                                                    <div class="min-discount">
+                                                        <div if:true={prod.isPercent}>[{prod.minDiscount}-{prod.maxDiscount}]%</div>
+                                                        <div if:false={prod.isPercent}>
+                                                            [<lightning-formatted-number value={prod.minDiscount} format-style="currency" minimum-fraction-digits="0" currency-code={orderCurrency} currency-display-as="symbol"></lightning-formatted-number>-<lightning-formatted-number value={prod.maxDiscount} format-style="currency" minimum-fraction-digits="0" currency-code={orderCurrency} currency-display-as="symbol"></lightning-formatted-number>]
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>
+                                                    <lightning-textarea value={prod.pbe.Product2.Description} data-index={index} onchange={handleDescription} class='no-input-lable'></lightning-textarea>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </template>-->
+                        </tbody>
+                    </table>
+                </div>
+                <footer class="slds-modal__footer text-center">
+                    <lightning-button label="Cancel" variant="neutral" onclick={closeEditModal}
+                        class="mr-2"></lightning-button>
+                    <lightning-button label="Update" variant="brand" onclick={updateOrderItem}></lightning-button>
+                </footer>
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+
+
+</template>

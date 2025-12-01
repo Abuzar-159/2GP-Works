@@ -143,7 +143,7 @@ export default class QuoteConsoleLwc extends LightningElement {
     ShowUndo = false;
     @track Stock_Class;
 
-
+    @track allowDiscount = true;
     @track QuoteandLineItemsHeading = QuoteandLineItems;
     @track QuoteLookupLabel = QuoteLookup;
     @track Quote_NameLabel = Quote_Name;
@@ -522,14 +522,44 @@ export default class QuoteConsoleLwc extends LightningElement {
         console.log('', this.spinner);
     }
 
-    quoteSelection(event) {
-        console.log('inside quoteSelection');
-        if (this.quoteLineToDelete.length == 0) {
-            this.quote.Id = event.detail.Id;
-            if (!this.isFromDraftSave && !this.frombackbutton) this.fetchLineFromQuote(this.quote.Id);
-        }
+    // quoteSelection(event) {
+    //     console.log('inside quoteSelection');
+    //     if (this.quoteLineToDelete.length == 0) {
+    //         this.quote.Id = event.detail.Id;
+    //         if (!this.isFromDraftSave && !this.frombackbutton) this.fetchLineFromQuote(this.quote.Id);
+    //     }
 
+    // }
+
+    quoteSelection(event) {
+    console.log('inside quoteSelection');
+
+    if (this.quoteLineToDelete.length === 0) {
+        this.quote.Id = event.detail.Id;
+
+        if (!this.isFromDraftSave && !this.frombackbutton) {
+
+            this.fetchLineFromQuote(this.quote.Id)
+                .then(lines => {
+
+                    // Restore selectedProducts
+                    this.selectedProducts = lines;
+
+                    // Restore DISCOUNT % to UI
+                    if (lines && lines.length > 0) {
+                        this.discountPercent = lines[0].discountPercent || 0;
+                    } else {
+                        this.discountPercent = 0;
+                    }
+
+                })
+                .catch(error => {
+                    console.log('Error in quoteSelection fetch:', error);
+                });
+        }
     }
+}
+
 
     fetchLineFromQuote(quoteId) {
         console.log('inside fetchLineFromQuote ---------->');
@@ -537,9 +567,10 @@ export default class QuoteConsoleLwc extends LightningElement {
         try {
             //if(!this.quoteLineToDelete.length > 0){
             this.spinner = true;
-            fetchQuoteLine({
-                quoteId: quoteId,
-            })
+            // fetchQuoteLine({
+            //     quoteId: quoteId,
+            // })
+            return fetchQuoteLine({ quoteId: quoteId })
                 .then(result => {
                     console.log('result of fetchQuoteLine:', result);
                     if (result.errorMsg != '') {
@@ -548,6 +579,7 @@ export default class QuoteConsoleLwc extends LightningElement {
                     }
                     this.quote = result.quote;
                     this.quote.opportunities__c = result.quote.opportunities__c;
+                     this.discountPercent = result.quote.Discount_Percentage__c || 0;
                     //added now
                     if (this.quote.Id != null && this.changedStatus != null) this.quote.Status__c = this.changedStatus; this.discountPercent = result.quote.Discount_Percentage__c; this.quote.opportunities__c = result.quote.opportunities__c;
                     if (!this.isMultiCurrency) this.quote.CurrencyIsoCode = this.allCurrencies[0].value;
@@ -557,6 +589,7 @@ export default class QuoteConsoleLwc extends LightningElement {
                         taxMap.set(result.taxMap[i].Id, result.taxMap[i]);
                     }
                     console.log('taxMap:', JSON.parse(JSON.stringify(taxMap)));
+                                    this.selectedProducts = [];
 
                     let i = 0;
 
@@ -729,7 +762,9 @@ export default class QuoteConsoleLwc extends LightningElement {
                     this.spinner = false;
 
                     console.log('fetchLineFromQuote Quoteline items List :~>', JSON.stringify(this.selectedProducts));
+                    this.calculateQuoteTotals();
 
+                    return this.selectedProducts;
                 })
                 .catch(error => {
                     this.spinner = false;
@@ -747,6 +782,19 @@ export default class QuoteConsoleLwc extends LightningElement {
 
         } catch (e) { console.log('Error:', e); }
     }
+//Added by abuzar on 20-11-2025 for whole quote discount calculation
+    calculateQuoteTotals() {
+        console.log('AZ In calculateQuoteTotals ');
+        
+    let total = 0;
+
+    this.selectedProducts.forEach(p => {
+        total += parseFloat(p.GrossAmount || 0);
+    });
+
+    this.quoteAmountBeforeDiscount = total;
+    this.applyWholeQuoteDiscountCalc();
+}
     quoteRemove() {
         try {
             //eval("$A.get('e.force:refreshView').fire();");
@@ -1318,29 +1366,160 @@ export default class QuoteConsoleLwc extends LightningElement {
     }
 
     discountPercent = 0;
-    handleDiscountQuote(event) {
-        try {
-            let discount = event.currentTarget.value != '' ? parseFloat(event.currentTarget.value) : '';
-            console.log('discount Quote:', discount);
-            if (discount > 0) this.allowDiscount = true;
-            if (discount == '' || discount < 0 || discount == 0) {
-                this.allowDiscount = false; this.discountPercent = 0;
-            }
-            if (discount && discount !== '') {
-                this.Product_Default_Discount = parseFloat(Product_Default_Discount_Limit);
-                if (discount > parseFloat(Product_Default_Discount_Limit)) {
-                    this.discountPercent = discount === '' ? '' : parseFloat(discount);
-                    this.isDiscountPlanConfirmation = true;
-                } else {
-                    this.discountPercent = discount === '' ? '' : parseFloat(discount);
-                    let selectedprodList = [];
-                    selectedprodList = this.selectedProducts;
-                    for (var i = 0; i < selectedprodList.length; i++) selectedprodList[i].discountPercent = this.discountPercent; this.selectedProducts = selectedprodList; for (var j in this.selectedProducts) this.calculateSelItemsTax(j);
-                }
-            } else { this.discountPercent = discount === '' ? '' : parseFloat(discount); }
-        } catch (e) { console.log('Error:', e); }
-    }
+//    handleDiscountQuote(event) {
+//     try {
+//         let discountRaw = event.currentTarget.value;
+//         let discount = discountRaw !== '' ? parseFloat(discountRaw) : '';
 
+//         console.log('discount Quote:', discount);
+
+//         // 1️⃣ Empty or invalid input → reset
+//         if (discount === '' || isNaN(discount)) {
+//             this.allowDiscount = false;
+//             this.discountPercent = 0;
+//             this.applyWholeQuoteDiscountCalc();
+//             return;
+//         }
+
+//         // 2️⃣ Allow 0%
+//         if (discount === 0) {
+//             this.allowDiscount = true;
+//             this.discountPercent = 0;
+//             this.applyWholeQuoteDiscountCalc();
+//             return;
+//         }
+
+//         // 3️⃣ Enforce limit of 15%
+//         if (discount > 15) {
+//             this.discountPercent = 15;
+//             this.allowDiscount = true;
+
+//             this.applyWholeQuoteDiscountCalc();
+
+//             this.dispatchEvent(
+//                 new ShowToastEvent({
+//                     title: 'Maximum Limit',
+//                     message: 'Quote Discount cannot exceed 15%. It has been reset to 15%.',
+//                     variant: 'warning'
+//                 })
+//             );
+//             return;
+//         }
+
+//         // 4️⃣ For valid discount between 1% and 15%
+//         this.allowDiscount = true;
+//         this.discountPercent = discount;
+
+//         // 5️⃣ Recalculate ONLY quote-level amount
+//         this.applyWholeQuoteDiscountCalc();
+
+//     } catch (e) {
+//         console.log('Error:', e);
+//     }
+// }
+
+    applyWholeQuoteDiscountCalc() {
+    let baseAmount = parseFloat(this.quoteAmountBeforeDiscount || 0);
+    let discPercent = parseFloat(this.discountPercent || 0);
+
+    let discountAmount = (baseAmount * discPercent) / 100;
+    this.quoteFinalAmount = baseAmount - discountAmount;
+
+    // prevent negative display
+    if (this.quoteFinalAmount < 0) {
+        this.quoteFinalAmount = 0;
+    }
+}
+
+
+   // handleDiscountQuote(event) {
+    //     try {
+    //         let discount = event.currentTarget.value != '' ? parseFloat(event.currentTarget.value) : '';
+    //         console.log('discount Quote:', discount);
+    //         if (discount >= 0) this.allowDiscount = true;
+    //         if (discount == '' || discount <= 0 || discount == 0) {
+    //             this.allowDiscount = false; this.discountPercent = 0;
+    //         }
+    //         if (discount && discount !== '') {
+    //             this.Product_Default_Discount = parseFloat(Product_Default_Discount_Limit);
+    //             if (discount > parseFloat(Product_Default_Discount_Limit)) {
+    //                 this.discountPercent = discount === '' ? '' : parseFloat(discount);
+    //                 this.isDiscountPlanConfirmation = true;
+    //             } else {
+    //                 this.discountPercent = discount === '' ? '' : parseFloat(discount);
+    //                 let selectedprodList = [];
+    //                 selectedprodList = this.selectedProducts;
+    //                 for (var i = 0; i < selectedprodList.length; i++) selectedprodList[i].discountPercent = this.discountPercent; this.selectedProducts = selectedprodList; for (var j in this.selectedProducts) this.calculateSelItemsTax(j);
+    //             }
+    //         } else { this.discountPercent = discount === '' ? '' : parseFloat(discount); }
+    //     } catch (e) { console.log('Error:', e); }
+    // }
+
+   handleDiscountQuote(event) {
+    try {
+        let discountRaw = event.currentTarget.value;
+        let discount = discountRaw !== '' ? parseFloat(discountRaw) : '';
+
+        console.log('discount Quote:', discount);
+
+        // Case 1: Empty input → reset discount
+        if (discount === '' || isNaN(discount)) {
+            this.allowDiscount = false;
+            this.discountPercent = 0;
+            this.applyWholeQuoteDiscountCalc();
+
+            return;
+        }
+
+        // Case 2: Discount = 0 → allow it
+        if (discount === 0) {
+            this.allowDiscount = true;
+            this.discountPercent = 0;
+                        this.applyWholeQuoteDiscountCalc();
+
+
+            // Update all selected products discount = 0
+            // this.selectedProducts = this.selectedProducts.map(p => {
+            //     p.discountPercent = 0;
+                return ;
+            // });
+            return;
+        }
+
+        // Case 3: Positive discount
+        if (discount > 0) {
+            this.allowDiscount = true;
+            this.applyWholeQuoteDiscountCalc();
+
+            this.Product_Default_Discount = parseFloat(Product_Default_Discount_Limit);
+
+            // Case 3A: Exceeds default limit → show confirmation
+            if (discount > this.Product_Default_Discount) {
+                this.discountPercent = discount;
+                this.isDiscountPlanConfirmation = true;
+                this.applyWholeQuoteDiscountCalc();
+
+            }
+            // Case 3B: Within allowed limit
+            else {
+                this.allowDiscount = true;
+                this.discountPercent = discount;
+                // this.selectedProducts = this.selectedProducts.map(p => {
+                    //p.discountPercent = discount;
+                    this.applyWholeQuoteDiscountCalc();
+
+                    return ;
+                // });
+
+                // for (let j in this.selectedProducts) {
+                //     this.calculateSelItemsTax(j);
+                // }
+            }
+        }
+    } catch (e) {
+        console.log('Error:', e);
+    }
+}
 
     handleDiscPlanSel(index, discountPlan) {//event
         try {
@@ -2092,45 +2271,109 @@ export default class QuoteConsoleLwc extends LightningElement {
                 console.log('this.quote:', JSON.stringify(this.quote));
                 console.log('quoteLines:', JSON.stringify(quoteLines));
                 console.log('this.quoteLineToDelete:', this.quoteLineToDelete);
+                // Added by Abuzar to handke the quote discount percentage in the field recommender discount
+                // this.quote.Recommended_Discount__c = (this.discountPercent ?? 0);
+                    // *********** SET Recommended Discount ***********
+                    this.quote.Recommended_Discount__c =
+                        this.discountPercent !== null && this.discountPercent !== undefined
+                            ? this.discountPercent
+                            : 0;
+
 
                 draftQuoteSave({
                     quote: JSON.stringify(this.quote),
                     quoteLines: JSON.stringify(quoteLines),
                     quoteLinesIdToDel: JSON.stringify(this.quoteLineToDelete)
                 })
-                    .then(result => {
-                        console.log('result of draftQuoteSave:', JSON.stringify(result));
-                        this.spinner = false;
-                        if (result.includes('Line:')) {
-                            this.errorList = Object.assign([], this.errorList);
-                            if (result.includes('Some quote line Items require approvals')) {
-                                if (!this.errorList.includes('Some quote line Items require approvals')) this.errorList.push('Some quote line Items require approvals');
-                            } else {
-                                if (!this.errorList.includes(result)) this.errorList.push(result);
-                            }
-                        } else {
-                            /**
-                             * Here not setting the selectedProducts Line Id, because Quote line have same products multiple times.
-                             */
-                            this.isFromDraftSave = true;
-                            if (!this.isMultiCurrency) this.quote.CurrencyIsoCode = this.allCurrencies[0].value;
-                            let qt = JSON.parse(result);
-                            this.quote.Id = qt[0].Id;
-                            this.fetchLineFromQuote(this.quote.Id);
-                            this.quoteLineToDelete = [];
-                            // const event = new ShowToastEvent({
-                            //     variant: 'success',
-                            //     message: 'Quote Saved Successfully',
-                            // });
-                            // this.dispatchEvent(event);
+                    // .then(result => {
+                    //     console.log('result of draftQuoteSave:', JSON.stringify(result));
+                    //     this.spinner = false;
+                    //     if (result.includes('Line:')) {
+                    //         this.errorList = Object.assign([], this.errorList);
+                    //         if (result.includes('Some quote line Items require approvals')) {
+                    //             if (!this.errorList.includes('Some quote line Items require approvals')) this.errorList.push('Some quote line Items require approvals');
+                    //         } else {
+                    //             if (!this.errorList.includes(result)) this.errorList.push(result);
+                    //         }
+                    //     } else {
+                    //         /**
+                    //          * Here not setting the selectedProducts Line Id, because Quote line have same products multiple times.
+                    //          */
+                    //         this.isFromDraftSave = true;
+                    //         if (!this.isMultiCurrency) this.quote.CurrencyIsoCode = this.allCurrencies[0].value;
+                    //         let qt = JSON.parse(result);
+                    //         this.quote.Id = qt[0].Id;
+                    //        //Commented by abuzar to prevent resetting of lines after save
+                    //         // this.fetchLineFromQuote(this.quote.Id);
+                    //         // this.quoteLineToDelete = [];
 
-                            this.visible = true;
-                            let timer = window.setTimeout(() => {
-                                this.visible = false;
-                                window.clearTimeout(timer)
-                            }, 1750)
-                        }
-                    })
+                    //         this.fetchLineFromQuote(this.quote.Id)
+                    //             .then((lines) => {
+                    //                 // Restore selected products
+                    //                 this.selectedProducts = lines;
+
+                    //                 // Restore discountPercent into UI (from the first line or whole quote)
+                    //                 if (lines && lines.length > 0) {
+                    //                     this.discountPercent = lines[0].Discount_Percent__c || 0;
+                    //                 } else {
+                    //                     this.discountPercent = 0;
+                    //                 }
+                    //             });
+
+                    //                  this.quoteLineToDelete = [];
+                    //         // const event = new ShowToastEvent({
+                    //         //     variant: 'success',
+                    //         //     message: 'Quote Saved Successfully',
+                    //         // });
+                    //         // this.dispatchEvent(event);
+
+                    //         this.visible = true;
+                    //         let timer = window.setTimeout(() => {
+                    //             this.visible = false;
+                    //             window.clearTimeout(timer)
+                    //         }, 1750)
+                    //     }
+                    // })
+
+                    .then(result => {
+    console.log('result of draftQuoteSave:', JSON.stringify(result));
+    this.spinner = false;
+
+    if (result.includes('Line:')) {
+        // Error Handling
+        this.errorList = Object.assign([], this.errorList);
+        if (result.includes('Some quote line Items require approvals')) {
+            if (!this.errorList.includes('Some quote line Items require approvals'))
+                this.errorList.push('Some quote line Items require approvals');
+        } else {
+            if (!this.errorList.includes(result)) this.errorList.push(result);
+        }
+    } else {
+
+        this.isFromDraftSave = true;
+        if (!this.isMultiCurrency) this.quote.CurrencyIsoCode = this.allCurrencies[0].value;
+
+        let qt = JSON.parse(result);
+        this.quote.Id = qt[0].Id;
+
+        // *********** FIX ADDED HERE ***********
+        this.fetchLineFromQuote(this.quote.Id)
+    .then(lines => {
+        this.selectedProducts = lines;
+        this.discountPercent = lines.length ? lines[0].discountPercent : 0;
+    });
+
+        // Reset deletion list
+        this.quoteLineToDelete = [];
+
+        this.visible = true;
+        let timer = window.setTimeout(() => {
+            this.visible = false;
+            window.clearTimeout(timer)
+        }, 1750)
+    }
+})
+
                     .catch(error => {
                         this.spinner = false;
                         console.log('Error:', error);

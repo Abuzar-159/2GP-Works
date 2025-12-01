@@ -1,0 +1,134 @@
+<template>
+    <template if:true={isLoading}>
+    <lightning-spinner alternative-text="Loading invoices"></lightning-spinner>
+</template>
+
+<template if:true={errorMessage}>
+    <div class="slds-text-color_error slds-m-top_small">{errorMessage}</div>
+</template>
+
+                    <section class="modern-card slds-p-around_small">
+
+                        <!-- Header -->
+                       <div class="slds-grid slds-grid_vertical-align-center">
+                            <lightning-icon 
+                                icon-name="custom:custom62" 
+                                size="small" 
+                                class="slds-m-right_small">
+                            </lightning-icon>
+
+                            <h2>Search Invoices</h2>
+                        </div>
+
+
+                        <!-- Body -->
+                        <div class="slds-card__body slds-p-around_medium">
+
+                            <!-- Search row -->
+                            <div
+                                class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center slds-m-bottom_medium">
+
+                                <div class="slds-col slds-grow">
+                                    <div class="slds-form-element">
+                                        <label class="slds-form-element__label" for="invoiceSearch">
+                                            Search
+                                        </label>
+                                        <div class="slds-form-element__control">
+                                            <div
+                                                class="slds-input-has-icon slds-input-has-icon_right invoice-search-wrapper">
+                                                <lightning-icon icon-name="utility:search" size="x-small"
+                                                    class="slds-input__icon slds-input__icon_right">
+                                                </lightning-icon>
+                                                <input id="invoiceSearch" type="text" class="slds-input"
+                                                        placeholder="Search by Invoice No / Name.." 
+                                                        oninput={handleSearch}/>
+
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="slds-col slds-no-flex slds-m-left_medium">
+                                    <button type="button"
+                                            class="slds-button slds-button_brand"
+                                            onclick={createInvoice}>Create Invoice</button>
+                                </div>
+                            </div>
+
+                            <!-- Table -->
+                            <div class="slds-scrollable_x">
+                                <table class="slds-table slds-table_bordered modern-table">
+                                    <thead>
+                                        <tr class="slds-text-title_caps">
+                                            <th scope="col">#</th>
+                                            <th scope="col">Invoice No</th>
+                                            <th scope="col">Order</th>
+                                            <th scope="col">Customer Account</th>
+                                            <th scope="col">Contact</th>
+                                            <th scope="col">Company</th>
+                                            <th scope="col">Invoice Date</th>
+                                            <th scope="col">Invoice Due Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <template if:true={hasInvoices}>
+                                            <template for:each={invoices} for:item="inv" for:index="index">
+                                                <tr key={inv.Id} data-id={inv.Id} data-orderid={inv.OrderId} data-accountid={inv.AccountId} data-contactid={inv.ContactId} data-companyid={inv.CompanyId}>
+
+                                                   <td>{inv.RowNumber}</td>
+                                                    <td><a onclick={navigateToInvoice}>{inv.InvoiceNumber}</a></td>
+                                                    <td><a onclick={navigateToOrder}>{inv.OrderNumber}</a></td>
+                                                    <td><a onclick={navigateToAccount}>{inv.AccountName}</a></td>
+                                                    <td><a onclick={navigateToContact}>{inv.ContactName}</a></td>
+                                                    <td><a onclick={navigateToCompany}>{inv.CompanyName}</a></td>
+                                                    <td>{inv.InvoiceDate}</td>
+                                                    <td>{inv.DueDate}</td>
+                                                </tr>
+                                            </template>
+                                        </template>
+
+                                        <template if:false={invoices}>
+                                            <tr>
+                                                <td colspan="8" style="text-align:center;">No invoices found</td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                                <div class="slds-m-top_medium slds-grid slds-grid_align-end">
+                                    <ul class="slds-pagination slds-list_horizontal slds-p-horizontal_x-small" role="navigation" aria-label="Pagination">
+                                                
+                                        <li class="slds-pagination__item slds-pagination__count slds-p-horizontal_small slds-p-top_xx-small">
+                                            <span>Page {pageNumber} of {totalPages}</span>
+                                        </li>
+                                        <li class="slds-pagination__item">
+                                            <lightning-button-icon
+                                                class="slds-m-right_small"
+                                                icon-name="utility:chevronleft"
+                                                variant="border-filled"
+                                                alternative-text="Previous page"
+                                                title="Previous"
+                                                onclick={handlePrev}
+                                                disabled={disablePrev}>
+                                            </lightning-button-icon>
+                                        </li>
+
+
+                                        <li class="slds-pagination__item">
+                                            <lightning-button-icon
+                                                icon-name="utility:chevronright"
+                                                variant="border-filled"
+                                                alternative-text="Next page"
+                                                title="Next"
+                                                onclick={handleNext}
+                                                disabled={disableNext}>
+                                            </lightning-button-icon>
+                                        </li>
+
+                                    </ul>
+                                </div>
+
+
+                            </div>
+                        </div>
+                    </section>
+</template>

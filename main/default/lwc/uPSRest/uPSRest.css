@@ -1,0 +1,23 @@
+.slds-form-element__label {
+		color: #080707;
+}
+
+.blue{
+    color :#0ab2e9;
+    cursor: pointer;
+}
+.button-getrates{
+    background-color: #0070d2;
+    color: #ffffff;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 14px;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.button-getrates:hover {
+    background-color: #005fb2;
+}

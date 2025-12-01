@@ -1,0 +1,624 @@
+<aura:component controller="CreateInvoice" implements="lightning:actionOverride,force:hasRecordId,force:hasSObjectName,flexipage:availableForAllPageTypes" access="global">
+
+    <ltng:require styles="{!join(',',
+                          $Resource.bootStrap +'/css/bootstrap-4.1.css',
+                          $Resource.SLDS +'/assets/styles/salesforce-lightning-design-system-vf.css',
+                          $Resource.SLDS +'/assets/styles/salesforce-lightning-design-system-vf.min.css',
+                          $Resource.PickPackShipResource +'/assets/styles/font-awesome.css')}" />
+    <ltng:require styles="{!join(',',$Resource.SLDS + '/assets/styles/salesforce-lightning-design-system-vf.css')}"  />
+    <ltng:require styles="/resource/CMP_CSS/CSS/createinvoice.css"/>
+    <ltng:require styles="/resource/CMP_CSS/CSS/global-axolt.css"/>
+
+    <aura:handler name="init" value="{!this}" action="{!c.doInit}"/>
+    <aura:method name="getinvoiceLI" action="{!c.getinvoiceLI}"></aura:method>
+    <aura:attribute name="invrecordId" type="String"/>
+    <aura:attribute name="fromProject" type="Boolean" default="false"/>
+    <aura:attribute name="ProjId" type="String" default=""/>
+    <aura:attribute name="today" type="Date"/>
+    <aura:attribute name="invoiceFields" type="List"/>
+    <aura:attribute name="subTotalPrice" type="Decimal" default='0.00'/>
+    <aura:attribute name="ordAmount" type="Decimal" default='0.00'/>
+    <aura:attribute name="AmountPaid" type="Decimal" default='0.00'/>
+    <aura:attribute name="PaidAmountApplied" type="Decimal" default='0.00'/>
+    <aura:attribute name="InvAmount" type="Decimal" default='0.00'/>
+    <aura:attribute name="callToupdatePrice" type="Decimal" default="1"/>
+    <aura:handler name="change" value="{!v.callToupdatePrice}" action="{!c.updateTotalPrice}"/>
+    <aura:attribute name="Invoice" type="Map" default=""/>
+    <aura:attribute name="INVLIList" type="List" />
+    <aura:attribute name="schInvoiceList" type="Object[]" default="[]"/>
+    <aura:attribute name="advanceInvoiceList" type="Object[]" default="[]"/>
+    <aura:attribute name="actualInvLIIndex" type="List" />
+    <aura:attribute name="selectedCount" type="integer" default="0"/>
+
+    <aura:attribute name="subTotal" type="Decimal" default="0.00"/>
+    <aura:attribute name="orderAmount" type="Decimal" default="0.00"/>
+    <aura:attribute name="invTax" type="Decimal" default="0.00"/>
+    <aura:attribute name="schInvAmount" type="Decimal" default="0.00"/>
+    <aura:attribute name="schInvCreditAmount" type="Decimal" default="0.00"/>
+    <aura:attribute name="schInvPaidApplied" type="Decimal" default="0.00"/>
+    <aura:attribute name="invLineSubTotal" type="Decimal" default="0.00"/>
+    <aura:attribute name="taxAmount" type="Decimal" default="0.00"/>
+    <aura:attribute name="actualInvLI" type="List" />
+    <aura:attribute name="InvoiceRTList" type="List" default=""/>
+    <!--aura:handler name="change" value="{!v.Invoice.Order__c}" action="{!c.fetchInvoiceLineItems}"/-->
+    <aura:attribute name="showTabs" type="String" default="cus"/>
+    <aura:attribute name="Organisation" type="Map" default="{}"/>
+    <aura:attribute name="AccountId" type="String" default=""/>
+    <aura:attribute name="OrgId" type="String" default=""/>
+    <aura:attribute name="seBool" type="Boolean" default="false"/>
+    <aura:attribute name="FromAR" type="Boolean" default="false"/>
+    <aura:attribute name="FromEPOS" type="Boolean" default="false"/>  <!-- by matheen -->
+    <aura:attribute name="disSchTax" type="Boolean" default="false"/>
+    <aura:attribute name="enableSchTax" type="Boolean" default="false"/>
+    <aura:attribute name="changeTD" type="Boolean" default="false"/>
+    <aura:attribute name="Error" type="Boolean" default="false"/>
+    <aura:attribute name="NDisplay" type="Boolean" default="false"/>
+    <aura:attribute name="saveErrorMsg" type="String" default="Please fill out all * fields"/>
+    <aura:attribute name="SOId" type="String" />
+    <aura:attribute name="SO_Id" type="String" default=""/>
+    <aura:attribute name="StdId" type="String" default=""/>
+    <aura:attribute name="Std_Id" type="String" default=""/>
+    <aura:attribute name="selectedrecordTypeMap" type="Map" default="{'RecordTypeId':'','DeveloperName':''}"/>
+    <aura:attribute name="ILIRerender" type="Boolean" default="true"/>
+    <aura:attribute name="showToast" type="Boolean" default="false"/>
+    <aura:attribute name="enableShippingAmount" type="Boolean" default="True"/>
+    <aura:attribute name="enableShipping" type="Boolean" default="True"/>
+    <aura:attribute name="displayPaid" type="Boolean" default="True"/>
+    <aura:attribute name="message" type="String"/>
+    <aura:attribute name="totalTax" type="Decimal"/>
+    <aura:attribute name="salesorder" type="Object" />
+    <aura:attribute name="defaultValues" type="Object" />
+    <aura:attribute name="TDPayment" type="Integer" default="0"/>
+    <aura:attribute name="showMmainSpin" type="Boolean" default="false"/>
+    <aura:attribute name="allChecked" type="Boolean" default="false"/>
+    <aura:attribute name="doneShowAdvanceAppliedAmount" type="Boolean" default="false"/>
+    <aura:attribute name="advancePaymentPaidAmount" type="Decimal" default="0.00"/>
+    <aura:attribute name="TotalPaidAmountApplied" type="Decimal" default="0.00"/>
+    <aura:attribute name="disableSubTotal" type="Boolean" default="false"/>
+    <aura:attribute name="downPaymentAmount" type="integer" default="0"/>
+    <aura:attribute name="downPaymentPercentage" type="integer" default="0"/>
+    <aura:attribute name="NewInvoice" type="Invoice__c" default="{sobjectType:'Invoice__c'}" access="global"/>
+
+    <lightning:workspaceAPI aura:id="workspace"/>
+
+    <div class=" createinvoice-class1" aura:id="body">
+        <div class=" slds-container--fluid">
+            <aura:if isTrue="{!v.showToast}">
+                <div class="maq-only">
+                    <div class="slds-notify_container slds-is-fixed">
+                        <div class="slds-notify slds-notify_toast slds-theme--warning" role="alert">
+                            <span class="slds-icon_container slds-icon-utility-warning slds-m-right_small slds-no-flex slds-align-top" title="">
+                                <lightning:icon iconName="utility:warning" variant="inverse" size="x-small" alternativeText="info" title="info" />
+                            </span>
+                            <div class="slds-notify__content createinvoice-class2">
+                                <h2 class="slds-text-heading_small ">{!v.message}</h2>
+                            </div>
+
+                            <div class="slds-notify__content createinvoice-class3">
+                                <button class="slds-button slds-button_icon slds-notify__close slds-button_icon-inverse slds-p-top_xx-small" title="Close"
+                                        >
+                                    <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="{!$Label.c.Close_ProjectScheduler}" title="close" onclick="{!c.closePopup}"/>
+                                    <span class="slds-assistive-text">{!$Label.c.Close_ProjectScheduler}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </aura:if>
+            <aura:if isTrue="{!and(v.InvoiceRTList.length>1,empty(v.selectedrecordTypeMap.DeveloperName))}">
+               <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true" aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container">
+
+                        <!-- Header -->
+                        <header class="slds-modal__header">
+                            <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                                    title="Close" onclick="{!c.CancelCalled}">
+                                <lightning:icon iconName="utility:close" variant="inverse" size="x-small" alternativeText="close"/>
+                                <span class="slds-assistive-text">{!$Label.c.Close_ProjectScheduler}</span>
+                            </button>
+                            <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">
+                                New Invoice
+                            </h2>
+                        </header>
+
+                        <!-- Content -->
+                        <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                            <aura:if isTrue="{!not(empty(v.InvoiceRTList))}">
+                                <div class="slds-grid slds-wrap slds-gutters slds-p-around_medium">
+                                    <aura:iteration items="{!v.InvoiceRTList}" var="item" indexVar="idx">
+                                    <div class="slds-grid slds-nowrap slds-p-around_medium box-row" style="border-radius: 0;">
+                                        <div 
+                                            id="{!'card_' + idx}"
+                                            class="slds-box box-tile"
+                                            onclick="{!c.selectRecordType}"
+                                            data-index="{!idx}">
+                                            
+                                            <div class="slds-grid slds-grid_align-start slds-grid_vertical-align-center slds-gutters_small">
+                                                <div class="slds-col slds-size_1-of-1 slds-text-align_left icon-label-container">
+                                                    <i class="fa fa-file-text-o"></i>
+                                                    <p class="slds-text-heading_small slds-truncate" title="{!item.label}">
+                                                        {!item.label}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </aura:iteration>
+
+                                </div>
+                            </aura:if>
+                        </div>
+
+                        <!-- Footer -->
+                        <footer class="slds-modal__footer createinvoice-class4">
+                            <lightning:button label="{!$Label.c.Cancel_ManageLeave}" onclick="{!c.CancelCalled}"/>
+                            <aura:if isTrue="{!v.NDisplay}">
+                                <lightning:button label="{!$Label.c.Next_UsersShiftMatch}" onclick="{!c.next}" variant="brand"/>
+                            </aura:if>
+                        </footer>
+
+                    </div>
+                </section>
+
+                
+                <div class="slds-backdrop slds-backdrop_open"></div>
+                <aura:set attribute="else">
+                    <aura:if isTrue="true">
+                        <div class="slds-page-header">
+                            <div class="slds-grid">
+                                <div class="slds-col slds-has-flexi-truncate">
+                                    <div class="slds-media slds-no-space slds-grow">
+                                        <div class="slds-media__figure">
+                                            <lightning:icon iconName="standard:work_plan" variant="inverse" size="medium" alternativeText="close" title="close" />
+                                        </div>
+                                        <div class="slds-media__body">
+                                            <span class="slds-text-title--caps slds-line-height--reset">{!$Label.c.Transfer_Order_Create}</span>
+                                            <div class="slds-page-header__title slds-m-right--small slds-align-middle slds-truncate" title="">
+                                                <aura:if isTrue="{!not(empty(v.selectedrecordTypeMap.DeveloperName))}">
+                                                    <aura:if isTrue="{!v.selectedrecordTypeMap.DeveloperName == 'Advance'}">
+                                                        {!$Label.c.AdvanceInvoice}
+                                                        <aura:set attribute="else">
+                                                            <aura:if isTrue="{!v.selectedrecordTypeMap.DeveloperName == 'Sale'}">
+                                                                Sales Invoice
+                                                                <aura:set attribute="else">
+                                                                    <aura:if isTrue="{!v.selectedrecordTypeMap.DeveloperName == 'Credit_Invoice'}">
+                                                                        Credit Invoice
+                                                                        <aura:set attribute="else">
+                                                                            <aura:if isTrue="{!v.selectedrecordTypeMap.DeveloperName == 'Schedule_Invoice'}">
+                                                                                Schedule Invoice
+                                                                                <aura:set attribute="else">
+                                                                                    <aura:if isTrue="{!v.selectedrecordTypeMap.DeveloperName == 'Prepayment'}">
+                                                                                        Pre Payment Invoice
+                                                                                        <aura:set attribute="else">
+                                                                                            <aura:if isTrue="{!v.selectedrecordTypeMap.DeveloperName == 'Return_Invoice'}">
+                                                                                                Return Invoice
+                                                                                                <aura:set attribute="else">
+                                                                                                    Invoice
+                                                                                                </aura:set>
+                                                                                            </aura:if>
+                                                                                        </aura:set>
+                                                                                    </aura:if>
+                                                                                </aura:set>
+                                                                            </aura:if>
+                                                                        </aura:set>
+                                                                    </aura:if>
+                                                                </aura:set>
+                                                            </aura:if>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                    <aura:set attribute="else">Invoice</aura:set>
+                                                </aura:if>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="slds-col slds-no-flex slds-grid slds-align-top">
+                                </div>
+                            </div>
+                        </div>
+                    </aura:if>
+
+                    <div class="erp_Mark7 createinvoice-class5 bg-white">
+                        <lightning:recordEditForm aura:id="invoiceEditForm"
+                                                  recordId="{!v.invrecordId}"
+                                                  onload="{!c.setDefaultValues}"
+                                                  onsuccess="{!c.handleInvoiceSuccess}"
+                                                  objectApiName="Invoice__c">
+                            <lightning:messages />
+                            <lightning:layout multipleRows="true">
+                                <lightning:layoutItem size="12">
+
+                                    <lightning:layout multipleRows="true">
+
+                                        <aura:iteration items="{!v.invoiceFields}" var="item" end="12">
+                                            <aura:if isTrue="{!not(and(equals(v.selectedrecordTypeMap.DeveloperName,'On_Account_Payment'),equals(item,'Order__c')))}">
+                                                <lightning:layoutItem size="3" padding="horizontal--small">
+                                                    <lightning:inputField fieldName="{!item}" aura:id="inv_input_field" onchange="{!c.onchangeInvoiceField}"/>
+                                                </lightning:layoutItem>
+                                            </aura:if>
+                                        </aura:iteration>
+                                    </lightning:layout>
+                                </lightning:layoutItem>
+                                <lightning:layoutItem size="12">
+                                    <div class="createinvoice-class6">
+                                        <table class="slds-table slds-table--bordered slds-table_cell-buffer">
+                                            <thead>
+
+                                                <aura:if isTrue="{!equals(v.selectedrecordTypeMap.DeveloperName,'On_Account_Payment')}">
+                                                    <tr>
+                                                        <th class="slds-text-heading--label" scope="col" width="70%">{!$Label.c.ContractConsole_Description} </th>
+                                                        <th class="slds-text-heading--label" scope="col" width="10%">Tax<span class="createinvoice-class7">*</span></th>
+                                                        <th class="slds-text-heading--label" scope="col" width="10%">Price<span class="createinvoice-class7">*</span></th>
+
+                                                    </tr>
+                                                    <aura:set attribute="else">
+                                                        <aura:if isTrue="{!and(not(empty(v.selectedrecordTypeMap.DeveloperName)),v.INVLIList.length eq 0)}">
+                                                            <div class="slds-notify_container slds-is-relative" aura:id="criteriaMsgId">
+                                                                <div class="slds-notify slds-notify_toast slds-theme_warning" role="alert">
+                                                                    <span class="slds-assistive-text">{!$Label.c.warning_New}</span>
+                                                                    <lightning:icon iconName="utility:warning" size="small" alternativeText="{!$Label.c.warning_New}"/>
+                                                                    <div class="slds-notify__content">
+                                                                        <span class="slds-text-heading_small slds-p-left_small">
+                                                                            Invoice is Already Created
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div class="slds-text-align--center slds-p-around--medium">
+                                                                <input type="button" value="Cancel" class="slds-button slds-button_neutral" onclick="{!c.CancelCalled}"/>
+                                                            </div>
+
+                                                        </aura:if>
+
+                                                        <aura:if isTrue="{!v.INVLIList.length>0}">
+                                                            <tr>
+                                                                <th class="slds-text-heading--label" scope="col">
+                                                                    <aura:if isTrue="false">
+                                                                        <lightning:button label="{!$Label.c.Add_ManageLeave}" class="slds-button slds-button--neutral" onclick="{!c.addInvoiceLineItem}" title="Add Invoice Line Item" />
+                                                                    </aura:if>
+                                                                </th>
+                                                                <th><lightning:input type="checkbox" variant="label-hidden" aura:id="select" value="" onchange="{!c.getallinvoiceLI}"/></th>
+                                                                <th class="slds-text-heading--label" scope="col"><aura:if isTrue="{!v.SOId != ''}">Order Product<aura:set attribute="else">{!$Label.c.Order_RMA}</aura:set></aura:if></th>
+                                                                <th class="slds-text-heading--label" scope="col">{!$Label.c.AddSubscription_Product} </th>
+                                                                <th class="slds-text-heading--label" scope="col">{!$Label.c.PackageSlip_List_Quantity}<span class="createinvoice-class7">*</span></th>
+                                                                <th class="slds-text-heading--label" scope="col">{!$Label.c.PurchaseOrderPDF_Unit_Price}</th>
+                                                                <th class="slds-text-heading--label" scope="col">Sub Total Price</th>
+                                                                <th class="slds-text-heading--label" scope="col">{!$Label.c.Tax}</th>
+                                                                <th class="slds-text-heading--label" scope="col">{!$Label.c.Add_Subscription_Discount}</th>
+                                                                <th class="slds-text-heading--label" scope="col">{!$Label.c.InventoryConsole_Total_Price}</th>
+                                                                <th class="slds-text-heading--label" scope="col">Description</th>
+                                                            </tr>
+                                                        </aura:if>
+                                                    </aura:set>
+                                                </aura:if>
+                                            </thead>
+                                            <aura:if isTrue="{!v.INVLIList.length>0}">
+                                                <tbody>
+                                                    <aura:if isTrue="{!equals(v.selectedrecordTypeMap.DeveloperName,'On_Account_Payment')}">
+                                                        <aura:iteration items="{!v.INVLIList}" var="i" indexVar="Index">
+                                                            <tr>
+                                                                <td>
+                                                                    <div class="slds-p-top--xx-small">
+                                                                        <lightning:input name="Description__c" aura:id="invli" variant="label-hidden" value="{!''+i.Description__c}" disabled="true"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td >
+                                                                    <div class="slds-p-top--xx-small">
+                                                                        <lightning:input name="tax" required="true" aura:id="invli" type="number" variant="label-hidden" formatter="percent" value="0.00" step="any" max="1" min="0" disabled="true" onchange="{!c.calculateAmount}"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td class="createinvoice-class14">
+                                                                    <div class="slds-p-top--xx-small">
+                                                                        <lightning:input name="Other_Tax__c" aura:id="invli" type="number" variant="label-hidden" formatter="currency" step="any" value="{!i.Other_Tax__c}" readonly="true"/>
+                                                                    </div>
+                                                                </td>
+                                                                <td>
+                                                                    <div class="slds-p-top--xx-small">
+                                                                        <lightning:input name="Sub_Total__c" required="true" aura:id="invli" type="number" variant="label-hidden" formatter="currency" step="any" value="{!i.Sub_Total__c}" disabled="true" onchange="{!c.calculateAmount}"/>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        </aura:iteration>
+                                                        <aura:set attribute="else">
+                                                            <aura:iteration items="{!v.INVLIList}" var="i" indexVar="Index">
+                                                                <tr> <td></td>
+                                                                    <td data-label="Action">
+                                                                        <aura:if isTrue="{!v.allChecked}">
+                                                                            <div class="slds-p-top--xx-small slds-grid">
+                                                                                <lightning:input type="checkbox" variant="label-hidden" aura:id="boxPack" value=""  name="{!Index}" onchange="{!c.getinvoiceLI}" disabled="true" checked="true"/>
+
+                                                                            </div>
+                                                                            <aura:set attribute="else">
+                                                                                <aura:if isTrue="{!equals(v.selectedrecordTypeMap.DeveloperName,'Schedule_Invoice')}">
+                                                                                    <div class="slds-p-top--xx-small slds-grid">
+                                                                                        <lightning:input type="checkbox" variant="label-hidden" aura:id="boxPack" value=""  name="{!Index}" disabled="true" onchange="{!c.getinvoiceLI}"/>
+
+                                                                                    </div>
+                                                                                    <aura:set attribute="else">
+                                                                                        <div class="slds-p-top--xx-small slds-grid">
+                                                                                            <lightning:input type="checkbox" variant="label-hidden" aura:id="boxPack" value=""  name="{!Index}" onchange="{!c.getinvoiceLI}"/>
+
+                                                                                        </div>
+                                                                                    </aura:set>
+                                                                                </aura:if>
+                                                                            </aura:set>
+                                                                        </aura:if>
+                                                                    </td>
+                                                                    <c:InvoiceLineItem invoiceLineItem="{!i}" aura:id="invli" callToupdatePrice="{!v.callToupdatePrice}" subTotalPrice="{!v.subTotalPrice}" totalTax="{!v.totalTax}" SOId="{!v.SOId}" StdId="{!v.StdId}" downPaymentAmount="{!v.downPaymentAmount}"  downPaymentPercentage="{!v.downPaymentPercentage}"/>
+                                                                </tr>
+
+                                                            </aura:iteration>
+                                                        </aura:set>
+                                                    </aura:if>
+                                                </tbody>
+                                            </aura:if>
+                                        </table>
+                                    </div>
+                                </lightning:layoutItem>
+                                <aura:if isTrue="{!v.INVLIList.length>0}">
+                                    <lightning:layoutItem size="12" class="slds-m-bottom_xx-large">
+                                        <lightning:layout multipleRows="true">
+                                            <div class="card overflow-hidden width100pt">
+                                                <div class="card-body cleartfix">
+                                                    <div class="slds-grid slds-wrap width-100pt">
+                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_3-of-12 slds-large-size_3-of-12">
+                                                            <aura:if isTrue="{!and(v.schInvoiceList.length>0,equals(v.selectedrecordTypeMap.DeveloperName,'Schedule_Invoice')) }">
+                                                                <div class="">
+                                                                    <div class="card-content">
+                                                                        <div class="card-body cleartfix">
+                                                                            <div class="media align-items-stretch">
+                                                                                <div class="align-self-center">
+                                                                                    <i class="icon-pencil primary font-large-2 mr-2"></i>
+                                                                                </div>
+                                                                                <div class="media-body">
+                                                                                    <h4>Prior scheduled invoices</h4>
+                                                                                    <span>
+                                                                                        <aura:iteration items="{!v.schInvoiceList}" var="schInvoice" indexVar="Index">
+                                                                                            {!Index+1}.&nbsp;<a href="{!'/'+schInvoice.Id}" target="_blank"><lightning:formattedText value="{!schInvoice.Name+' '}"/></a>with {!schInvoice.Sales_Invoice_Percentage__c}% of Sub Total with {!schInvoice.Sales_Invoice_Percentage__c}% Tax Amount
+                                                                                            <aura:if isTrue="{!and(schInvoice.Credit_Note__c != null,schInvoice.Credit_Note__c != '')}">
+                                                                                                and Credit Note of {!schInvoice.Credit_Note__c}<br/>
+                                                                                                <aura:set attribute="else">
+                                                                                                    <br/>
+                                                                                                </aura:set>
+                                                                                            </aura:if>
+                                                                                        </aura:iteration>
+                                                                                    </span>
+                                                                                </div>
+
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+
+
+                                                            </aura:if>
+                                                            <aura:if isTrue="{!and(v.advanceInvoiceList.length>0,equals(v.selectedrecordTypeMap.DeveloperName,'Schedule_Invoice')) }">
+                                                                <div class="">
+                                                                    <div class="card-content">
+                                                                        <div class="card-body cleartfix">
+                                                                            <div class="media align-items-stretch">
+                                                                                <div class="align-self-center">
+                                                                                    <i class="icon-pencil primary font-large-2 mr-2"></i>
+                                                                                </div>
+                                                                                <div class="media-body">
+                                                                                    <h4>Prior Proforma invoices</h4>
+                                                                                    <span>
+                                                                                        <aura:iteration items="{!v.advanceInvoiceList}" var="schInvoice" indexVar="Index">
+                                                                                            {!Index+1}.&nbsp;<a href="{!'(' + schInvoice.Id + '/'}" target="_blank"><lightning:formattedText value="{!schInvoice.Name+' '}"/></a>with {!schInvoice.Down_Payment__c} % of Down Payment  and  {!schInvoice.Amount_Paid__c} amount paid
+                                                                                            <aura:if isTrue="{!and(schInvoice.Credit_Note__c != null,schInvoice.Credit_Note__c != '')}">
+                                                                                                and Credit Note of {!schInvoice.Credit_Note__c}<br/>
+                                                                                                <aura:set attribute="else">
+                                                                                                    <br/>
+                                                                                                </aura:set>
+                                                                                            </aura:if>
+                                                                                        </aura:iteration>
+                                                                                    </span>
+                                                                                </div>
+
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </aura:if>
+                                                        </div>
+                                                        <div class="slds-col slds-size_1-of-1 slds-medium-size_9-of-12 slds-large-size_9-of-12">
+                                                            <div class="slds-grid slds-wrap">
+                                                                <aura:if isTrue="{!equals(v.selectedrecordTypeMap.DeveloperName,'Schedule_Invoice')}">
+
+                                                                    <lightning:layoutItem size="12" padding="horizontal-small" class="slds-p-top_xx-small"/>
+                                                                    <!--<lightning:layoutItem size="1" class="labellayout" >
+                                                    <label class="slds-form-element__label">Order Amount</label>
+                                                </lightning:layoutItem>-->
+                                                                    <lightning:layoutItem size="3" padding="" class="slds-p-top_xx-small p-cs">
+                                                                        <label class="slds-form-element__label" style="">Order Amount</label>
+                                                                        <lightning:helptext content="Order Amount with Tax." />
+                                                                        <lightning:input aura:id="orderAmount" value="{!v.orderAmount}" type="number" label="Order Amount"  formatter="currency" step="any" disabled="true" variant="label-hidden"/><!-- readonly="{!if(equals(v.selectedrecordTypeMap.DeveloperName,'Sales'),'false','true')}" readonly="true" -->
+                                                                    </lightning:layoutItem>
+                                                                    <!--<lightning:layoutItem size="1" class="labellayout" >
+                                                    <label class="slds-form-element__label"></label>
+                                                </lightning:layoutItem>
+                                                <lightning:layoutItem size="3" padding="horizontal-small" class="slds-p-top_xx-small">
+                                                </lightning:layoutItem>-->
+                                                                    <!--<lightning:layoutItem size="1" class="labellayout" >
+                                                    <label class="slds-form-element__label">Invoice Amount % </label>
+                                                </lightning:layoutItem>-->
+                                                                    <lightning:layoutItem size="3" padding="" class="slds-p-top_xx-small p-cs">
+                                                                        <lightning:inputField fieldName="Sales_Invoice_Percentage__c" aura:id="inv_input_field" class="hideLabel createinvoice-class14"/>
+                                                                        <lightning:input aura:id="downPaymentAmtSales" type="number" label="Invoice Amount %"  formatter="percent-fixed" max="100" min="0" step="any" onchange="{!c.calculateInvoiceAmount}" /><!-- onchange="{!c.calculateDownPaymentPercentag}"   -->
+                                                                    </lightning:layoutItem>
+                                                                </aura:if>
+                                                                <lightning:layoutItem size="3" padding="horizontal-small" class="slds-p-top_xx-small">
+                                                                    <lightning:inputField fieldName="Invoice_Amount__c" aura:id="inv_input_field" label="Total Amount" disabled="true"/>
+                                                                </lightning:layoutItem>
+                                                                <!--<lightning:layoutItem size="1" class="labellayout">
+                                                    <label class="slds-form-element__label">Advance Paid</label>
+                                                </lightning:layoutItem>-->
+                                                                <aura:if isTrue="{!equals(v.selectedrecordTypeMap.DeveloperName,'Schedule_Invoice')}">
+                                                                    <lightning:layoutItem size="3" padding="" class="slds-p-top_xx-small p-cs">
+                                                                        <lightning:inputField fieldName="Amount_Paid__c" aura:id="inv_input_field" label="Advance Paid" disabled="true" /><!-- disabled="true" -->
+                                                                    </lightning:layoutItem>
+
+                                                                    <aura:if isTrue="{!v.disSchTax}">
+                                                                        <!--<lightning:layoutItem size="1" class="labellayout" >
+                                                    <label class="slds-form-element__label">Tax %</label>
+                                                </lightning:layoutItem>-->
+                                                                        <lightning:layoutItem size="3" padding="horizontal-small" class="slds-p-top_xx-small">
+                                                                            <lightning:inputField fieldName="Sales_Invoice_Tax_Percentage__c" aura:id="inv_input_field" class="hideLabel createinvoice-class14" />
+                                                                            <lightning:input aura:id="downPaymentTax" type="number" label="Tax %"   max="100" min="0" step="any" formatter="percent-fixed" onchange="{!c.calculateIvoiceTaxAmount}" disabled="{!(v.enableSchTax == false)}"/><!-- onchange="{!c.calculateDownPaymentAmt}" -->
+                                                                        </lightning:layoutItem>
+                                                                        <lightning:layoutItem size="12" padding="horizontal-small" class="slds-p-top_xx-small"/>
+                                                                        <!--<aura:set attribute="else">
+                                                       <lightning:layoutItem size="1" class="labellayout" >
+                                                            <label class="slds-form-element__label"></label>
+                                                        </lightning:layoutItem>
+                                                        <lightning:layoutItem size="3" padding="horizontal-small" class="slds-p-top_xx-small">
+                                                        </lightning:layoutItem>
+                                                    </aura:set>-->
+                                                                    </aura:if>
+                                                                    <!--<lightning:layoutItem size="1" class="labellayout" >
+                                                    <label class="slds-form-element__label">Sub Total</label>
+                                                </lightning:layoutItem>-->
+                                                                    <lightning:layoutItem size="3" padding="" class="slds-p-top_xx-small p-cs">
+                                                                        <lightning:inputField fieldName="Sub_Total_Amount__c" aura:id="inv_input_field" class=" createinvoice-class14" />
+                                                                        <lightning:input aura:id="subTotalAmount" value="{!v.subTotal}" type="number" label="{!$Label.c.InvoiceSubTotal}"  formatter="currency" step="any" onchange="{!c.updateInvoicePercentage}" disabled="{!and(v.disableSubTotal,equals(v.selectedrecordTypeMap.DeveloperName,'Schedule_Invoice'))}"/><!-- readonly="{!if(equals(v.selectedrecordTypeMap.DeveloperName,'Sales'),'false','true')}" readonly="true" -->
+                                                                    </lightning:layoutItem>
+                                                                </aura:if>
+
+
+                                                                <aura:if isTrue="{!!equals(v.selectedrecordTypeMap.DeveloperName,'On_Account_Payment')}">
+                                                                    <aura:if isTrue="{!v.salesorder.Total_Shipping_Amount__c>0}">
+                                                                        <aura:if isTrue="{!v.enableShippingAmount}">
+                                                                            <lightning:layoutItem size="6" padding="horizontal-small"/>
+                                                                            <lightning:layoutItem size="3" class="slds-p-top_small">
+                                                                                <label class="slds-form-element__label">Shipping Amount</label>
+                                                                                <aura:if isTrue="{!v.actualInvLIIndex.length>0}">
+                                                                                    <aura:if isTrue="{!!and(v.INVLIList.length==1, v.enableShippingAmount)}">
+                                                                                        <lightning:input type="checkbox" variant="label-hidden" aura:id="enableShipping"  checked="{!v.enableShipping}" onchange="{!c.onCheck}"/>
+                                                                                    </aura:if>
+                                                                                </aura:if>
+                                                                            </lightning:layoutItem>
+                                                                            <lightning:layoutItem size="3" padding="horizontal-small">
+                                                                                <lightning:inputField fieldName="Invoice_Shipping_Amount__c" aura:id="inv_input_field" class="hideLabel" disabled="true"/>
+                                                                            </lightning:layoutItem>
+                                                                        </aura:if>
+                                                                    </aura:if>
+                                                                </aura:if>
+
+                                                                <!--<lightning:layoutItem size="1" class="labellayout">
+                                                <label class="slds-form-element__label">Tax</label>
+                                            </lightning:layoutItem>-->
+                                                                <lightning:layoutItem size="3" padding="horizontal-small" class="slds-p-top_xx-small">
+                                                                    <lightning:inputField fieldName="Tax_Amount__c"  label="Tax" disabled="true" aura:id="inv_input_field"/>
+                                                                    <lightning:inputField fieldName="RecordTypeId" aura:id="RecordTypeId" class="createinvoice-class14"/>
+                                                                </lightning:layoutItem>
+
+                                                                <!--<lightning:layoutItem size="1" class="labellayout">
+                                                <label class="slds-form-element__label">{!$Label.c.Add_Subscription_Discount}</label>
+                                            </lightning:layoutItem>-->
+                                                                <lightning:layoutItem size="3" padding="horizontal-small" class="slds-p-top_xx-small">
+                                                                    <lightning:inputField fieldName="Discount_Amount__c"  label="{!$Label.c.Add_Subscription_Discount}" disabled="true" aura:id="inv_input_field"/>
+                                                                </lightning:layoutItem>
+
+                                                                <aura:if isTrue="{!v.displayPaid}">
+                                                                    <aura:if isTrue="{!v.schInvPaidApplied>0}">
+
+                                                                        <!--lightning:layoutItem size="1" class="labellayout">
+                                                                        <label class="slds-form-element__label">Prior Advance Amount Used</label>
+                                                                    </lightning:layoutItem-->
+
+                                                                        <lightning:layoutItem size="3" padding="horizontal-small" class="slds-p-top_xx-small">
+                                                                            <lightning:input aura:id="subTotalAmount" value="{!v.schInvPaidApplied}" type="number" label="Prior Advance Amount Used"  formatter="currency" step="any" disabled="true"/><!-- readonly="{!if(equals(v.selectedrecordTypeMap.DeveloperName,'Sales'),'false','true')}" readonly="true" -->
+                                                                        </lightning:layoutItem>
+                                                                    </aura:if>
+
+                                                                    <!--lightning:layoutItem size="1" class="labellayout" >
+                                                                    <label class="slds-form-element__label">Advance Amount Applied</label>
+                                                                </lightning:layoutItem-->
+                                                                    <!-- <aura:if isTrue="{!!and(v.doneShowAdvanceAppliedAmount,equals(v.selectedrecordTypeMap.DeveloperName,'Advance'))}"> -->
+                                                                     <!-- <aura:if isTrue="{! v.advanceInvoiceList.length > 0 }">-->
+                                                                        <lightning:layoutItem size="3" padding="" class="slds-p-top_xx-small p-cs2">
+                                                                            <lightning:inputField fieldName="Paid_Amount_Applied__c" aura:id="inv_input_field" class=" createinvoice-class14"/>
+                                                                            <label class="slds-form-element__label" style="">Advance Amount Applied</label>
+                                                                            <lightning:helptext content="Caution to avoid negative balance if edited." />
+                                                                            <lightning:input aura:id="paidAmountApplied" type="number" variant="label-hidden" label="Advance Amount Applied"  formatter="currency" step="any" min="0" onchange="{!c.setAmountApplied}" /><!-- onchange="{!c.calculateDownPaymentPercentag}"   -->
+                                                                        </lightning:layoutItem>
+                                                                  <!--  </aura:if>-->
+                                                                </aura:if>
+
+                                                                <!--lightning:layoutItem size="1" class="labellayout" >
+                                                <label class="slds-form-element__label">Total Amount</label>
+                                            </lightning:layoutItem-->
+
+                                                                <aura:if isTrue="{!equals(v.selectedrecordTypeMap.DeveloperName,'Advance')}">
+
+                                                                    <!--lightning:layoutItem size="1" class="labellayout" >
+                                                    <label class="slds-form-element__label">Down Payment</label>
+                                                </lightning:layoutItem-->
+                                                                    <lightning:layoutItem size="3" padding="horizontal-small" class="slds-p-top_xx-small">
+                                                                        <lightning:inputField fieldName="Total_Down_Payment_Amount__c" aura:id="inv_input_field" class="createinvoice-class14"/>
+                                                                        <label class="slds-form-element__label" style="">Down Payment</label>
+                                                                        <lightning:helptext content="Down Payment with VAT." />
+                                                                        <lightning:input aura:id="downPaymentAmt" type="number" label="Down Payment"  onchange="{!c.calculateDownPaymentPercentag}"  value = "{!v.downPaymentAmount}"  formatter="currency" step="any" variant="label-hidden"/>
+                                                                    </lightning:layoutItem>
+
+                                                                    <!--lightning:layoutItem size="1" class="labellayout" >
+                                                    <label class="slds-form-element__label">Down Payment Percentage</label>
+                                                </lightning:layoutItem-->
+                                                                    <lightning:layoutItem size="3" padding="horizontal-small" class="slds-p-top_xx-small">
+                                                                        <lightning:inputField fieldName="Down_Payment__c" class=" createinvoice-class14" aura:id="inv_input_field"/>
+
+                                                                        <lightning:input aura:id="downPayment" type="number" label="Down Payment Percentage"  onchange="{!c.calculateDownPaymentAmt}" value="{!v.downPaymentPercentage}" max="100" min="0.01" step="any" /><!--formatter="percent-fixed"-->
+                                                                    </lightning:layoutItem>
+
+                                                                </aura:if>
+                                                                <aura:if isTrue="{!equals(v.selectedrecordTypeMap.DeveloperName,'Schedule_Invoice')}">
+
+
+                                                                    <!--lightning:layoutItem size="1" class="labellayout" >
+                                                    <label class="slds-form-element__label">Total Due</label>
+                                                </lightning:layoutItem-->
+                                                                    <lightning:layoutItem size="3" padding="" class="slds-p-top_xx-small p-cs">
+                                                                        <lightning:inputField fieldName="Total_Down_Payment_Amount__c" aura:id="inv_input_field" class="createinvoice-class14" />
+                                                                        <lightning:input  value="{!(v.InvAmount-v.PaidAmountApplied) > 0 ? (v.InvAmount-v.PaidAmountApplied) : 0 }" type="number" label="Total Due"  formatter="currency" step="any" disabled="true" /><!-- readonly="{!if(equals(v.selectedrecordTypeMap.DeveloperName,'Sales'),'false','true')}" readonly="true" -->
+                                                                    </lightning:layoutItem>
+
+                                                                </aura:if>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </lightning:layout>
+                                    </lightning:layoutItem>
+                                </aura:if>
+                            </lightning:layout>
+                        </lightning:recordEditForm>
+
+                    </div>
+                    <aura:if isTrue="{!v.INVLIList.length>0}">
+                        <div class="slds-docked-form-footer">
+                            <input type="button" value="{!$Label.c.Cancel_ManageLeave}" class="slds-button slds-button_neutral createinvoice-class16" onclick="{!c.cancelCreateInvoiceAndLineItem}"/>
+                            <lightning:button label="{!$Label.c.ContractConsole_Save}" disabled="{!v.INVLIList.length eq 0}" variant="brand" class="slds-button slds-button_brand" onclick="{!c.CreateInvoiceAndLineItem}"/>
+                        </div>
+                    </aura:if>
+
+                </aura:set>
+            </aura:if>
+            <!-- <aura:if isTrue="{!v.showMmainSpin}">
+                <span class="createinvoice-class17 spinner-overlay">
+                    <lightning:spinner variant="brand" size="large" alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}" aura:id="mainSpin" class="mainSpinClass"/>
+                </span>
+            </aura:if>  -->
+            <aura:if isTrue="{!v.showMmainSpin}">
+                <span class="createinvoice-class17">
+                    <lightning:spinner variant="brand" size="large"
+                        alternativeText="{!$Label.c.Please_wait_while_loading_UserAvailabilities}"
+                        aura:id="mainSpin" class="mainSpinClass"/>
+                </span>
+            </aura:if>
+
+
+        </div>
+    </div>
+</aura:component>

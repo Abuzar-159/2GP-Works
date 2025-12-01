@@ -1,0 +1,128 @@
+<apex:page sidebar="false" showHeader="true" standardStylesheets="false">
+<style>
+/*.slds-rise-from-ground {
+    visibility: visible;
+    opacity: 1;
+    -webkit-transform: translate(0,0);
+    transform: translate(0,0);
+    -webkit-transition: opacity .1s linear,visibility .1s linear,-webkit-transform .1s linear;
+    transition: opacity .1s linear,visibility .1s linear,-webkit-transform .1s linear;
+    transition: opacity .1s linear,visibility .1s linear,transform .1s linear;
+    transition: opacity .1s linear,visibility .1s linear,transform .1s linear,-webkit-transform .1s linear;
+    will-change: transform;
+}
+.slds-popover--tooltip,
+.slds-popover_tooltip {
+    width: auto;
+    max-width: 20rem;
+    background-color:#032d60;
+    border: 0;
+    color:#fff;
+        padding: 5px;
+    font-size: 12px;
+    font-family: Arial, sans-serif;
+
+}
+
+.slds-popover {
+    position: relative ;
+    border-radius: 0.25rem ;
+    width: 20rem;
+    min-height: 2rem;
+    z-index: 6000;
+    display: inline-block;
+    -webkit-box-shadow: 0 2px 3px 0 rgb(0 0 0 / 16%);
+    box-shadow: 0 2px 3px 0 rgb(0 0 0 / 16%);
+    border: 1px solid #dddbda;
+
+}
+.slds-nubbin--bottom-left:after,
+.slds-nubbin--bottom-left:before,
+.slds-nubbin_bottom-left-corner:after,
+.slds-nubbin_bottom-left-corner:before,
+.slds-nubbin_bottom-left:after,
+.slds-nubbin_bottom-left:before {
+    left: 1.5rem ;
+    top: 100%;
+    margin-top: -0.5rem;
+
+}
+.slds-nubbin--bottom-left:before,
+.slds-nubbin_bottom-left-corner:before,
+.slds-nubbin_bottom-left:before {
+    width: 1rem;
+    height: 1rem;
+    position: absolute;
+    -webkit-transform: rotate(45deg);
+    transform: rotate(45deg);
+    content: "";
+    background-color: inherit;
+    left: 50%;
+    bottom: -0.5rem;
+    margin-left: -0.5rem;
+
+}
+.slds-nubbin--bottom-left:after,
+.slds-nubbin--bottom-left:before,
+.slds-nubbin_bottom-left-corner:after,
+.slds-nubbin_bottom-left-corner:before,
+.slds-nubbin_bottom-left:after,
+.slds-nubbin_bottom-left:before {
+    left: 1.5rem;
+    top: 100%;
+    margin-top: -0.5rem;
+
+}
+.slds-nubbin--bottom-left:after, .slds-nubbin_bottom-left-corner:after,  .slds-nubbin_bottom-left:after {
+    -webkit-box-shadow: 2px 2px 4px 0 rgb(0 0 0 / 16%);
+    box-shadow: 2px 2px 4px 0 rgb(0 0 0 / 16%);
+    z-index: -1;
+
+}
+.slds-nubbin--bottom-left:after,
+.slds-nubbin_bottom-left-corner:after,
+.slds-nubbin_bottom-left:after {
+    width: 1rem;
+    height: 1rem;
+    position: absolute;
+    -webkit-transform: rotate(45deg);
+    transform: rotate(45deg);
+    content: "";
+    background-color: inherit;
+    left: 50%;
+    bottom: -0.5rem;
+    margin-left: -0.5rem;
+}
+.slds-popover__body,
+.slds-popover__footer,
+.slds-popover__header {
+    position: relative;
+    padding: 0.5rem 0.75rem;
+    word-wrap: break-word;
+}*/
+</style>
+<apex:slds />
+  <apex:includeScript value="/lightning/lightning.out.js" />
+  <script>
+        !$Lightning.use("c:CreatesInvoiceApp", function() {
+            !$Lightning.createComponent(
+                "c:CreatesInvoice",
+                  {
+                   "SOId":'{!JSENCODE($currentPage.Parameters.soid)}',//changed id to soid
+                    "StdId":'{!JSENCODE($CurrentPage.parameters.id)}',//changed soid to id
+                    "FromEPOS": ('{!JSENCODE($CurrentPage.parameters.FromEPOS)}' === 'true'), // by matheen
+                    "FromACRelatedPage": ('{!JSENCODE($CurrentPage.parameters.FromACRelatedPage)}' === 'true') // by matheen
+                },
+                "accounts",
+                function(component) {
+                    console.log("SOId in vf:", '{!JSENCODE($currentPage.Parameters.soid)}');
+                    console.log("StdId in vf:", '{!JSENCODE($currentPage.Parameters.id)}');
+                    console.log("FromEPOS in vf:", '{!JSENCODE($currentPage.Parameters.FromEPOS)}');
+                    console.log("FromACRelatedPage in vf:", '{!JSENCODE($currentPage.Parameters.FromACRelatedPage)}');
+                    
+                }
+             );
+            });
+    </script>
+    <div id="accounts"></div>
+</apex:page>
