@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>64.0</apiVersion>
+    <isExposed>true</isExposed>
+  <targets>
+    <target>lightning__AppPage</target>
+    <target>lightning__RecordPage</target>
+    <target>lightning__HomePage</target>
+  </targets>
+  <targetConfigs>
+    <targetConfig targets="lightning__RecordPage">
+      <property name="expertId" type="String" label="Expert ID" />
+      <property name="rId" type="String" label="Registration ID" />
+      <property name="serviceName" type="String" label="Service Name" />
+      <property name="locName" type="String" label="Location Name" />
+      <property name="locId" type="String" label="Location ID" />
+      <property name="serviceId" type="String" label="Service ID" />
+      <property name="isMultiBooking" type="Boolean" label="Is Multi Booking" default="false" />
+      <property name="rescheduleBool" type="Boolean" label="Reschedule" default="false" />
+      <property name="autoResourceAllocation" type="Boolean" label="Auto Resource Allocation" default="false" />
+      <property name="showNotAvailableSlots" type="Boolean" label="Show Not Available Slots" default="false" />
+      <property name="country" type="String" label="Country" />
+    </targetConfig>
+  </targetConfigs>
+</LightningComponentBundle>

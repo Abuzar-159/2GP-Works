@@ -1,0 +1,268 @@
+:host {
+  display: block;
+}
+
+.main {
+  background: url(/resource/Bookingkare/img/background2.png) #f3f7fa fixed;
+  background-size: cover;
+  width: 100%;
+  padding-top: 10px;
+  background-position: left center;
+  border-radius: 0;
+}
+
+.alert {
+  position: relative;
+  padding: 0.75rem 0.25rem;
+}
+
+p {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.course {
+  background-color: #fff;
+  border-radius: 6px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  display: flex;
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.course h6 {
+  opacity: 0.6;
+  margin: 0;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.course h2 {
+  letter-spacing: 1px;
+  margin: 0;
+}
+
+.course-preview {
+  padding: 5px;
+  width: 50%;
+}
+
+.course-info {
+  padding: 5px;
+  position: relative;
+  width: 45%;
+}
+
+.virtual-meeting-sec {
+  background: #fff;
+  box-shadow: -2px 1px 11px 0 rgba(0, 0, 0, 0.1);
+  padding-left: 10px;
+  margin-top: 9px;
+  border-left: 1px solid #2196f3;
+  border-radius: 5px;
+}
+
+.cc-selector input {
+  margin: 0;
+  padding: 0;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+}
+
+.cc-selector-2 input {
+  position: absolute;
+  z-index: 999;
+}
+
+
+.drinkcard-cc {
+  cursor: pointer;
+  background-size: contain;
+  background-repeat: no-repeat;
+  display: inline-block;
+  width: 50px;
+  height: 50px;
+  transition: all 100ms ease-in;
+  filter: brightness(1.8) grayscale(1) opacity(0.7);
+}
+
+.drinkcard-cc2 {
+  cursor: pointer;
+  background-size: contain;
+  background-repeat: no-repeat;
+  display: inline-block;
+  width: 40px;
+  height: 40px;
+  transition: all 100ms ease-in;
+  filter: brightness(1.2) grayscale(0.5) opacity(0.9);
+}
+
+.cc-selector input:checked + .drinkcard-cc,
+.cc-selector-2 input:checked + .drinkcard-cc {
+  -webkit-filter: none;
+  -moz-filter: none;
+  filter: none;
+}
+
+.available-time {
+  border: 1px solid #e2e0e0;
+  width: 100%;
+  background: transparent;
+  padding: 5px;
+  border-radius: 6px;
+  margin: 5px 0;
+  color: #242424;
+  font-weight: 600;
+}
+
+.available-time.disabled {
+  color: #b8b8b8;
+}
+
+.available-time.selected {
+  background-color: #d4dae6;
+}
+
+.btn-primary {
+  background-color: #63abff;
+  box-shadow: 0 3px 10px rgba(99, 171, 255, 0.5);
+  border: 1px solid #63abff;
+}
+
+.search {
+  border: 0;
+  border-radius: 30px;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+}
+
+.mainSpinClass {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  text-align: center;
+}
+
+.mainSpinClass::after {
+  content: 'Please wait while loading...';
+  width: 100%;
+  text-align: center;
+  font-size: 16px;
+  top: calc(50% + 3em);
+  font-weight: bold;
+  position: absolute;
+}
+.course-card {
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 0.5rem;
+  background-color: #f4f6f9;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  transition: background-color 0.3s, border 0.3s;
+  border: 2px solid transparent;
+}
+
+.course-card:hover {
+  background-color: #e5f3ff;
+}
+
+.course-card.selected {
+  background-color: #e5f3ff;
+  border: 2px solid #0070d2;
+}
+
+.slot-button {
+  padding: 0.5rem 1rem;
+  margin: 0.5rem 0;
+  border-radius: 1rem;
+  background-color: #f3f3f3;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.slot-button.selected {
+  background-color: #0070d2;
+  color: white;
+}
+.resource-card {
+  border-radius: 0.25rem;
+  box-shadow:  0 4px 8px 0 rgba(0, 0, 0, 0.1);
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
+  border: 1px solid #ddd;
+ 
+}
+
+.resource-card:hover {
+  //transform: scale(1.02);
+  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+}
+
+.resource-card.active {
+  background-color: aliceblue;
+  border: 1px solid #0070d2;
+}
+
+.time-slot-button {
+  width: 100%;
+  height: 40px;
+  border-radius: 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  border: 1px solid #dddbda;
+  background-color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+}
+
+.time-slot-button:hover:not(.active) {
+  background-color: #f3f2f2;
+  border-color: #8e8e8e;
+}
+
+.time-slot-button.active {
+  background-color: #0070d2;
+  color: #ffffff;
+  border-color: #0070d2;
+  box-shadow:  0 2px 2px 0 rgba(0, 112, 210, 0.2)
+}
+
+.time-slot-button:disabled {
+  background-color: #ecebea;
+  color: #a8a8a8;
+  cursor: not-allowed;
+}
+
+/* Ensure consistent spacing and alignment */
+.slds-p-horizontal_medium > .slds-card {
+  height: 100%;
+}
+
+.slot-btn-selected{width: 100%; background: aliceblue; font-size: 16px; border: 1px solid #3172d2; font-weight: 400; box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.1);
+}
+
+
+.slot-btn-normal{
+width: 100%;
+background: #fff;
+border: 1px solid #a3a0a0;
+color: #3172d2;
+font-weight: 600;
+
+}
+.slds-progress__label {
+    visibility: visible;
+    position: relative;
+    top: -1rem; /* Adjust this value to move the label up or down */
+    text-align: center;
+}
+
+/* This targets the container to make space for the labels */
+.slds-progress-indicator_base .slds-progress__list {
+    margin-top: 1.5rem; /* Adjust this value to create more space above the steps */
+}

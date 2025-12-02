@@ -1,0 +1,294 @@
+<template>
+    <template if:true={showABServiceResource}>
+        <lightning-spinner if:true={showMainSpin} size="large" alternative-text="Loading"></lightning-spinner>
+
+       <!-- <template if:true={toastMessage}>
+            <div class="slds-notify slds-notify_toast slds-theme_success" role="status">
+                <span class="slds-assistive-text">success</span>
+                <span>{toastMessage}</span>
+            </div>
+        </template>-->
+        
+
+        <template if:true={showCancelModal}>
+            <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true"
+                class="slds-modal slds-fade-in-open">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        <h2 id="modal-heading-01" class="slds-modal__title">Cancel Registration</h2>
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium">
+                        <lightning-combobox label="Cancellation Reason" value={cancellationReason}
+                            options={cancellationReasons} onchange={handleCancellationReasonChange}>
+                        </lightning-combobox>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning-button variant="neutral" label="Close" onclick={handleCloseModal}>
+                        </lightning-button>
+                        <lightning-button variant="brand" label="Confirm" onclick={handleConfirmCancel}>
+                        </lightning-button>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </template>
+         <!-- 🔹 Page Header -->
+        <div class="slds-page-header slds-m-bottom_medium">
+            <div class="slds-media">
+                <div class="slds-media__figure">
+                    <lightning-icon icon-name="standard:event" size="medium"></lightning-icon>
+                </div>
+                <div class="slds-media__body">
+                    <h1 class="slds-page-header__title slds-text-heading_large">Booked Details</h1>
+                    <p class="slds-page-header__info">Review or update your booking details below</p>
+                </div>
+            </div>
+        </div>
+        <template if:true={toastMessage}>
+    <div class="slds-notify_container slds-is-fixed">
+        <div class="slds-notify slds-notify_toast slds-theme_success" role="status">
+            <span class="slds-assistive-text">Success</span>
+            
+            <span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top" title="Success">
+                <lightning-icon icon-name="utility:success" size="small" variant="inverse"></lightning-icon>
+            </span>
+ 
+            <div class="slds-notify__content">
+                <h2 class="slds-text-heading_small">{toastMessage}</h2>
+            </div>
+            
+            <div class="slds-notify__close">
+                <lightning-button-icon
+                    icon-name="utility:close"
+                    variant="bare-inverse"
+                    alternative-text="Close notification"
+                    title="Close"
+                    onclick={closeToast}>
+                </lightning-button-icon>
+            </div>
+        </div>
+    </div>
+</template>
+        <div class="slds-card slds-card-extra">
+    <div class="slds-grid slds-gutters slds-wrap slds-p-around_medium">
+
+        <!-- Registration Details -->
+        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+            <div class=" slds-p-around_medium card-shadow" >
+                <h2 class="slds-text-heading_medium slds-m-bottom_medium">Registration Details</h2>
+                
+                <div class="slds-grid slds-gutters">
+                    <div class="slds-col slds-size_1-of-2">
+                        <lightning-input data-id="Customer_Name" label="First Name"
+                            value={createReg.Customer_Name__c} onchange={handleInputChange}>
+                        </lightning-input>
+                    </div>
+                    <div class="slds-col slds-size_1-of-2">
+                        <lightning-input data-id="Customer_Lastname" label="Last Name"
+                            value={createReg.Customer_Lastname__c} onchange={handleInputChange}>
+                        </lightning-input>
+                    </div>
+                </div>
+
+                <lightning-input data-id="Customer_Email" type="email" label="Email"
+                    value={createReg.Customer_Email__c} onchange={handleInputChange}>
+                </lightning-input>
+
+                <lightning-input data-id="Customer_Contact" type="tel" label="Phone"
+                    value={createReg.Customer_Contact__c} onchange={handleInputChange}>
+                </lightning-input>
+
+                <lightning-textarea data-id="Purpose" label="Purpose"
+                    value={createReg.Purpose__c} onchange={handleInputChange} style="height: 205px;">
+                </lightning-textarea>
+            </div>
+        </div>
+ 
+        <!-- Appointment Summary -->
+        <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2">
+            <div class="slds-p-around_medium card-shadow">
+                <h2 class="slds-text-heading_medium slds-m-bottom_medium">Appointment Summary</h2>
+
+                <div class="slds-grid slds-wrap slds-gutters">
+
+                    <!-- Appointment with -->
+                    <div class="slds-col slds-size_1-of-2">
+                        <div class="slds-card slds-p-around_medium card-shadow" style="border: 1px solid #ddd;">
+                            <div class="slds-media slds-media_center">
+                                <div class="slds-media__figure">
+                                    <lightning-icon icon-name="standard:user" size="small"></lightning-icon>
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-heading_small slds-m-bottom_xx-small">Appointment is with</p>
+                                    <p>{createReg.Resource__r.Name}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Service -->
+                    <div class="slds-col slds-size_1-of-2">
+                        <div class="slds-card slds-p-around_medium card-shadow" style="border: 1px solid #ddd;">
+                            <div class="slds-media slds-media_center">
+                                <div class="slds-media__figure">
+                                    <lightning-icon icon-name="standard:service_territory" size="small"></lightning-icon>
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-heading_small slds-m-bottom_xx-small">Service</p>
+                                    <p>{createReg.Product2__r.Name}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ref Number -->
+                    <div class="slds-col slds-size_1-of-2 slds-m-top_medium">
+                        <div class="slds-card slds-p-around_medium card-shadow" style="border: 1px solid #ddd;">
+                            <div class="slds-media slds-media_center">
+                                <div class="slds-media__figure">
+                                    <lightning-icon icon-name="standard:number_input" size="small"></lightning-icon>
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-heading_small slds-m-bottom_xx-small">Ref Number</p>
+                                    <p>{createReg.Name}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                     <!-- Location -->
+                    <div class="slds-col slds-size_1-of-2 slds-m-top_medium">
+                        <div class="slds-card slds-p-around_medium card-shadow" style="border: 1px solid #ddd;">
+                            <div class="slds-media slds-media_center">
+                                <div class="slds-media__figure">
+                                    <lightning-icon icon-name="standard:location" size="small"></lightning-icon>
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-heading_small slds-m-bottom_xx-small">Location</p>
+                                    <p>{createReg.Expert_Location__r.Address__c}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Date -->
+                    <div class="slds-col slds-size_1-of-2 slds-m-top_medium">
+                        <div class="slds-card slds-p-around_medium card-shadow" style="border: 1px solid #ddd;">
+                            <div class="slds-media slds-media_center">
+                                <div class="slds-media__figure">
+                                    <lightning-icon icon-name="standard:event" size="small"></lightning-icon>
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-heading_small slds-m-bottom_xx-small">Date</p>
+                                    <p><!--{createReg.Registration_Time__c}-->
+                                        <lightning-formatted-date-time
+                                        value={createReg.Registration_Time__c}
+                                        year="numeric"
+                                        month="short"
+                                        day="2-digit">
+                                    </lightning-formatted-date-time>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Time -->
+                    <div class="slds-col slds-size_1-of-2 slds-m-top_medium">
+                        <div class="slds-card slds-p-around_medium card-shadow" style="border: 1px solid #ddd;">
+                            <div class="slds-media slds-media_center">
+                                <div class="slds-media__figure">
+                                    <lightning-icon icon-name="standard:event" size="small"></lightning-icon>
+                                </div>
+                                <div class="slds-media__body">
+                                    <p class="slds-text-heading_small slds-m-bottom_xx-small">Time</p>
+                                    <p><!--{createReg.End_Time__c}-->
+                                        <lightning-formatted-date-time
+                                        value={createReg.End_Time__c}
+                                        hour="2-digit"
+                                        minute="2-digit"
+                                        hour12="true">
+                                    </lightning-formatted-date-time>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                   
+                </div>
+
+                <!-- Change Date/Time -->
+                <template if:true={allowed}>
+                <div class="slds-box slds-theme_default slds-m-bottom_small slds-m-top_small">
+                    <!--<p>
+                        <lightning-icon icon-name="utility:event" size="x-small"></lightning-icon>
+                        <b> Date:&nbsp;</b> {createReg.Registration_Time__c}
+                         <lightning-formatted-date-time
+                                        value={createReg.Registration_Time__c}
+                                        year="numeric"
+                                        month="short"
+                                        day="2-digit">
+                                    </lightning-formatted-date-time>
+                                    <lightning-icon icon-name="utility:clock" size="x-small"></lightning-icon>&nbsp;
+                        <b> Time:&nbsp;</b> {createReg.End_Time__c}
+                         <lightning-formatted-date-time
+                                        value={createReg.End_Time__c}
+                                        hour="2-digit"
+                                        minute="2-digit"
+                                        hour12="true">
+                                    </lightning-formatted-date-time>
+                    </p>-->
+                    
+                    <p><lightning-button 
+                            variant="base" 
+                            label="Change Date/Time" 
+                            icon-name="utility:edit"
+                            icon-position="left"
+                            class="slds-text-link slds-m-left_small"
+                            onclick={handleChangeDate}
+                            disabled={isPastRegistration}>
+                        </lightning-button>
+                    </p>
+                </div>
+                </template>
+            </div>
+        </div>
+=
+
+    </div>
+</div>
+
+
+        <template if:true={showBookingWarning}>
+            <div class="slds-notify slds-notify_alert slds-theme_error slds-m-top_medium">
+                {saveErrorMsg}
+            </div>
+        </template>
+
+        <div class="slds-docked-form-footer">
+            <lightning-button variant="neutral" label="Go Back" onclick={handleBack}></lightning-button>
+           
+            <lightning-button variant="brand" label="Update Registration" class="slds-m-left_small"
+                onclick={handleUpdate}>
+            </lightning-button>
+              <template if:true={allowed}>
+            <lightning-button variant="destructive" label="Cancel Registration" class="slds-m-left_small"
+                onclick={handleCancel}>
+            </lightning-button>
+              </template>
+        </div>
+
+    </template>
+    <template if:false={showABServiceResource}>
+        <div class="full-screen-container">
+            <c-ab-resource-scheduler expert-id={createReg.Resource__r.User__c} service-name={createReg.Product2__r.Name}
+                loc-name={createReg.Expert_Location__r.Name} loc-id={createReg.Expert_Location__c}
+                service-id={createReg.Product2__c} is-multi-booking={isMultiBooking} reschedule=true reschedule-bool={isReschedule}
+                auto-resource-allocation={AutoResourceAllocation} show-not-available-slots={showNotAvailableSlots}
+                country={country} onclosefullscreen={handleCloseFullScreen} selected-date={selectedDate}
+                create-reg={createReg}>
+            </c-ab-resource-scheduler>
+        </div>
+    </template>
+</template>

@@ -1,0 +1,400 @@
+<template >
+ <div class="app-container">
+      <!-- Top Progress Indicator (Enhanced) -->
+    <div class="">
+       <div class="slds-card">
+    <div class="slds-card__body slds-card__body_inner slds-grid slds-grid_vertical-align-center">
+
+        <div class="slds-col slds-size_1-of-5">
+            <lightning-button
+                label="Back"
+                variant="base"
+                icon-name="utility:chevronleft"
+                icon-position="left"
+                onclick={handlehome}>
+            </lightning-button>
+        </div>
+
+        <div class="slds-col slds-size_3-of-5">
+          <div class="custom-progress-steps-container slds-grid slds-grid_align-center slds-grid_pull-padded-x-small">
+                        <div class="step-wrapper slds-p-horizontal_x-small slds-size_1-of-3">
+                            <div class="step-icon-container" >
+                                <lightning-icon icon-name="utility:user" size="small"></lightning-icon>
+                            </div>
+                            <span class="step-label slds-text-align_center">Cardiologist</span>
+                        </div>
+
+                        <div class="step-wrapper slds-p-horizontal_x-small slds-size_1-of-3">
+                            <div class="step-icon-container" >
+                                <lightning-icon icon-name="utility:clock" size="small"></lightning-icon>
+                            </div>
+                            <span class="step-label slds-text-align_center">Time</span>
+                        </div>
+
+                        <div class="step-wrapper slds-p-horizontal_x-small slds-size_1-of-3">
+                            <div class="step-icon-container" >
+                                <lightning-icon icon-name="utility:info" size="small"></lightning-icon>
+                            </div>
+                            <span class="step-label slds-text-align_center">Details</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="slds-col slds-size_1-of-5 slds-text-align_right">
+                    <lightning-input
+                        type="toggle"
+                        label="Auto Resource Allocation"
+                        checked={autoResourceAllocation}
+                        onchange={handleToggleChange}>
+                    </lightning-input>
+                </div>
+            </div>
+        </div>
+
+        <!--div class="slds-col slds-size_1-of-5 slds-text-align_right">
+            <lightning-input
+                type="toggle"
+                label="Auto Resource Allocation"
+                checked={autoResourceAllocation}
+                onchange={handleToggleChange}>
+            </lightning-input>
+        </div-->
+
+    </div>
+
+   <template if:true={toastMessage}>
+    <div class="slds-notify_container slds-is-fixed">
+        <div class="slds-notify slds-notify_toast slds-theme_success" role="status">
+            <span class="slds-assistive-text">Success</span>
+
+            <span class="slds-icon_container slds-icon-utility-success slds-m-right_small slds-no-flex slds-align-top" title="Success">
+                <lightning-icon icon-name="utility:success" size="small" variant="inverse"></lightning-icon>
+            </span>
+
+            <div class="slds-notify__content">
+                <h2 class="slds-text-heading_small">{toastMessage}</h2>
+            </div>
+
+            <div class="slds-notify__close">
+                <lightning-button-icon
+                    icon-name="utility:close"
+                    variant="bare-inverse"
+                    alternative-text="Close notification"
+                    title="Close"
+                    onclick={closeToast}>
+                </lightning-button-icon>
+            </div>
+        </div>
+    </div>
+</template>
+
+    <!-- The rest of your component's HTML follows below -->
+    <div class="slds-grid slds-wrap slds-m-top_medium">
+
+        <!-- Left Panel: Resource List -->
+        <div class="slds-col slds-size_1-of-3 slds-p-horizontal_medium">
+          <div class="slds-card" style="border-radius: 12px;border: 1px solid #f7f8f9;">
+            <div class="slds-card__header slds-grid">
+              <header class="slds-media slds-media_center">
+                <div class="slds-media__figure">
+                  <lightning-icon icon-name="standard:user" size="small"></lightning-icon>
+                </div>
+                <div class="slds-media__body">
+                  <h2 class="slds-text-heading_small">Select a Resource</h2>
+                </div>
+              </header>
+            </div>
+            <div class="slds-card__body slds-card__body_inner">
+              <lightning-input
+                type="search"
+                label="Search Resource..."
+                value={searchString}
+                onchange={handleSearch}
+                class="slds-m-bottom_medium"
+              ></lightning-input>
+
+              <div class="slds-scrollable_y" style="max-height: 400px;">
+                <template for:each={usersToDisplay} for:item="user">
+                  <div
+                    key={user.Id}
+                    class={user.cssClass}
+                    data-record={user.users.Id}
+                    data-name={user.users.Name}
+                    onclick={handleFetchTimeSlot}
+                  >
+                    <div class="slds-media slds-p-around_small">
+                      <div class="slds-media__figure">
+                        <lightning-icon icon-name="standard:user" size="medium" class="slds-m-right_small"></lightning-icon>
+                      </div>
+                      <div class="slds-media__body">
+                        <p class="slds-text-heading_small">{user.users.Name}</p>
+                        <p class="slds-text-body_small slds-text-color_weak">First Available Booking</p>
+                        <p class="slds-text-body_small slds-text-color_weak">{user.users.Title}</p>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Middle Panel: Time Slot -->
+        <div class="slds-col slds-size_1-of-3 slds-p-horizontal_medium">
+          <div class="slds-card" style="border-radius: 12px;border: 1px solid #f7f8f9;">
+            <div class="slds-card__header slds-grid">
+              <header class="slds-media slds-media_center">
+                <div class="slds-media__figure">
+                  <lightning-icon icon-name="standard:event" size="small"></lightning-icon>
+                </div>
+                <div class="slds-media__body">
+                  <h2 class="slds-text-heading_small">Select a Time Slot</h2>
+                </div>
+              </header>
+            </div>
+            <div class="slds-card__body slds-card__body_inner">
+              <!--<div class="slds-text-title slds-m-bottom_x-small">{selectedDate}</div>-->
+             <div class="slds-grid slds-align_absolute-center slds-m-around_small">
+
+        <!-- Backward button (disabled if today) -->
+        <lightning-button-icon
+            icon-name="utility:chevronleft"
+            alternative-text="Previous Day"
+            onclick={handlePrev}
+            disabled={isPrevDisabled}>
+        </lightning-button-icon>
+
+        <!-- Date Picker -->
+        <lightning-input
+            type="date"
+            variant="label-hidden"
+            value={selectedDate}
+            label=""
+            onchange={handleDateChange}
+            class="slds-m-horizontal_small datepick">
+        </lightning-input>
+
+        <!-- Forward button -->
+        <lightning-button-icon
+            icon-name="utility:chevronright"
+            alternative-text="Next Day"
+            onclick={handleNextDate}>
+        </lightning-button-icon>
+    </div>
+
+              <lightning-accordion allow-multiple-sections-open active-section-name={allSections}>
+                <!-- Morning Session Accordion -->
+                <lightning-accordion-section name="morning" label="Morning Session" class="slds-m-bottom_small" expanded>
+                  <div class="slds-grid slds-wrap slds-grid_align-left slds-gutters_x-small">
+                    <template for:each={formattedMorningSlots} for:item="slot">
+                      <div key={slot.Slot} class="slds-col slds-size_1-of-3 slds-m-bottom_x-small">
+                        <button
+                          class={slot.className}
+                          data-sel-time={slot.Slot}
+                          data-resource-id={slot.ResourceId}
+                          onclick={handleReserveRegistration}
+                        >
+                          <lightning-formatted-time value={slot.SlotStr} hour="2-digit" minute="2-digit"></lightning-formatted-time>
+                        </button>
+                      </div>
+                    </template>
+                  </div>
+                </lightning-accordion-section>
+
+                <!-- Afternoon Session Accordion -->
+                <lightning-accordion-section name="afternoon" label="Afternoon Session" class="slds-m-bottom_small">
+                  <div class="slds-grid slds-wrap slds-grid_align-left slds-gutters_x-small">
+                    <template for:each={formattedAfternoonSlots} for:item="slot">
+                      <div key={slot.Slot} class="slds-col slds-size_1-of-3 slds-m-bottom_x-small">
+                        <button
+                          class={slot.className}
+                          data-sel-time={slot.Slot}
+                          data-resource-id={slot.ResourceId}
+                          onclick={handleReserveRegistration}
+                        >
+                          <lightning-formatted-time value={slot.SlotStr} hour="2-digit" minute="2-digit"></lightning-formatted-time>
+                        </button>
+                      </div>
+                    </template>
+                  </div>
+                </lightning-accordion-section>
+
+                <!-- Evening Session Accordion -->
+                <lightning-accordion-section name="evening" label="Evening Session">
+                  <div class="slds-grid slds-wrap slds-grid_align-left slds-gutters_x-small">
+                    <template for:each={formattedEveningSlots} for:item="slot">
+                      <div key={slot.Slot} class="slds-col slds-size_1-of-3 slds-m-bottom_x-small">
+                        <button
+                          class={slot.className}
+                          data-sel-time={slot.Slot}
+                          data-resource-id={slot.ResourceId}
+                          onclick={handleReserveRegistration}
+                        >
+                          <lightning-formatted-time value={slot.SlotStr} hour="2-digit" minute="2-digit"></lightning-formatted-time>
+                        </button>
+                      </div>
+                    </template>
+                  </div>
+                </lightning-accordion-section>
+              </lightning-accordion>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Panel: Registration Form -->
+        <div class="slds-col slds-size_1-of-3 slds-p-horizontal_medium">
+          <div class="slds-card" style="border-radius: 12px;border: 1px solid #f7f8f9;">
+            <div class="slds-card__header slds-grid">
+              <header class="slds-media slds-media_center">
+                <div class="slds-media__figure">
+                  <lightning-icon icon-name="action:edit" size="x-small"></lightning-icon>
+                </div>
+                <div class="slds-media__body">
+                  <h2 class="slds-text-heading_small">Registration Details</h2>
+                </div>
+              </header>
+            </div>
+            <div class="slds-card__body slds-card__body_inner">
+             <div class="slds-form-element"><!--from here-->
+  <label class="slds-form-element__label" for="clientLookup">Search Client</label>
+  <div class="slds-form-element__control slds-input-has-icon slds-input-has-icon_right">
+    <input
+      type="text"
+      id="clientLookup"
+      class="slds-input"
+      placeholder="Search client..."
+      value={searchClientString}
+      oninput={handleClientSearch}
+    />
+    <template if:true={searchClientString}>
+      <button
+        class="slds-button slds-button_icon slds-input__icon slds-input__icon_right"
+        onclick={clearSearch}
+        title="Clear"
+      >
+        <lightning-icon icon-name="utility:close" size="x-small"></lightning-icon>
+      </button>
+    </template>
+    <template if:false={searchClientString}>
+      <lightning-icon
+        icon-name="utility:search"
+        size="x-small"
+        class="slds-input__icon slds-input__icon_right"
+      ></lightning-icon>
+    </template>
+  </div>
+</div>
+            </div>
+
+       <div class="slds-form-element" style="position: relative;">
+  <!-- Client Lookup Input -->
+  <!-- your input field and icons here -->
+
+  <!-- Lookup Results Floating Panel -->
+  <template if:true={showSearchPanelSection}>
+    <div
+      class="slds-box slds-theme_default  slds-m-top_xx-small "
+      style="position: absolute; top: 100%; left: 0; right: 0; z-index: 10;"
+    >
+      <div class="slds-grid slds-grid_align-end">
+        <button onclick={closeSearchPanel} class="slds-button slds-button_icon">
+          <lightning-icon icon-name="utility:close" size="x-small"></lightning-icon>
+        </button>
+      </div>
+      <template for:each={srcList} for:item="w" for:index="index">
+        <div
+          key={w.Id}
+          class="slds-box slds-m-top_x-small slds-box_link"
+          data-index={index}
+          onclick={setRecord}
+          title={w.Name}
+        >
+          <div class="slds-grid slds-wrap">
+            <div class="slds-col slds-size_1-of-1">
+              <strong>{w.Name}</strong>
+            </div>
+            <template if:true={w.Family}>
+              <div class="slds-col slds-size_1-of-1">
+                <lightning-icon icon-name="utility:group" size="xx-small"></lightning-icon> {w.Family}
+              </div>
+            </template>
+            <template if:true={w.Email}>
+              <div class="slds-col slds-size_1-of-1">
+                <lightning-icon icon-name="utility:email" size="xx-small"></lightning-icon> {w.Email}
+              </div>
+            </template>
+            <template if:true={w.Phone}>
+              <div class="slds-col slds-size_1-of-1">
+                <lightning-icon icon-name="utility:phone_portrait" size="xx-small"></lightning-icon> {w.Phone}
+              </div>
+            </template>
+          </div>
+        </div>
+      </template>
+    </div>
+  </template>
+</div><!--till here-->
+            <div class="slds-card__body slds-card__body_inner">
+              <lightning-input
+                label="First Name"
+                name="firstName"
+                value={createReg.Customer_Name__c}
+                required
+                onchange={handleInputChange}
+              ></lightning-input>
+              <lightning-input
+                label="Last Name"
+                name="lastName"
+                value={createReg.Customer_Lastname__c}
+                required
+                onchange={handleInputChange}
+                class="slds-m-top_small"
+              ></lightning-input>
+              <lightning-input
+                label="Email"
+                name="email"
+                type="email"
+                value={createReg.Customer_Email__c}
+                required
+                onchange={handleInputChange}
+                class="slds-m-top_small"
+              ></lightning-input>
+              <lightning-input
+                label="Mobile"
+                name="phone"
+                type="tel"
+                value={createReg.Customer_Contact__c}
+                required
+                onchange={handleInputChange}
+                class="slds-m-top_small"
+              ></lightning-input>
+            </div>
+            <footer class="slds-card__footer slds-text-align_center">
+              <template if:false={setConfirm}>
+                <lightning-button label="Confirm" variant="brand" onclick={handleConfirmReg} class="slds-m-right_small"></lightning-button>
+                  <template if:false={rescheduleBool}>
+                <lightning-button label="Cancel" variant="neutral" onclick={handleCancel} class="slds-m-right_small"></lightning-button>
+                  </template>
+              </template>
+              <template if:true={setConfirm}>
+                <lightning-button label="UPDATE" variant="brand" onclick={handleConfirmReg} class="slds-m-right_small"></lightning-button>
+                <template if:false={rescheduleBool}>
+                <lightning-button label="HOME" variant="neutral" onclick={handlehome} class="slds-m-right_small"></lightning-button>
+                </template>
+              <template if:true={rescheduleBool}>
+                <lightning-button label="Back to record" variant="neutral" onclick={handleRec} class="slds-m-right_small"></lightning-button>
+                  </template>
+              </template>
+            </footer>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bottom Action Buttons -->
+    <!--  <div class="slds-docked-form-footer slds-grid_align-center">
+        <lightning-button label="Previous" variant="neutral" onclick={handlePrevious} class="slds-m-right_small"></lightning-button>
+        <lightning-button label="Next" variant="brand" onclick={handleNext} class="slds-m-right_small"></lightning-button>
+        <lightning-button label="Cancel" variant="destructive" onclick={handleCancel}></lightning-button>
+      </div>-->
+  </div>
+</template>
