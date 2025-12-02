@@ -718,5 +718,132 @@ public with sharing class MRPTrigger{
             
         }
     }
+
+    // added by Abuzar for handling the Scheadule MO scenario for huge quantity of MRP records on 03-12-2025 converted the flow "Set Cost of BOM to Work orders" to the trigger 
+     // -------------------------------------------------
+    // BEFORE INSERT/UPDATE: Set BOM_Actual_Cost__c & BOM_Requirement_Cost__c
+    // (replaces Flow formulas BOMActualCost & BOMRequirementCost)
+    // -------------------------------------------------
+    public static void handleBeforeBOMCost(List<MRP__c> newList) {
+        system.debug('AZ MRPTrigger.handleBeforeBOMCost - Start');
+        if (newList == null || newList.isEmpty()) return;
+
+        // Collect BOM Line Item ids
+        Set<Id> bomLineItemIds = new Set<Id>();
+        for (MRP__c mrp : newList) {
+            if (mrp.BOM_Line_Item__c != null) {
+                bomLineItemIds.add(mrp.BOM_Line_Item__c);
+            }
+        }
+        if (bomLineItemIds.isEmpty()) return;
+
+        // Query BOM Line Items with Cost Card & Cost
+        Map<Id, BOM_Line_Item__c> bomLineItemById = new Map<Id, BOM_Line_Item__c>([
+            SELECT Id,
+                   Cost_Price__c,
+                   Cost_Card__c,
+                   Cost_Card__r.Cost__c
+            FROM BOM_Line_Item__c
+            WHERE Id IN :bomLineItemIds
+        ]);
+
+        // Compute BOM_Actual_Cost__c and BOM_Requirement_Cost__c
+        for (MRP__c mrp : newList) {
+            if (mrp.Work_Order__c == null || mrp.BOM_Line_Item__c == null) continue;
+
+            BOM_Line_Item__c bli = bomLineItemById.get(mrp.BOM_Line_Item__c);
+            if (bli == null) continue;
+
+            // Same logic as Flow formulas:
+            // if(Cost_Card__c != null, Cost_Card__r.Cost__c, Cost_Price__c)
+            Decimal unitCost = 0;
+            if (bli.Cost_Card__c != null && bli.Cost_Card__r != null && bli.Cost_Card__r.Cost__c != null) {
+                unitCost = bli.Cost_Card__r.Cost__c;
+            } else if (bli.Cost_Price__c != null) {
+                unitCost = bli.Cost_Price__c;
+            }
+
+            Decimal fulfilledAmt = (mrp.Fulfilled_Amount__c == null) ? 0 : mrp.Fulfilled_Amount__c;
+            Decimal requiredAmt  = (mrp.Required_Amount__c  == null) ? 0 : mrp.Required_Amount__c;
+
+            mrp.BOM_Actual_Cost__c      = unitCost * fulfilledAmt;
+            mrp.BOM_Requirement_Cost__c = unitCost * requiredAmt;
+        }
+    }
+
+    // -------------------------------------------------
+    // AFTER INSERT/UPDATE: Sum BOM_Actual_Cost__c into WO__c.Material_Cost__c
+    // (replaces Flow: Get_all_MRPS_associated_with_Work_Order + loop + Get_total_BOM_Cost + Update_Work_orders)
+    // -------------------------------------------------
+    public static void handleAfterBOMCost(List<MRP__c> newList) {
+        if (newList == null || newList.isEmpty()) return;
+
+        // Only records matching Flow start condition: Work_Order__c != null AND BOM_Line_Item__c != null
+        Set<Id> workOrderIds = new Set<Id>();
+        Map<Id, String> workOrderToKey = new Map<Id, String>(); // WO -> (WO|BOM|MO) key
+
+        for (MRP__c mrp : newList) {
+            if (mrp.Work_Order__c != null && mrp.BOM_Line_Item__c != null) {
+                workOrderIds.add(mrp.Work_Order__c);
+                String key = buildGroupingKey(mrp.Work_Order__c, mrp.BOM__c, mrp.MO__c);
+                // Last record per WO in this tx wins, same idea as Flow executing per-record
+                workOrderToKey.put(mrp.Work_Order__c, key);
+            }
+        }
+
+        if (workOrderIds.isEmpty()) return;
+
+        Set<String> keysToCalculate = new Set<String>(workOrderToKey.values());
+
+        // Get all MRP__c for these Work Orders (like the Flow lookup),
+        // only ones with BOM_Line_Item__c != null.
+        List<MRP__c> relatedMrps = [
+            SELECT Id,
+                   Work_Order__c,
+                   BOM__c,
+                   MO__c,
+                   BOM_Line_Item__c,
+                   BOM_Actual_Cost__c
+            FROM MRP__c
+            WHERE Work_Order__c IN :workOrderIds
+              AND BOM_Line_Item__c != null
+        ];
+
+        // Sum BOM_Actual_Cost__c per (Work_Order__c, BOM__c, MO__c)
+        Map<String, Decimal> totalCostByKey = new Map<String, Decimal>();
+        for (MRP__c mrp : relatedMrps) {
+            String key = buildGroupingKey(mrp.Work_Order__c, mrp.BOM__c, mrp.MO__c);
+
+            // Only calculate for combos touched in this transaction
+            if (!keysToCalculate.contains(key)) continue;
+
+            Decimal existing = totalCostByKey.containsKey(key) ? totalCostByKey.get(key) : 0;
+            Decimal cost     = (mrp.BOM_Actual_Cost__c == null) ? 0 : mrp.BOM_Actual_Cost__c;
+            totalCostByKey.put(key, existing + cost);
+        }
+
+        // Prepare Work Orders to update Material_Cost__c
+        List<WO__c> workOrdersToUpdate = new List<WO__c>();
+        for (Id woId : workOrderToKey.keySet()) {
+            String key = workOrderToKey.get(woId);
+            Decimal totalCost = totalCostByKey.containsKey(key) ? totalCostByKey.get(key) : 0;
+
+            workOrdersToUpdate.add(new WO__c(
+                Id               = woId,
+                Material_Cost__c = totalCost
+            ));
+        }
+
+        if (!workOrdersToUpdate.isEmpty()) {
+            update workOrdersToUpdate;
+        }
+    }
+
+    // Helper: same grouping as Flow filters (Work_Order__c, BOM__c, MO__c)
+    private static String buildGroupingKey(Id workOrderId, Id bomId, Id moId) {
+        return String.valueOf(workOrderId) + '|' +
+               String.valueOf(bomId)       + '|' +
+               String.valueOf(moId);
+    }
     
 }
