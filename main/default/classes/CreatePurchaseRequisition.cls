@@ -176,10 +176,13 @@ return ord;
         if(prequisitions != null && Schema.sObjectType.Requisition__c.isCreateable() && Schema.sObjectType.Requisition__c.isUpdateable()){ upsert prequisitions;} else{ }
         
         List<Purchase_Requisition_Line_Items__c> pr_List = (List<Purchase_Requisition_Line_Items__c>) JSON.deserialize(PRLI_List, List<Purchase_Requisition_Line_Items__c>.class);
-        for(Integer i = 0;i<pr_List.size();i++){
+        for(Integer i = 0;  i<pr_List.size();i++){
+
+            if(pr_List[i].Name != null && pr_List[i].Name.length() > 70){
+                    pr_List[i].Name = pr_List[i].Name.substring(0, 70);
+            }
             if(Schema.sObjectType.Purchase_Requisition_Line_Items__c.fields.Purchase_Requisition__c.isCreateable() || Schema.sObjectType.Purchase_Requisition_Line_Items__c.fields.Purchase_Requisition__c.isUpdateable()) pr_List[i].Purchase_Requisition__c = prequisitions.id;
         }
-        
         if(pr_List.size()>0 && (Schema.sObjectType.Purchase_Requisition_Line_Items__c.isCreateable() || Schema.sObjectType.Purchase_Requisition_Line_Items__c.isUpdateable())){ upsert pr_List;} else{ }
         return prequisitions; 
     }
