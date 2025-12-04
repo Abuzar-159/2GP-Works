@@ -1495,6 +1495,7 @@ deriveDocMap(ids, titles) {
 @track orderLineAnalysis = [];
 @track order;
 @track showOrderToLogisticsStep = false;
+@track showCreateLogisticStep = false;   // Step-2 (logistic creation screen)
 @track orderVsLogisticsEqual = false;
 @track selectedRows = [];
 // @track isCreateDisabled = true;
@@ -1526,6 +1527,145 @@ deriveDocMap(ids, titles) {
         Primary_Contact__r: { Id:'', Name:'' }
     }
 };
+@track account = {Id : '',Name : ''};
+
+distributionUrl = null;
+
+// Auto-filled from order + DC Site
+fromContactId = null;
+fromContactName = '';
+fromContactUrl = null;
+
+fromAddressId = null;
+fromAddressName = '';
+fromAddressUrl = null;
+
+toContactId = null;
+toContactName = '';
+toContactUrl = null;
+
+toAddressId = null;
+toAddressName = '';
+toAddressUrl = null;
+
+accountId = null;
+accountName = '';
+accountUrl = null;
+@track selectedChannel = null;
+@track selectedChannelName = '';
+@track channelUrl = null;
+
+// loadOrderData() {
+//     if (!this.recordId) return;
+
+//     this.isLoading = true;
+//     getOrderAndItemsAnalysis({ orderId: this.recordId })
+//         .then(res => {
+//             this.order = res.order;
+//             this.orderLineItems = res.items;
+//             this.existingLogistics = res.logistics || res.logistics; 
+
+//             console.log('🚛 Existing Logistics:', JSON.stringify(this.existingLogistics));
+
+//             console.log('order -> ', JSON.stringify(this.order));
+//             console.log('items -> ', JSON.stringify(this.orderLineItems));
+
+//             const orderQty    = this.order?.Total_Quantity__c || 0;
+//             const logisticQty = this.order?.Total_Logistic_Quantity_U__c || 0;
+
+//             // ✅ Correct flag logic
+//             this.showOrderToLogisticsStep = (orderQty !== logisticQty);
+//              const dc = res.distributionChannelRaw || res.distributionChannel || null;
+//              if (dc) {
+//                 this.selectedDC = {
+//                     Id: dc.Id,
+//                     Name: dc.Name,
+//                     Active__c: true,
+//                     Priority__c: dc.Priority__c || '',
+//                     Site__c: dc.Site__c || null,
+
+//                     Site__r: {
+//                         Id: dc.Site__r?.Id || '',
+//                         Name: dc.Site__r?.Name || '',
+//                         Address__c: dc.Site__r?.Address__c || '',
+//                         Address__r: {
+//                             Id: dc.Site__r?.Address__r?.Id || '',
+//                             Name: dc.Site__r?.Address__r?.Name || ''
+//                         },
+//                         Primary_Contact__c: dc.Site__r?.Primary_Contact__c || '',
+//                         Primary_Contact__r: {
+//                             Id: dc.Site__r?.Primary_Contact__r?.Id || '',
+//                             Name: dc.Site__r?.Primary_Contact__r?.Name || ''
+//                         }
+//                     }
+//                 };
+
+//                 console.log('📍 selectedDC →', JSON.stringify(this.selectedDC));
+//             }
+
+//             // ✅ MOST IMPORTANT → map into the variable used in HTML loop
+//             this.orderLineAnalysis = (res.items || []).map(x => {
+//                 const rec = x.record;
+//                 return {
+//                     Id: rec?.Id,
+//                     orderItemNumber: rec?.OrderItemNumber,
+//                     productName: rec?.Product2?.Name,
+//                     productId: rec?.Product2?.Id,
+//                     orderQty: rec?.Quantity,
+//                     logisticQty: rec?.Logistic_Quantity_U__c || rec?.Logistic_Quantity__c || 0,
+//                     remainingQty: x.remainingQty
+//                 };
+//             });
+
+//             console.log('🧠 Mapped Items:', JSON.stringify(this.orderLineAnalysis));
+//             console.log('📦 Order Qty:', orderQty);
+//             console.log('🚚 Logistic Total Qty:', logisticQty);
+//             console.log('🧩 showOrderToLogisticsStep:', this.showOrderToLogisticsStep);
+//         })
+//         .catch(err => console.error('❌ Error', err))
+//         .finally(() => {
+//             this.isLoading = false;
+//         });
+// }
+// Channel lookup selected?
+get channelSelected() {
+    return this.selectedChannel != null;
+}
+
+// Distribution Channel lookup selected?
+get dcSelected() {
+    return this.selectedDC?.Id != null;
+}
+
+// From Contact selected?
+get fromContactSelected() {
+    return this.fromContactId != null;
+}
+
+// To Contact selected?
+get toContactSelected() {
+    return this.toContactId != null;
+}
+
+// From Address selected?
+get fromAddressSelected() {
+    return this.fromAddressId != null;
+}
+
+// To Address selected?
+get toAddressSelected() {
+    return this.toAddressId != null;
+}
+
+// Account selected?
+get accountSelected() {
+    return this.accountId != null;
+}
+
+// Logistic name selected? (we consider parent exists if name not null)
+get logisticNameSelected() {
+    return this.newLogistic?.Name != null;
+}
 
 loadOrderData() {
     if (!this.recordId) return;
@@ -1533,50 +1673,74 @@ loadOrderData() {
     this.isLoading = true;
     getOrderAndItemsAnalysis({ orderId: this.recordId })
         .then(res => {
-            this.order = res.order;
-            this.orderLineItems = res.items;
-            this.existingLogistics = res.logistics || res.logistics; 
+            this.order = res.order || {};
+            console.log('Order:', JSON.stringify(this.order));
+            // ===== MAP CHANNEL FROM ORDER =====
+            this.selectedDC = this.selectedDC || {};
+            this.selectedChannel = this.order?.Channel__c || null;
+            this.selectedChannelName = this.order?.Channel__r?.Name || '';
+            this.channelUrl = this.selectedChannel ? '/' + this.selectedChannel : null;
+        
+            // ===== MAP TOP PRIORITY DC =====
+            const dc = res.distributionChannel || null;
 
-            console.log('🚛 Existing Logistics:', JSON.stringify(this.existingLogistics));
-
-            console.log('order -> ', JSON.stringify(this.order));
-            console.log('items -> ', JSON.stringify(this.orderLineItems));
-
-            const orderQty    = this.order?.Total_Quantity__c || 0;
-            const logisticQty = this.order?.Total_Logistic_Quantity_U__c || 0;
-
-            // ✅ Correct flag logic
-            this.showOrderToLogisticsStep = (orderQty !== logisticQty);
-             const dc = res.distributionChannelRaw || res.distributionChannel || null;
-             if (dc) {
+            console.log('Distribution Channel:', JSON.stringify(dc));
+            if (dc) {
                 this.selectedDC = {
                     Id: dc.Id,
                     Name: dc.Name,
                     Active__c: true,
                     Priority__c: dc.Priority__c || '',
-                    Site__c: dc.Site__c || null,
+                    Site__c: dc.Site.siteId || null,
 
                     Site__r: {
-                        Id: dc.Site__r?.Id || '',
-                        Name: dc.Site__r?.Name || '',
-                        Address__c: dc.Site__r?.Address__c || '',
+                        Id: dc.Site.siteId || '',
+                        Name: dc.Site.siteName || '',
+                        Address__c: dc.Site.siteAddressId || '',
                         Address__r: {
-                            Id: dc.Site__r?.Address__r?.Id || '',
-                            Name: dc.Site__r?.Address__r?.Name || ''
+                            Id: dc.Site.siteAddressId || '',
+                            Name: dc.Site.siteAddressName || ''
                         },
-                        Primary_Contact__c: dc.Site__r?.Primary_Contact__c || '',
+                        Primary_Contact__c: dc.Site.sitePrimaryContactId || '',
                         Primary_Contact__r: {
-                            Id: dc.Site__r?.Primary_Contact__r?.Id || '',
-                            Name: dc.Site__r?.Primary_Contact__r?.Name || ''
+                            Id: dc.Site.sitePrimaryContactId || '',
+                            Name: dc.Site.sitePrimaryContactName || ''
                         }
                     }
                 };
-
-                console.log('📍 selectedDC →', JSON.stringify(this.selectedDC));
+                this.distributionUrl = this.selectedDC?.Id ? '/' + this.selectedDC?.Id : null;
+                console.log('📍 Top priority DC mapped →', JSON.stringify(this.selectedDC));
             }
 
-            // ✅ MOST IMPORTANT → map into the variable used in HTML loop
-            this.orderLineAnalysis = (res.items || []).map(x => {
+            // ===== AUTO-FILL STEP 2 VALUES FROM ORDER & DC =====
+            this.fromContactId = this.selectedDC?.Site__r?.Primary_Contact__c || null;
+            this.fromContactName = this.selectedDC?.Site__r?.Primary_Contact__r?.Name || '';
+            this.fromContactUrl = this.fromContactId ? '/' + this.fromContactId : null;
+
+            this.fromAddressId = this.selectedDC?.Site__r?.Address__c || null;
+            this.fromAddressName = this.selectedDC?.Site__r?.Address__r?.Name || '';
+            this.fromAddressUrl = this.fromAddressId ? '/' + this.fromAddressId : null;
+
+            this.toContactId = this.order?.Contact__c || null;
+            this.toContactName = this.order?.Contact__r?.Name || '';
+            this.toContactUrl = this.toContactId ? '/' + this.toContactId : null;
+
+            this.toAddressId = this.order?.Ship_To_Address__c || null;
+            this.toAddressName = this.order?.Ship_To_Address__r?.Name ||  '';
+            this.toAddressUrl = this.toAddressId ? '/' + this.toAddressId : null;
+
+            this.accountId = this.order?.AccountId || null;
+            this.accountName = this.order?.Account?.Name || this.order?.Account__r?.Name || '';
+            this.accountUrl = this.accountId ? '/' + this.accountId : null;
+
+            // Compare totals for step-1 visibility
+            const orderQty = Number(this.order?.Total_Quantity__c || 0);
+            const logisticQty = Number(this.order?.Total_Logistic_Quantity_U__c || 0);
+            this.showOrderToLogisticsStep = (orderQty !== logisticQty);
+
+            // Map order items for Step-1 table
+            //this.orderLineAnalysis = (res.items || []).map(x => x);
+             this.orderLineAnalysis = (res.items || []).map(x => {
                 const rec = x.record;
                 return {
                     Id: rec?.Id,
@@ -1589,16 +1753,12 @@ loadOrderData() {
                 };
             });
 
-            console.log('🧠 Mapped Items:', JSON.stringify(this.orderLineAnalysis));
-            console.log('📦 Order Qty:', orderQty);
-            console.log('🚚 Logistic Total Qty:', logisticQty);
-            console.log('🧩 showOrderToLogisticsStep:', this.showOrderToLogisticsStep);
+            console.log('📦 Step-1 Analysis mapped →', JSON.stringify(this.orderLineAnalysis));
         })
         .catch(err => console.error('❌ Error', err))
-        .finally(() => {
-            this.isLoading = false;
-        });
+        .finally(() => this.isLoading = false);
 }
+
 handleRowSelect(e) {
     const id = e.target.dataset.id;
     const checked = e.target.checked;
@@ -1628,6 +1788,10 @@ async handleCreateLogistic() {
 
         this.stockMap = res; // store for next step ✅
         this.buildNewLogisticAndLines(); // go to next logic ✅
+        // ✅ Move to Step-2 UI
+    // this.showOrderToLogisticsStep = false;
+    this.showCreateLogisticStep = true;
+
 
     } catch(err) {
         console.error(err.body?.message || 'Unexpected error');
@@ -1638,66 +1802,6 @@ async handleCreateLogistic() {
         this.isLoading = false;
     }
 }
-// buildNewLogisticAndLines() {
-//     console.log('Building new Logistic and Lines...');
-//     const orderName = this.order?.Name || 'Order';
-
-//     // 🔥 Next logistic number
-//     const nextNumber = (this.existingLogistics?.length || 0) + 1;
-
-//     // ✅ Channel → from Order
-//     const channel = this.order?.Channel__c || null;
-
-//     // ✅ Distribution Channel → from selectedDC (highest priority)
-//     const distChannel = this.selectedDC?.Id || null;
-// console.log('Building new Logistic and Lines...');
-//     // ===== Build Logistic__c model =====
-//     this.newLogistic = {
-//         Id: null,
-//         Name: `${orderName} - Logistic-${nextNumber}`, // ✅ OrderName - Logistic-#
-//         Order_S__c: this.recordId,
-//         Account__c: this.order?.AccountId || null,
-//         From_Contact__c: this.fromContact?.Id || null,
-//         Contact__c: this.order?.Contact__c || null,
-//         From_Address__c: this.order?.From_Address__c || null,
-//         To_Address__c: this.toContact?.Id || null,
-
-//         // ✅ Required
-//         Channel__c: channel,
-//         Distribution_Channel__c: distChannel
-//     };
-// console.log('Building new Logistic and Lines...');
-// console.log('order line a...',JSON.stringify(this.orderLineAnalysis));
-// console.log('selectedProductIds...',JSON.stringify(this.selectedProductIds));
-//     // ===== Build Logistic Line Items =====
-//     const newLines = [];
-//     this.selectedProductIds.forEach((productId, i) => {
-//         const found = this.orderLineAnalysis.find(x => x.productId === productId);
-
-//         console.log('Found:', JSON.stringify(found));
-//         if (!found) {
-//             console.error('Product not found:', productId);
-//             return;
-//         }
-//         const rec = found?.record || {};
-//         const productItemName = rec.productName;
-//         const ln = i + 1;
-
-//         newLines.push({
-//             Id: null,
-//             Product__c: productId,
-//             Remaining_Qty__c: found?.remainingQty || 0,
-//             Name: `${productItemName} - LogisticLine-${ln}`,
-//             Logistic__c: null
-//         });
-//     });
-// console.log('Building new Logistic and Lines...');
-//     this.newLogisticLineItems = newLines;
-// console.log('Building new Logistic and Lines...');
-//     // ✅ FIX logging variable reference
-//     console.log('🚛 newLogistic →', JSON.stringify(this.newLogistic));
-//     console.log('📦 newLogisticLineItems →', JSON.stringify(this.newLogisticLineItems));
-// }
 buildNewLogisticAndLines() {
     console.log('Building new Logistic and Lines...');
     const orderName = this.order?.Name || 'Order';
@@ -1714,32 +1818,33 @@ buildNewLogisticAndLines() {
         Account__c: this.order?.AccountId || null,
         From_Contact__c: this.fromContact?.Id || null,
         Contact__c: this.order?.Contact__c || null,
-        From_Address__c: this.order?.From_Address__c || null,
-        To_Address__c: this.toContact?.Id || null,
+        From_Address__c: this.fromAddressId?.Id || null,
+        To_Address__c: this.toAddressId?.Id || null,
         Channel__c: channel,
         Distribution_Channel__c: distChannel
     };
 
-    // Build Line Items
+    // Build Line Items + Stock + Temp Keys
     const newLines = [];
+    console.log('Building new Logistic and Lines...');
+    console.log('Selected Product IDs:', this.selectedProductIds);
+    console.log('Order Line Analysis:', JSON.stringify(this.orderLineAnalysis));
     this.selectedProductIds.forEach((productId, i) => {
-        console.log('searching for →', productId);
-
-        // ✅ FIXed lookup logic
         const found = this.orderLineAnalysis.find(x => x.productId === productId);
         console.log('Found:', JSON.stringify(found));
-
         if (!found) return;
 
-        const productItemName = found.productName;
         const ln = i + 1;
+        const tempKey = `temp-${productId}-${ln}`; // ✅ Unique, never null
 
         newLines.push({
-            Id: null,
+            tempKey,                     // ✅ loop key
+            logisticUrl: `/${tempKey}`,  // Optional for preview navigation
             Product__c: productId,
-            Remaining_Qty__c: found.remainingQty || 0,
-            Name: `${productItemName} - LogisticLine-${ln}`,
-            Logistic__c: null
+            productName: found.productName || '',
+            QuantityValue: found.remainingQty || 0,
+            StockValue: this.stockMap[productId].totalQty || 0,
+            Name: `${found.productName} - LogisticLine-${ln}`
         });
     });
 
@@ -1748,6 +1853,7 @@ buildNewLogisticAndLines() {
     console.log('🚛 newLogistic →', JSON.stringify(this.newLogistic));
     console.log('📦 newLogisticLineItems →', JSON.stringify(this.newLogisticLineItems));
 }
+
 
 
 
@@ -1781,6 +1887,22 @@ openProductRecord(e) {
 }
 get isCreateDisabled() {
     return this.selectedProductIds.length === 0;
+}
+handlePrevious() {
+    console.log('Previous clicked');
+
+    // ✅ Go back to Step-1 screen
+    this.showCreateLogisticStep = false;
+    this.showOrderToLogisticsStep = true;
+}
+openOrderItemRecord(e) {
+    const id = e.currentTarget.dataset.id;
+    if (id) this[NavigationMixin.Navigate]({ type: 'standard__recordPage', attributes: { recordId: id, actionName: 'view' }});
+}
+
+openProductRecord(e) {
+    const id = e.currentTarget.dataset.id;
+    if (id) this[NavigationMixin.Navigate]({ type: 'standard__recordPage', attributes: { recordId: id, actionName: 'view' }});
 }
 
 }

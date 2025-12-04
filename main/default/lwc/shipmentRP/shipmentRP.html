@@ -3,69 +3,245 @@
         <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
     </template>
     <template if:true={showOrderToLogisticsStep}>
+        <template if:true={showCreateLogisticStep}>
+  <div class="page-background slds-p-around_medium">
+
+    <div class="modern-card slds-p-around_large">
+      <h2 class="slds-text-heading_medium slds-m-bottom_medium">Create Logistic</h2>
+
+      <!-- ✅ TOP SECTION : Channel & Distribution Channel Lookup (read-only auto-filled) -->
+      <div class="slds-grid slds-gutters slds-wrap slds-m-bottom_large">
+
+        <div class="slds-col slds-size_1-of-2 slds-p-around_small">
+          <label class="label-text">Channel</label>
+          <c-input-lookup obj-name="Channel__c"
+                          search-placeholder="Search Channel..."
+                          selected-value={selectedChannel}
+                          selected-name={selectedChannelName}
+                          selected-name-url={channelUrl}
+                          is-value-selected={channelSelected}
+                          disabled>
+          </c-input-lookup>
+        </div>
+
+        <div class="slds-col slds-size_1-of-2 slds-p-around_small">
+          <label class="label-text">Distribution Channel</label>
+          <c-input-lookup obj-name="Distribution_Channel__c"
+                          search-placeholder="Search Distribution Channel..."
+                          selected-value={selectedDC.Id}
+                          selected-name={selectedDC.Name}
+                          selected-name-url={distributionUrl}
+                          is-value-selected={dcSelected}
+                          disabled>
+          </c-input-lookup>
+        </div>
+
+      </div>
+
+      <!-- ✅ Logistic Name → Editable Text Field (auto-filled from JS, user can edit) -->
+      <div class="slds-m-bottom_medium slds-p-around_small">
+        <lightning-input type="text"
+                         label="Logistic Name"
+                         name="Name"
+                         value={newLogistic.Name}
+                         onchange={handleShipmentFieldChange}>
+        </lightning-input>
+      </div>
+
+      <!-- ✅ Logistic Details Section (ALL auto-filled lookups, no expressions) -->
+      <div class="slds-box slds-theme_shade slds-p-around_medium slds-m-bottom_large">
+        <div class="slds-grid slds-wrap">
+
+          <div class="slds-col slds-size_1-of-1 slds-p-around_small">
+            <label class="label-text">Account</label>
+            <c-input-lookup obj-name="Account"
+                            search-placeholder="Search Account..."
+                            selected-value={accountId}
+                            selected-name={accountName}
+                            selected-name-url={accountUrl}
+                            is-value-selected={accountSelected}
+                            disabled>
+            </c-input-lookup>
+          </div>
+
+          <div class="slds-col slds-size_1-of-2 slds-p-around_small">
+            <label class="label-text">From Contact</label>
+            <c-input-lookup obj-name="Contact"
+                            search-placeholder="Search From Contact..."
+                            selected-value={fromContactId}
+                            selected-name={fromContactName}
+                            selected-name-url={fromContactUrl}
+                            is-value-selected={fromContactSelected}
+                            disabled>
+            </c-input-lookup>
+          </div>
+
+          <div class="slds-col slds-size_1-of-2 slds-p-around_small">
+            <label class="label-text">To Contact</label>
+            <c-input-lookup obj-name="Contact"
+                            search-placeholder="Search To Contact..."
+                            selected-value={toContactId}
+                            selected-name={toContactName}
+                            selected-name-url={toContactUrl}
+                            is-value-selected={toContactSelected}
+                            disabled>
+            </c-input-lookup>
+          </div>
+
+          <div class="slds-col slds-size_1-of-2 slds-p-around_small">
+            <label class="label-text">From Address</label>
+            <c-input-lookup obj-name="Address__c"
+                            search-placeholder="Search From Address..."
+                            selected-value={fromAddressId}
+                            selected-name={fromAddressName}
+                            selected-name-url={fromAddressUrl}
+                             is-value-selected={fromAddressSelected}
+                            disabled>
+            </c-input-lookup>
+          </div>
+
+          <div class="slds-col slds-size_1-of-2 slds-p-around_small">
+            <label class="label-text">To Address</label>
+            <c-input-lookup obj-name="Address__c"
+                            search-placeholder="Search To Address..."
+                            selected-value={toAddressId}
+                            selected-name={toAddressName}
+                            selected-name-url={toAddressUrl}
+                            is-value-selected={toAddressSelected}
+                            disabled>
+            </c-input-lookup>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ✅ LOGISTIC LINE ITEMS TABLE -->
       <div class="modern-card slds-p-around_medium">
-  <h2 class="slds-text-heading_medium slds-m-bottom_medium">Order Items</h2>
+        <h3 class="slds-text-heading_small slds-m-bottom_medium"><strong>Logistic Line Items</strong></h3>
 
-  <table class="slds-table slds-table_bordered slds-table_cell-buffer">
-    <thead>
-      <tr>
-        <th style="width:3rem;">Select</th>
-        <th>Order Item #</th>
-        <th>Product</th>
-        <th>Order Qty</th>
-        <th>Logistic Qty</th>
-        <th>Remaining Qty</th>
-      </tr>
-    </thead>
+        <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+          <thead>
+            <tr>
+              <th>Line Name</th>
+              <th>Product</th>
+              <th>Remaining Qty</th>
+              <th>In Stock</th>
+            </tr>
+          </thead>
 
-    <tbody>
-      <template for:each={orderLineAnalysis} for:item="item">
-        <tr key={item.Id}>
-          <!-- ✅ CHECKBOX COLUMN -->
-          <td>
-            <lightning-input
-              type="checkbox"
-              data-id={item.Id}
-              onchange={handleRowSelect}>
-            </lightning-input>
-          </td>
+          <tbody>
+            <template for:each={newLogisticLineItems} for:item="li">
+              <tr key={li.tempKey}>
 
-          <td>
-            <a href="#" data-id={item.Id} onclick={openOrderItemRecord}>
-              {item.orderItemNumber}
-            </a>
-          </td>
+                <td>
+                  <a href="#"
+                     data-id={li.tempKey}
+                     onclick={openTempPreview}>
+                    {li.Name}
+                  </a>
+                </td>
 
-          <td>
-            <a href="#" data-id={item.productId} onclick={openProductRecord}>
-              {item.productName}
-            </a>
-          </td>
+                <td>
+                  <a href="#" data-id={li.Product__c} onclick={openProductRecord}>
+                    {li.productName}
+                  </a>
+                </td>
 
-          <td>{item.orderQty}</td>
-          <td>{item.logisticQty}</td>
-          <td><strong>{item.remainingQty}</strong></td>
-        </tr>
-      </template>
-    </tbody>
-  </table>
+                <td>{li.QuantityValue}</td>
+                <td><strong>{li.StockValue}</strong></td>
 
-  <!-- ✅ BUTTONS UNDER TABLE -->
-  <div class="slds-grid slds-grid_align-end slds-m-top_medium slds-grid_align-spread">
-    <lightning-button
-      variant="neutral"
-      label="Skip"
-      onclick={handleSkip}>
-    </lightning-button>
 
-    <lightning-button
-      variant="brand"
-      label="Create Logistic"
-      onclick={handleCreateLogistic}
-      disabled={isCreateDisabled}>
-    </lightning-button>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- ✅ NAVIGATION BUTTONS (Back to Step-1 + Save) -->
+      <div class="slds-grid slds-grid_align-spread slds-m-top_large">
+        <lightning-button variant="neutral"
+                          label="Previous"
+                          onclick={handlePrevious}>
+        </lightning-button>
+
+        <lightning-button variant="brand"
+                          label="Save Logistic"
+                          onclick={handleSaveLogistic}
+                          disabled={isCreateDisabled}>
+        </lightning-button>
+      </div>
+
+    </div>
   </div>
+</template>
+
+
+<template if:false={showCreateLogisticStep}>
+        <div class="modern-card slds-p-around_medium">
+<h2 class="slds-text-heading_medium slds-m-bottom_medium">Order Items</h2>
+
+<table class="slds-table slds-table_bordered slds-table_cell-buffer">
+<thead>
+<tr>
+<th style="width:3rem;">Select</th>
+<th>Order Item #</th>
+<th>Product</th>
+<th>Order Qty</th>
+<th>Logistic Qty</th>
+<th>Remaining Qty</th>
+</tr>
+</thead>
+
+<tbody>
+<template for:each={orderLineAnalysis} for:item="item">
+<tr key={item.Id}>
+    <!-- ✅ CHECKBOX COLUMN -->
+    <td>
+    <lightning-input
+        type="checkbox"
+        data-id={item.Id}
+        onchange={handleRowSelect}>
+    </lightning-input>
+    </td>
+
+    <td>
+    <a href="#" data-id={item.Id} onclick={openOrderItemRecord}>
+        {item.orderItemNumber}
+    </a>
+    </td>
+
+    <td>
+    <a href="#" data-id={item.productId} onclick={openProductRecord}>
+        {item.productName}
+    </a>
+    </td>
+
+    <td>{item.orderQty}</td>
+    <td>{item.logisticQty}</td>
+    <td><strong>{item.remainingQty}</strong></td>
+</tr>
+</template>
+</tbody>
+</table>
+
+<!-- ✅ BUTTONS UNDER TABLE -->
+<div class="slds-grid slds-grid_align-end slds-m-top_medium slds-grid_align-spread">
+<lightning-button
+variant="neutral"
+label="Skip"
+onclick={handleSkip}>
+</lightning-button>
+
+<lightning-button
+variant="brand"
+label="Create Logistic"
+onclick={handleCreateLogistic}
+disabled={isCreateDisabled}>
+</lightning-button>
 </div>
+</div>
+</template>
+     
 
     </template>
 <template if:false={showOrderToLogisticsStep}>

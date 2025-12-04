@@ -1799,7 +1799,7 @@ public static Map<String, Object> getOrderAndItemsAnalysis(Id orderId) {
     Map<String, Object> out = new Map<String, Object>();
 
     String orderQuery = 'SELECT ' + UtilClass.selectStarFromSObject('Order') + 
-                       ' FROM Order WHERE Id = :orderId';
+                       ' , Channel__r.Id, Channel__r.Name,Contact__r.Id,Contact__r.Name,Ship_To_Address__r.Id,Ship_To_Address__r.Name,Account.Name FROM Order WHERE Id = :orderId';
     SObject orderRec = Database.query(orderQuery);
     out.put('order', orderRec);
 
@@ -1829,7 +1829,7 @@ public static Map<String, Object> getOrderAndItemsAnalysis(Id orderId) {
     if (chId != null) {
         Distribution_Channel__c topDC = [
             SELECT Id, Name, Priority__c, Site__c,
-                   Site__r.Name,
+                   Site__r.Name,Active__c,
                    Site__r.Address__c, Site__r.Address__r.Name,
                    Site__r.Primary_Contact__c, Site__r.Primary_Contact__r.Name,
                    Site__r.Address__r.City__c, Site__r.Address__r.State__c, Site__r.Address__r.Country__c
@@ -1840,17 +1840,28 @@ public static Map<String, Object> getOrderAndItemsAnalysis(Id orderId) {
         ];
 
         if (topDC != null) {
-            out.put('distributionChannel', new Map<String, Object>{
+            Map<String, Object> dcMap = new Map<String, Object>{
                 'Id' => topDC.Id,
-                'Name' => topDC.Name
+                'Name' => topDC.Name,
+                'Priority__c' => topDC.Priority__c,
+                'Active__c' => topDC.Active__c
+            };
+
+            // ✅ Nest Site details under dcMap
+            dcMap.put('Site', new Map<String, Object>{
+                'siteId' => topDC.Site__c,
+                'siteName' => topDC.Site__r?.Name,
+                'siteAddressId' => topDC.Site__r?.Address__c,
+                'siteAddressName' => topDC.Site__r?.Address__r?.Name,
+                'sitePrimaryContactId' => topDC.Site__r?.Primary_Contact__c,
+                'sitePrimaryContactName' => topDC.Site__r?.Primary_Contact__r?.Name
+                // 'sitePrimaryContactEmail' => topDC.Site__r?.Primary_Contact__r?.Email
             });
-            out.put('siteId', topDC.Site__c);
-            out.put('siteName', topDC.Site__r?.Name);
-            out.put('siteAddressId', topDC.Site__r?.Address__c);
-            out.put('siteAddressName', topDC.Site__r?.Address__r?.Name);
-            out.put('sitePrimaryContactId', topDC.Site__r?.Primary_Contact__c);
-            out.put('sitePrimaryContactName', topDC.Site__r?.Primary_Contact__r?.Name);
+
+            // ✅ Return only one structured object for Distribution Channel
+            out.put('distributionChannel', dcMap);
         }
+
     }
     //  EXISTING LOGISTICS with only required fields + navigation ready names
     List<Logistic__c> logisticRecs = [
@@ -1876,15 +1887,11 @@ public static Map<String, Object> getOrderAndItemsAnalysis(Id orderId) {
     String channel,                 // kept for compatibility (not used in filter here)
     String distributionChannel      // Id of Distribution_Channel__c record
 ) {
-    
-    Map<Id, ProductStockSummary> result = new Map<Id, ProductStockSummary>();
-    try {
-        
-    
     System.debug('productIds --> '+productIds);
     System.debug('channel --> '+channel);
     System.debug('distributionChannel --> '+distributionChannel);
 
+    Map<Id, ProductStockSummary> result = new Map<Id, ProductStockSummary>();
 
     if (productIds == null || productIds.isEmpty() || String.isBlank(distributionChannel)) {
         return result;
@@ -1933,9 +1940,7 @@ public static Map<String, Object> getOrderAndItemsAnalysis(Id orderId) {
 
         result.put(productId, new ProductStockSummary(productId, totalQty));
     }
-} catch (Exception e) {
-        System.debug('Error in getTotalStockPerProduct : ' + e.getMessage() + ' at line ' + e.getLineNumber());
-    }
+
     return result;
 }
 
