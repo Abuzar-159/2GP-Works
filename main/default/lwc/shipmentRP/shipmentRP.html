@@ -2,6 +2,73 @@
      <template if:true={isLoading}>
         <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
     </template>
+    <template if:true={showOrderToLogisticsStep}>
+      <div class="modern-card slds-p-around_medium">
+  <h2 class="slds-text-heading_medium slds-m-bottom_medium">Order Items</h2>
+
+  <table class="slds-table slds-table_bordered slds-table_cell-buffer">
+    <thead>
+      <tr>
+        <th style="width:3rem;">Select</th>
+        <th>Order Item #</th>
+        <th>Product</th>
+        <th>Order Qty</th>
+        <th>Logistic Qty</th>
+        <th>Remaining Qty</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <template for:each={orderLineAnalysis} for:item="item">
+        <tr key={item.Id}>
+          <!-- ✅ CHECKBOX COLUMN -->
+          <td>
+            <lightning-input
+              type="checkbox"
+              data-id={item.Id}
+              onchange={handleRowSelect}>
+            </lightning-input>
+          </td>
+
+          <td>
+            <a href="#" data-id={item.Id} onclick={openOrderItemRecord}>
+              {item.orderItemNumber}
+            </a>
+          </td>
+
+          <td>
+            <a href="#" data-id={item.productId} onclick={openProductRecord}>
+              {item.productName}
+            </a>
+          </td>
+
+          <td>{item.orderQty}</td>
+          <td>{item.logisticQty}</td>
+          <td><strong>{item.remainingQty}</strong></td>
+        </tr>
+      </template>
+    </tbody>
+  </table>
+
+  <!-- ✅ BUTTONS UNDER TABLE -->
+  <div class="slds-grid slds-grid_align-end slds-m-top_medium slds-grid_align-spread">
+    <lightning-button
+      variant="neutral"
+      label="Skip"
+      onclick={handleSkip}>
+    </lightning-button>
+
+    <lightning-button
+      variant="brand"
+      label="Create Logistic"
+      onclick={handleCreateLogistic}
+      disabled={isCreateDisabled}>
+    </lightning-button>
+  </div>
+</div>
+
+    </template>
+<template if:false={showOrderToLogisticsStep}>
     <template if:false={showSuccessScreen}>
     <div class="page-background slds-p-around_medium">
         <template if:false={showShippingOptions}>
@@ -602,5 +669,5 @@
         </article>
     </div>
 </template>
-
+</template>
 </template>

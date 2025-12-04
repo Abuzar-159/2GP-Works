@@ -353,6 +353,13 @@
                     bomlist[i] = bomwrap[i].Bom;
                 }
                 var BomItemsJSON =  JSON.stringify(bomlist);
+
+                console.log('abu creating logistics');
+                console.log('LogisticJSON = ', LogisticJSON);
+                console.log('LLIListJSON = ', LLIListJSON);
+                console.log('OrderLIneItemsJSON = ', OrderLIneItemsJSON);
+                console.log('BomItemsJSON = ', BomItemsJSON);
+                
                 action.setParams({
                     "LogisticJSON":LogisticJSON,
                     "LLIListJSON":LLIListJSON,
@@ -407,7 +414,7 @@
                                         console.log('remainigqty 1: ',remainigqty);
                                         remainigqty = remainigqty - allloglines[x].Remaining_Quantity__c;
                                         console.log('remainigqty 2: ',remainigqty);
-                                        console.log('allloglines[x].Logistic_Quantity__c : ',allloglines[x].Logistic_Quantity__c);
+                                        console.log('allloglines[x].Logistic_Quantity__c : ',allloglines[x].Logistic_Quantity__c); 
                                         if(remainigqty > 0){ //|| allloglines[x].Logistic_Quantity__c == 0
                                             returntologcreation = true; 
                                             break;

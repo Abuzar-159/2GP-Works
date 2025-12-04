@@ -1751,4 +1751,194 @@ public class BookingResult {
        
 }
 
+public class ProductStockSummary {
+        @AuraEnabled public Id      productId;
+        @AuraEnabled public Decimal totalQty;
+
+        public ProductStockSummary(Id productId, Decimal totalQty) {
+            this.productId = productId;
+            this.totalQty  = totalQty;
+        }
+    }
+// for order to logistic here 
+// @AuraEnabled(cacheable=true)
+// public static Map<String, Object> getOrderAndItemsAnalysis(Id orderId) {
+
+//     Map<String, Object> out = new Map<String, Object>();
+
+//     String orderQuery = 'SELECT ' + UtilClass.selectStarFromSObject('Order') + 
+//                        ' FROM Order WHERE Id = :orderId';
+//     SObject orderRec = Database.query(orderQuery);
+//     out.put('order', orderRec);
+
+//    String itemQuery = 'SELECT ' + UtilClass.selectStarFromSObject('OrderItem') +
+//                    ', Product2.Name FROM OrderItem WHERE OrderId = :orderId';
+//     List<SObject> itemRecs = Database.query(itemQuery);
+
+//     List<Map<String, Object>> analysis = new List<Map<String, Object>>();
+//     Set<Id> ProductIds = new Set<Id>();
+//     for (SObject s : itemRecs) {
+//         Decimal qty  = (Decimal) s.get('Quantity');
+//         Decimal logQ = s.get('Logistic_Quantity__c') == null ? 0 : (Decimal)s.get('Logistic_Quantity__c');
+//         Decimal rem  = qty - logQ;
+
+//         Map<String, Object> row = new Map<String, Object>();
+//         row.put('record', s);
+//         productIds.add((Id)s.get('Product2Id'));
+//         row.put('remainingQty', rem);
+//         analysis.add(row);
+//     }
+
+//     out.put('items', analysis);
+
+//     return out;
+// }
+@AuraEnabled(cacheable=true)
+public static Map<String, Object> getOrderAndItemsAnalysis(Id orderId) {
+
+    Map<String, Object> out = new Map<String, Object>();
+
+    String orderQuery = 'SELECT ' + UtilClass.selectStarFromSObject('Order') + 
+                       ' FROM Order WHERE Id = :orderId';
+    SObject orderRec = Database.query(orderQuery);
+    out.put('order', orderRec);
+
+    String itemQuery = 'SELECT ' + UtilClass.selectStarFromSObject('OrderItem') +
+                       ', Product2.Id, Product2.Name FROM OrderItem WHERE OrderId = :orderId';
+    List<SObject> itemRecs = Database.query(itemQuery);
+
+    List<Map<String, Object>> analysis = new List<Map<String, Object>>();
+    Set<Id> productIds = new Set<Id>();
+
+    for (SObject s : itemRecs) {
+        Decimal qty  = (Decimal)s.get('Quantity');
+        Decimal logQ = s.get('Logistic_Quantity__c') == null ? 0 : (Decimal)s.get('Logistic_Quantity__c');
+        Decimal rem  = qty - logQ;
+
+        Map<String, Object> row = new Map<String, Object>();
+        row.put('record', s);
+        row.put('remainingQty', rem);
+        analysis.add(row);
+
+        productIds.add((Id)s.get('Product2Id'));
+    }
+
+    out.put('items', analysis);
+     // 3️⃣ Get Distribution Channel FROM ORDER SITE with highest priority
+    Id chId = (Id)orderRec.get('Channel__c');
+    if (chId != null) {
+        Distribution_Channel__c topDC = [
+            SELECT Id, Name, Priority__c, Site__c,
+                   Site__r.Name,
+                   Site__r.Address__c, Site__r.Address__r.Name,
+                   Site__r.Primary_Contact__c, Site__r.Primary_Contact__r.Name,
+                   Site__r.Address__r.City__c, Site__r.Address__r.State__c, Site__r.Address__r.Country__c
+            FROM Distribution_Channel__c
+            WHERE Channel__c = :chId
+            ORDER BY Priority__c ASC
+            LIMIT 1
+        ];
+
+        if (topDC != null) {
+            out.put('distributionChannel', new Map<String, Object>{
+                'Id' => topDC.Id,
+                'Name' => topDC.Name
+            });
+            out.put('siteId', topDC.Site__c);
+            out.put('siteName', topDC.Site__r?.Name);
+            out.put('siteAddressId', topDC.Site__r?.Address__c);
+            out.put('siteAddressName', topDC.Site__r?.Address__r?.Name);
+            out.put('sitePrimaryContactId', topDC.Site__r?.Primary_Contact__c);
+            out.put('sitePrimaryContactName', topDC.Site__r?.Primary_Contact__r?.Name);
+        }
+    }
+    //  EXISTING LOGISTICS with only required fields + navigation ready names
+    List<Logistic__c> logisticRecs = [
+        SELECT Id, Name,
+               Account__c, Account__r.Name,
+               Contact__c, Contact__r.Name,
+               From_Contact__c, From_Contact__r.Name,
+               To_Address__c, To_Address__r.Name,
+               From_Address__c, From_Address__r.Name
+        FROM Logistic__c
+        WHERE Order_S__c = :orderId
+    ];
+
+    out.put('logistics', logisticRecs);
+    return out;
+}
+
+
+// abuzar
+@AuraEnabled(cacheable=true)
+ public static Map<Id, ProductStockSummary> getTotalStockPerProduct(
+    List<Id> productIds,
+    String channel,                 // kept for compatibility (not used in filter here)
+    String distributionChannel      // Id of Distribution_Channel__c record
+) {
+    
+    Map<Id, ProductStockSummary> result = new Map<Id, ProductStockSummary>();
+    try {
+        
+    
+    System.debug('productIds --> '+productIds);
+    System.debug('channel --> '+channel);
+    System.debug('distributionChannel --> '+distributionChannel);
+
+
+    if (productIds == null || productIds.isEmpty() || String.isBlank(distributionChannel)) {
+        return result;
+    }
+
+    // 1) Get the DC record to derive Site (Warehouse)
+    Id dcId;
+    try {
+        dcId = (Id)distributionChannel;         // assuming caller passes DC Id as String
+    } catch (Exception e) {
+        // If it's not a valid Id, nothing to do
+        return result;
+    }
+
+    // ⚠️ Adjust object/field API names if different in your org
+    Distribution_Channel__c dc = [
+        SELECT Id, Site__c
+        FROM Distribution_Channel__c
+        WHERE Id = :dcId
+        LIMIT 1
+    ];
+
+    if (dc.Site__c == null) {
+        // No site/warehouse on DC → no inventory to fetch
+        return result;
+    }
+    Id siteId = dc.Site__c;   // this is what Inventory_Stock__c.Warehouse__c points to
+    System.debug('SiteId: ' + siteId);
+    // 2) Query Inventory_Stock__c filtered by Warehouse__c (site)
+    String soql =
+        'SELECT Product__c productId,' +
+        '       SUM(Number_of_Item_In_Stock__c) totalQty' +
+        '  FROM Inventory_Stock__c' +
+        ' WHERE Product__c IN :productIds' +
+        '   AND Active__c = true' +
+        '   AND Number_of_Item_In_Stock__c >= 0' +
+        '   AND Name NOT IN (\'Awaiting Stock\', \'Serial Stock Holder\')' +
+        '   AND Warehouse__c = :siteId' +
+        ' GROUP BY Product__c';
+
+    List<AggregateResult> ars = Database.query(soql);
+
+    for (AggregateResult ar : ars) {
+        Id      productId = (Id)ar.get('productId');
+        Decimal totalQty  = (Decimal)ar.get('totalQty');
+
+        result.put(productId, new ProductStockSummary(productId, totalQty));
+    }
+} catch (Exception e) {
+        System.debug('Error in getTotalStockPerProduct : ' + e.getMessage() + ' at line ' + e.getLineNumber());
+    }
+    return result;
+}
+
+
+
 }
