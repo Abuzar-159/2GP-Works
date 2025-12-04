@@ -1,357 +1,606 @@
 <template>
+     <template if:true={isLoading}>
+        <lightning-spinner alternative-text="Loading..." size="medium"></lightning-spinner>
+    </template>
+    <template if:false={showSuccessScreen}>
     <div class="page-background slds-p-around_medium">
-        
-        <div class="modern-card slds-m-bottom_large slds-p-around_medium">
-           <h2 class="slds-text-heading_medium slds-m-bottom_small slds-grid slds-grid_vertical-align-center">
-                <lightning-icon 
-                    icon-name="standard:contact" 
-                    size="small" 
-                    class="slds-m-right_x-small"
-                    alternative-text="Lightning">
-                </lightning-icon>
-                Shipment Details
-            </h2>
-            
-            <div class="slds-grid slds-wrap slds-gutters slds-m-bottom_medium">
-                <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-right_small">
-                   <lightning-input 
-                        label="Order Number" 
-                        name="orderLookup" 
-                        type="search" 
-                        placeholder="Enter Order Number (e.g., O-00123)"
-                        class="slds-m-bottom_small">
-                        
-                        <lightning-icon 
-                            slot="suffix" 
-                            icon-name="utility:search" 
-                            size="x-small">
-                        </lightning-icon>
-                    </lightning-input>
+        <template if:false={showShippingOptions}>
+
+            <div class="modern-card slds-m-bottom_large slds-p-around_medium">
+                <h2 class="slds-text-heading_medium slds-m-bottom_small slds-grid slds-grid_vertical-align-center">
+                    <lightning-icon icon-name="standard:contact" size="small" class="slds-m-right_x-small"
+                        alternative-text="Lightning">
+                    </lightning-icon>
+                    Shipment Details
+                </h2>
+
+                <div class="slds-grid slds-wrap slds-gutters slds-m-bottom_medium">
+                    <!-- <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-right_small">
+                        <label>Order</label>
+                        <c-input-lookup obj-name="Order" search-placeholder="Search..." icon-name="standard:orders"
+                            qry={orderFilter} onremove={handleRemoveOrder} onlookupselected={selectOrder}
+                            is-value-selected={orderSelected} selected-value={order.Id} selected-name={order.Name}
+                            selected-name-url={orderUrl}>
+                        </c-input-lookup>
+                    </div> -->
+
+                    <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-left_small">
+                        <label>Logistics</label>
+                        <c-input-lookup obj-name="Logistic__c" search-placeholder="Search Logistics..."
+                            icon-name="custom:custom63" qry={setLogisticsQuery} onremove={handleRemoveLogistics}
+                            onlookupselected={selectLogistics} is-value-selected={logisticsSelected}
+                            selected-value={logistics.Id} selected-name={logistics.Name}
+                            selected-name-url={logisticsUrl}>
+                        </c-input-lookup>
+
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-left_small">
+                        <label>Emergency Contact</label>
+                        <c-custom-input-lookup-l-w-c obj-name="Contact" lable="contact" icon-name="standard:contact"
+                            selected-value={emergencyContactId} selected-name={emergencyContactName}
+                            onlookupselected={handleEmergencyContactSelected}
+                            is-value-selected={isEmergencyContactSelected} selected-name-url={emergencyContactUrl}
+                            hide-remove="true" filter={contactFilter}>
+                        </c-custom-input-lookup-l-w-c>
+                    </div>
+                     <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-left_small slds-p-top_large">
+                                <lightning-input type="checkbox" label="Schedule Pickup" name="SchedulePickup"
+                                    checked={shipment.Schedule_Pickup__c} onchange={handleShipmentFieldChange}>
+                                </lightning-input>
+                            </div>
+
+                            <!-- Pickup Date -->
+                            <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-left_small">
+                                <lightning-input type="date" label="Pickup Date" name="PickupDate"
+                                    value={shipment.Pickup_Date__c} onchange={handleShipmentFieldChange}>
+                                </lightning-input>
+                            </div>
+
+                    <!-- BILL TO -->
+                    <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-left_small">
+                        <div class="slds-m-bottom_x-small">
+                            <!-- <span class="slds-form-element__label">From Address</span> -->
+                        </div>
+                        <!-- <label>From Address</label> -->
+                        <!-- <c-input-lookup obj-name="Address__c" search-placeholder="Search..."
+                            icon-name="standard:address" onlookupselected={selectBillTo} qry={billToFilter}
+                            selected-value={order.Bill_To_Address__c} selected-name={billToName}
+                            selected-name-url={billToUrl} onremove={removeBillTo} is-value-selected={billToSelected}
+                            disabled>
+                        </c-input-lookup> -->
+
+
+
+                    </div>
+
+                    <!-- SHIP TO -->
+                    <div class="slds-col slds-size_1-of-1 slds-large-size_4-of-12 slds-p-left_small">
+                        <div class="slds-m-bottom_x-small">
+                            <!-- <span class="slds-form-element__label">To Address</span> -->
+                        </div>
+                        <!-- <label>To Address</label> -->
+
+                        <!-- <c-input-lookup obj-name="Address__c" search-placeholder="Search..."
+                            icon-name="standard:address" onlookupselected={selectShipTo} qry={shipToFilter}
+                            selected-value={order.Ship_To_Address__c} selected-name={shipToName}
+                            selected-name-url={shipToUrl} onremove={removeShipTo} is-value-selected={shipToSelected}
+                            disabled>
+                        </c-input-lookup> -->
+
+                      
+
+
+
+                    </div>
                 </div>
 
-                <div class="slds-col slds-size_1-of-1 slds-large-size_3-of-12 slds-p-left_small">
-                    <lightning-input 
-                        label="Logistics" 
-                        name="trackingLookup" 
-                        type="search"
-                        placeholder="Logistics (e.g., TRK-45678)"
-                        class="slds-m-bottom_small">
-                        
-                        <lightning-icon 
-                            slot="suffix" 
-                            icon-name="utility:truck" 
-                            size="x-small">
-                        </lightning-icon>
-                    </lightning-input>
-                </div>
+
+
+                <h3 class="slds-text-heading_small slds-m-vertical_small">Logistics Details</h3>
+                <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_fixed-layout">
+                    <thead>
+                        <tr class="slds-line-height_reset">
+                            <th scope="col">
+                                <div class="slds-truncate" title="Logistics Name">Logistics Name</div>
+                            </th>
+                            <th scope="col">
+                                <div class="slds-truncate" title="Order">Order</div>
+                            </th>
+                            <th scope="col">
+                                <div class="slds-truncate" title="Product">Product</div>
+                            </th>
+                            <th scope="col">
+                                <div class="slds-truncate" title="Distribution Channel">Distribution Channel</div>
+                            </th>
+                            <th scope="col">
+                                <div class="slds-truncate" title="Total Quantity">Total Quantity</div>
+                            </th>
+                            <th scope="col">
+                                <div class="slds-truncate" title="Type">Type</div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <!-- <tbody>
+                    
+                        <tr class="custom-table-row">
+                            <th scope="row" data-label="Logistics Name">
+                                <div class="slds-truncate">00001328-Logistic-1</div>
+                            </th>
+                            <td data-label="Order">0001328
+                            </td>
+                            <td data-label="Distribution Channel">
+                                <div class="slds-truncate">Direct Sales DC</div>
+                            </td>
+                            <td data-label="Total Quantity">
+                                <div class="slds-truncate">10.00</div>
+                            </td>
+                            <td data-label="Type">
+                                <div class="slds-truncate">Outbound</div>
+                            </td>
+                        </tr>
+                        <tr class="custom-table-row">
+                            <th scope="row" data-label="Logistics Name">
+                                <div class="slds-truncate">00001328-Logistic-1</div>
+                            </th>
+                            <td data-label="Order">0001328
+                            </td>
+                            <td data-label="Distribution Channel">
+                                <div class="slds-truncate">Direct Sales DC</div>
+                            </td>
+                            <td data-label="Total Quantity">
+                                <div class="slds-truncate">10.00</div>
+                            </td>
+                            <td data-label="Type">
+                                <div class="slds-truncate">Outbound</div>
+                            </td>
+                        </tr>
+                        <tr class="custom-table-row">
+                            <th scope="row" data-label="Logistics Name">
+                                <div class="slds-truncate">00001328-Logistic-1</div>
+                            </th>
+                            <td data-label="Order">0001328
+                            </td>
+                            <td data-label="Distribution Channel">
+                                <div class="slds-truncate">Direct Sales DC</div>
+                            </td>
+                            <td data-label="Total Quantity">
+                                <div class="slds-truncate">10.00</div>
+                            </td>
+                            <td data-label="Type">
+                                <div class="slds-truncate">Outbound</div>
+                            </td>
+                        </tr>
+                        <tr class="custom-table-row">
+                            <th scope="row" data-label="Logistics Name">
+                                <div class="slds-truncate">00001328-Logistic-1</div>
+                            </th>
+                            <td data-label="Order">0001328
+                            </td>
+                            <td data-label="Distribution Channel">
+                                <div class="slds-truncate">Direct Sales DC</div>
+                            </td>
+                            <td data-label="Total Quantity">
+                                <div class="slds-truncate">10.00</div>
+                            </td>
+                            <td data-label="Type">
+                                <div class="slds-truncate">Outbound</div>
+                            </td>
+                        </tr>
+                    
+                
+                </tbody> -->
+
+                    <tbody>
+                        <template if:true={logisticLineItems}>
+                            <template for:each={logisticLineItems} for:item="lli">
+                                <tr key={lli.Id} class="custom-table-row">
+                                    <th scope="row" data-label="Logistics Name">
+                                        <div class="slds-truncate">
+                                            {lli.Logistic__r.Name}
+                                        </div>
+                                    </th>
+                                    <td data-label="Order">
+                                        <div class="slds-truncate">
+                                            {lli.Logistic__r.Order_S__r.Name}
+                                        </div>
+                                    </td>
+                                    <td data-label="Product">
+                                        <div class="slds-truncate">
+                                            {lli.Product__r.Name}
+                                        </div>
+                                    </td>
+                                    <td data-label="Distribution Channel">
+                                        <div class="slds-truncate">
+                                            <!-- change to your actual API field -->
+                                            {lli.Logistic__r.Distribution_Channel__r.Name}
+                                        </div>
+                                    </td>
+                                    <td data-label="Total Quantity">
+                                        <div class="slds-truncate">
+                                            {lli.Quantity__c}
+                                        </div>
+                                    </td>
+                                    <td data-label="Type">
+                                        <div class="slds-truncate">
+                                            <!-- change to your actual API field -->
+                                            {lli.Logistic__r.Type__c}
+                                        </div>
+                                    </td>
+                                </tr>
+                            </template>
+                        </template>
+                    </tbody>
+
+                </table>
             </div>
 
-            <h3 class="slds-text-heading_small slds-m-vertical_small">Logistics Details</h3>
-            <table class="slds-table slds-table_cell-buffer slds-table_bordered slds-table_fixed-layout">
-                <thead>
-                    <tr class="slds-line-height_reset">
-                        <th scope="col"><div class="slds-truncate" title="Logistics Name">Logistics Name</div></th>
-                        <th scope="col"><div class="slds-truncate" title="Order">Order</div></th>
-                        <th scope="col"><div class="slds-truncate" title="Distribution Channel">Distribution Channel</div></th>
-                        <th scope="col"><div class="slds-truncate" title="Total Quantity">Total Quantity</div></th>
-                        <th scope="col"><div class="slds-truncate" title="Type">Type</div></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    
-                        <tr class="custom-table-row">
-                            <th scope="row" data-label="Logistics Name">
-                                <div class="slds-truncate">00001328-Logistic-1</div>
-                            </th>
-                            <td data-label="Order">0001328
-                            </td>
-                            <td data-label="Distribution Channel">
-                                <div class="slds-truncate">Direct Sales DC</div>
-                            </td>
-                            <td data-label="Total Quantity">
-                                <div class="slds-truncate">10.00</div>
-                            </td>
-                            <td data-label="Type">
-                                <div class="slds-truncate">Outbound</div>
-                            </td>
-                        </tr>
-                        <tr class="custom-table-row">
-                            <th scope="row" data-label="Logistics Name">
-                                <div class="slds-truncate">00001328-Logistic-1</div>
-                            </th>
-                            <td data-label="Order">0001328
-                            </td>
-                            <td data-label="Distribution Channel">
-                                <div class="slds-truncate">Direct Sales DC</div>
-                            </td>
-                            <td data-label="Total Quantity">
-                                <div class="slds-truncate">10.00</div>
-                            </td>
-                            <td data-label="Type">
-                                <div class="slds-truncate">Outbound</div>
-                            </td>
-                        </tr>
-                        <tr class="custom-table-row">
-                            <th scope="row" data-label="Logistics Name">
-                                <div class="slds-truncate">00001328-Logistic-1</div>
-                            </th>
-                            <td data-label="Order">0001328
-                            </td>
-                            <td data-label="Distribution Channel">
-                                <div class="slds-truncate">Direct Sales DC</div>
-                            </td>
-                            <td data-label="Total Quantity">
-                                <div class="slds-truncate">10.00</div>
-                            </td>
-                            <td data-label="Type">
-                                <div class="slds-truncate">Outbound</div>
-                            </td>
-                        </tr>
-                        <tr class="custom-table-row">
-                            <th scope="row" data-label="Logistics Name">
-                                <div class="slds-truncate">00001328-Logistic-1</div>
-                            </th>
-                            <td data-label="Order">0001328
-                            </td>
-                            <td data-label="Distribution Channel">
-                                <div class="slds-truncate">Direct Sales DC</div>
-                            </td>
-                            <td data-label="Total Quantity">
-                                <div class="slds-truncate">10.00</div>
-                            </td>
-                            <td data-label="Type">
-                                <div class="slds-truncate">Outbound</div>
-                            </td>
-                        </tr>
-                    
-                
-                </tbody>
-            </table>
-        </div>
 
-    
 
-        <div class="modern-card slds-m-bottom_large slds-p-around_medium">
-        <h2 class="slds-text-heading_medium slds-m-bottom_small slds-grid slds-grid_vertical-align-center">
-        <lightning-icon 
-            icon-name="standard:code_set_bundle" 
-            size="small" 
-            class="slds-m-right_x-small"
-            alternative-text="Package Details Icon">
-        </lightning-icon>
-        Package Details
-        </h2>
+            <div class="modern-card slds-m-bottom_large slds-p-around_medium">
+                <h2 class="slds-text-heading_medium slds-m-bottom_small slds-grid slds-grid_vertical-align-center">
+                    <lightning-icon icon-name="standard:code_set_bundle" size="small" class="slds-m-right_x-small"
+                        alternative-text="Package Details Icon">
+                    </lightning-icon>
+                    Package Details
+                </h2>
 
-        <div class="package-list-container slds-m-vertical_medium slds-p-vertical_small">
-            <div class="slds-m-bottom_large">
-        <lightning-button 
-            variant="neutral" 
-            label="Add Package" 
-            icon-name="utility:add" 
-            onclick={addPackage}>
-        </lightning-button>
-        </div>
-        <template for:each={packageList} for:item="pkg" for:index="index">
-            <div key={pkg.id} class="slds-m-vertical_small package-item" style="border: 1px solid #ddd;  border-radius: 10px; padding: 10px;">
-                
-                <div class="slds-box slds-box_x-small slds-grid slds-grid_align-spread slds-grid_vertical-align-center package-header" 
-                        onclick={togglePackageDetails} 
-                        data-package-id={pkg.id} style="    border: none;">
-
-                    <h3 class="slds-text-heading_small">
-                        Package #{index} (Weight: {pkg.Weight} {pkg.WeightUnit})
-                    </h3>
-                    
-                    <div class="slds-button-group" role="group">
-                        <lightning-icon icon-name="action:delete" 
-                                                size="x-small"
-                                                alternative-text="Remove Package" 
-                                                title="Remove Package"
-                                                data-package-id={pkg.id}
-                                                onclick={removePackage}
-                                                class="slds-m-right_small cursor-pointer">
-                        </lightning-icon>
-                        <lightning-icon icon-name={pkg.icon} size="small" alternative-text="Expand"></lightning-icon>
+                <div class="package-list-container slds-m-vertical_medium slds-p-vertical_small">
+                    <div class="slds-m-bottom_large">
+                        <lightning-button variant="neutral" label="Add Package" icon-name="utility:add"
+                            onclick={addPackage}>
+                        </lightning-button>
                     </div>
+                    <template for:each={packageList} for:item="pkg" for:index="index">
+                        <div key={pkg.id} class="slds-m-vertical_small package-item"
+                            style="border: 1px solid #ddd;  border-radius: 10px; padding: 10px;">
+
+                            <div class="slds-box slds-box_x-small slds-grid slds-grid_align-spread slds-grid_vertical-align-center package-header"
+                                onclick={togglePackageDetails} data-package-id={pkg.id} style="    border: none;">
+
+                                <h3 class="slds-text-heading_small">
+                                    Package {pkg.displayIndex} (Weight: {pkg.Weight} {pkg.WeightUnit})
+                                </h3>
+
+                                <div class="slds-button-group" role="group">
+                                    <lightning-icon icon-name="action:delete" size="x-small"
+                                        alternative-text="Remove Package" title="Remove Package"
+                                        data-package-id={pkg.id} onclick={removePackage}
+                                        class="slds-m-right_small cursor-pointer">
+                                    </lightning-icon>
+                                    <lightning-icon icon-name={pkg.icon} size="small"
+                                        alternative-text="Expand"></lightning-icon>
+                                </div>
+                            </div>
+
+                            <div class={pkg.class}>
+                                <div class="slds-grid slds-wrap slds-gutters slds-p-top_medium">
+
+                                    <!-- <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-combobox label="Shipment Type" name="ShipmentType" options={shipmentTypeOptions} data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.ShipmentType} placeholder="Select Type"></lightning-combobox></div> -->
+                                    <!-- <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-combobox label="Shipment Mode" name="ShipmentMode" options={shipmentModeOptions} data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.ShipmentMode} placeholder="Select Mode"></lightning-combobox></div> -->
+                                    <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-combobox
+                                            label=" Package Type" name="FVPackageType" options={fvPackageTypeOptions}
+                                            data-package-id={pkg.id} onchange={handlePackageChange}
+                                            value={pkg.FVPackageType}
+                                            placeholder="Select Package Type"></lightning-combobox></div>
+                                    <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input
+                                            label="Declared Value" name="DeclaredValue" type="number"
+                                            data-package-id={pkg.id} onchange={handlePackageChange}
+                                            value={pkg.DeclaredValue}></lightning-input></div>
+                                    <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input
+                                            label="Length" name="Length" type="number" data-package-id={pkg.id}
+                                            onchange={handlePackageChange} value={pkg.Length}></lightning-input></div>
+
+                                    <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input
+                                            label="Width" name="Width" type="number" data-package-id={pkg.id}
+                                            onchange={handlePackageChange} value={pkg.Width}></lightning-input></div>
+                                    <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input
+                                            label="Height" name="Height" type="number" data-package-id={pkg.id}
+                                            onchange={handlePackageChange} value={pkg.Height}></lightning-input></div>
+                                    <div class="slds-col slds-size_1-of-5 slds-p-bottom_small">
+                                        <lightning-combobox label="Dimension Unit" name="DimensionUnit"
+                                            options={dimensionUnitOptions} data-package-id={pkg.id}
+                                            onchange={handlePackageChange} value={pkg.DimensionUnit}
+                                            placeholder="Select Unit">
+                                        </lightning-combobox>
+
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input
+                                            label="Weight" name="Weight" type="number" data-package-id={pkg.id}
+                                            onchange={handlePackageChange} value={pkg.Weight}></lightning-input></div>
+                                    <div class="slds-col slds-size_1-of-5 slds-p-bottom_small">
+                                        <lightning-combobox label="Weight Unit" name="WeightUnit"
+                                            options={weightUnitOptions} data-package-id={pkg.id}
+                                            onchange={handlePackageChange} value={pkg.WeightUnit}
+                                            placeholder="Select Unit">
+                                        </lightning-combobox>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input
+                                            label="Quantity" name="Quantity" type="number" data-package-id={pkg.id}
+                                            onchange={handlePackageChange}  value={pkg.Quantity}></lightning-input></div>
+
+                                    <!-- <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input label="PO Number" name="PONumber" type="text" data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.PONumber}></lightning-input></div> -->
+                                    <!-- <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input label="Deposit Tag" name="DepositTag" type="text" data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.DepositTag}></lightning-input></div> -->
+                                    <div class="slds-col slds-size_1-of-5 slds-p-bottom_small">
+                                        <lightning-combobox label="Freight Class" name="FreightClass"
+                                            options={freightClassOptions} data-package-id={pkg.id}
+                                            onchange={handlePackageChange} value={pkg.FreightClass}
+                                            placeholder="Select Class">
+                                        </lightning-combobox>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input
+                                            label="NMFC Code" name="NMFCCode" type="number" data-package-id={pkg.id}
+                                            onchange={handlePackageChange} value={pkg.NMFCCode}></lightning-input></div>
+                                    <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input
+                                            label="Is Hazmat?" name="IsHazmat" type="toggle" data-package-id={pkg.id}
+                                            onchange={handlePackageChange} checked={pkg.IsHazmat}></lightning-input>
+                                    </div>
+
+                                    <template if:true={pkg.IsHazmat}>
+                                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input
+                                                label="Hazmat ID" name="HazmatID" type="text" data-package-id={pkg.id}
+                                                onchange={handlePackageChange} value={pkg.HazmatID}></lightning-input>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small">
+
+                                            <lightning-combobox label="Primary Hazard Class" name="HazardClass"
+                                                options={hazardClassOptions} data-package-id={pkg.id}
+                                                onchange={handlePackageChange} value={pkg.HazardClass}
+                                                placeholder="Select Class">
+                                            </lightning-combobox>
+                                        </div>
+                                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small">
+                                            <lightning-combobox label="Packaging Group" name="PackagingGroup"
+                                                options={packagingGroupOptions} data-package-id={pkg.id}
+                                                onchange={handlePackageChange} value={pkg.PackagingGroup}
+                                                placeholder="Select Group">
+                                            </lightning-combobox>
+                                        </div>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
                 </div>
 
-                <div class={pkg.class}>
-                    <div class="slds-grid slds-wrap slds-gutters slds-p-top_medium">
-                        
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-combobox label="Shipment Type" name="ShipmentType" options={shipmentTypeOptions} data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.ShipmentType} placeholder="Select Type"></lightning-combobox></div>
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-combobox label="Shipment Mode" name="ShipmentMode" options={shipmentModeOptions} data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.ShipmentMode} placeholder="Select Mode"></lightning-combobox></div>
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-combobox label="FV Package Type" name="FVPackageType" options={fvPackageTypeOptions} data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.FVPackageType} placeholder="Select Package Type"></lightning-combobox></div>
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input label="Declared Value" name="DeclaredValue" type="number" data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.DeclaredValue}></lightning-input></div>
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input label="Length" name="Length" type="number" data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.Length}></lightning-input></div>
-                        
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input label="Width" name="Width" type="number" data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.Width}></lightning-input></div>
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input label="Height" name="Height" type="number" data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.Height}></lightning-input></div>
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-combobox label="Dimension Unit" name="DimensionUnit" options={dimensionUnitOptions} data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.DimensionUnit} placeholder="Select Unit"></lightning-combobox></div>
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input label="Weight" name="Weight" type="number" data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.Weight}></lightning-input></div>
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-combobox label="Weight Unit" name="WeightUnit" options={weightUnitOptions} data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.WeightUnit} placeholder="Select Unit"></lightning-combobox></div>
-                        
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input label="PO Number" name="PONumber" type="text" data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.PONumber}></lightning-input></div>
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input label="Deposit Tag" name="DepositTag" type="text" data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.DepositTag}></lightning-input></div>
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-combobox label="Freight Class" name="FreightClass" options={freightClassOptions} data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.FreightClass} placeholder="Select Class"></lightning-combobox></div>
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input label="NMFC Code" name="NMFCCode" type="number" data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.NMFCCode}></lightning-input></div>
-                        <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input label="Is Hazmat?" name="IsHazmat" type="toggle" data-package-id={pkg.id} onchange={handlePackageChange} checked={pkg.IsHazmat}></lightning-input></div>
-                        
-                        <template if:true={pkg.IsHazmat}>
-                            <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input label="Hazmat ID" name="HazmatID" type="text" data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.HazmatID}></lightning-input></div>
-                            <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-combobox label="Primary Hazard Class" name="HazardClass" options={hazardClassOptions} data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.HazardClass} placeholder="Select Class"></lightning-combobox></div>
-                            <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-combobox label="Packaging Group" name="PackagingGroup" options={packagingGroupOptions} data-package-id={pkg.id} onchange={handlePackageChange} value={pkg.PackagingGroup} placeholder="Select Group"></lightning-combobox></div>
-                        </template>
-                    </div>
+
+                <div class="slds-grid slds-grid_align-end slds-m-top_medium">
+                    <lightning-button variant="brand" label="Get Quotes" title="Get Rates" onclick={handleGetQuotes}
+                        class="slds-m-left_x-small">
+                    </lightning-button>
                 </div>
             </div>
         </template>
-        </div>
-        
 
-        <div class="slds-grid slds-grid_align-end slds-m-top_medium">
-        <lightning-button 
-            variant="brand" 
-            label="Get Quotes" 
-            title="Get Rates" 
-            onclick={handleGetQuotes} 
-            class="slds-m-left_x-small">
-        </lightning-button>
-        </div>
-        </div>
+        <!-- get rates page  -->
+        <template if:true={showShippingOptions}>
+            <template if:false={showSuccessScreen}>
+            <div class=" shipment-container">
+                <div class="modern-card slds-m-bottom_large slds-p-around_medium">
+                    <div class="slds-grid slds-grid_align-spread slds-m-bottom_medium">
+                        <h2 class="slds-text-heading_medium slds-grid slds-grid_vertical-align-center">
+                            <lightning-icon icon-name="standard:service_territory" size="small"
+                                class="slds-m-right_x-small" alternative-text="Shipping Territory Icon">
+                            </lightning-icon>
+                            Available Shipping Options
+                        </h2>
+                        <!-- <lightning-combobox placeholder="Sort by Price" options={sortingOptions} variant="label-hidden"
+                        class="sort-combobox"></lightning-combobox> -->
+                    </div>
 
-      
-     
-    <div class=" shipment-container">
-        <div class="modern-card slds-m-bottom_large slds-p-around_medium">
-            <div class="slds-grid slds-grid_align-spread slds-m-bottom_medium">
-               <h2 class="slds-text-heading_medium slds-grid slds-grid_vertical-align-center">
-                    <lightning-icon 
-                        icon-name="standard:service_territory" 
-                        size="small" 
-                        class="slds-m-right_x-small"
-                        alternative-text="Shipping Territory Icon">
-                    </lightning-icon>
-                    Available Shipping Options
-                </h2>
-                <lightning-combobox placeholder="Sort by Price" options={sortingOptions} variant="label-hidden" class="sort-combobox"></lightning-combobox>
-            </div>
-            
-            <p class="slds-text-body_small slds-m-bottom_medium">03 services available for your shipment</p>
+                    <p class="slds-text-body_small slds-m-bottom_medium">03 services available for your shipment</p>
 
-            <div class="slds-m-bottom_medium">
-                <div class="filter-chip selected">All <lightning-icon icon-name="utility:check" size="xx-small"></lightning-icon></div>
-                <div class="filter-chip">FedEX</div>
-                <div class="filter-chip">UPS</div>
-                <div class="filter-chip">Frieght View</div>
-                
-            </div>
-
-            <template for:each={carrierOptions} for:item="carrier">
+                   <div class="slds-m-bottom_medium">
+                    <!-- <template for:each={carrierOptions} for:item="c">
+                        <div key={c.name} class="filter-chip">{c.name}</div>
+                    </template> -->
+                </div>
+<template for:each={carrierOptions} for:item="carrier">
     <div key={carrier.name} class="shipping-option-card slds-p-around_medium slds-m-bottom_small">
-        <div class="slds-grid  slds-grid_vertical-align-center" onclick={toggleCarrierDetails} data-carrier={carrier.name}>
+
+        <!-- parent row -->
+        <div class="slds-grid slds-grid_vertical-align-center"
+             onclick={toggleCarrierDetails}
+             data-carrier={carrier.name}>
+
             <div class="slds-col">
                 <label class="slds-radio">
-                    <input type="radio" class="slds-m-right_small" name="selectedCarrier" value={carrier.name} />
+                    <input type="radio" name="selectedCarrier" value={carrier.name}/>
                     <span class="slds-radio_faux"></span>
-                    <span class="slds-form-element__label slds-text-heading_medium slds-m-left_small">{carrier.name} ({carrier.count} Options)</span>
-                </label>
-                <div class="slds-text-body_small slds-m-top_x-small slds-m-left_large">
-                    <span class="slds-m-right_medium">
-                        <lightning-icon icon-name="utility:clock" size="x-small" class="slds-m-right_xx-small"></lightning-icon>
-                        {carrier.days} Business Days
+                    <span class="slds-form-element__label slds-text-heading_medium slds-m-left_small">
+                        {carrier.name} ({carrier.count} options available)
                     </span>
-                    <template if:true={carrier.isAffordable}>
-                        <span class="shipping-tag most-affordable slds-m-right_x-small">Most affordable</span>
-                    </template>
-                    <template if:true={carrier.isReliable}>
-                        <span class="shipping-tag reliable-delivery">Reliable delivery</span>
-                    </template>
-                    <template if:true={carrier.isBestSelection}>
-                        <span class="shipping-tag best-selection">Best Selection</span>
-                    </template>
-                </div>
+
+                    <!-- ✅ Provider on parent only -->
+                    <span class="slds-badge slds-m-left_small" style="font-size:12px;">
+                        {carrier.provider}
+                    </span>
+
+                </label>
             </div>
-            
-            <div class="slds-col slds-text-align_right slds-m-right_medium">
+
+            <div class="slds-col slds-text-align_right">
                 <span class="slds-text-heading_medium">{carrier.startingPrice}</span>
                 <div class="slds-text-body_small slds-text-color_weak">Starting cost</div>
             </div>
-            
-            <lightning-icon 
-                icon-name={carrier.icon} 
-                size="small" 
-                alternative-text="Expand" 
-                title="Expand"
-                class="expand-icon slds-p-horizontal_x-small" 
-                data-carrier={carrier.name}>
+
+            <lightning-icon icon-name={carrier.icon}
+                            size="small"
+                            class="expand-icon slds-p-horizontal_x-small">
             </lightning-icon>
         </div>
-        
-        <div class={carrier.class} data-sub-options={carrier.name}>
+
+        <!-- expand section -->
+        <div class={carrier.class}>
+
             <template for:each={carrier.services} for:item="service">
-                <div key={service.name} class="sub-option-row slds-p-vertical_small">
+                <div key={service.value} class="sub-option-row slds-p-vertical_small">
                     <div class="slds-grid slds-grid_align-spread slds-grid_vertical-align-center">
+
                         <div class="slds-col">
                             <label class="slds-radio">
-                                <input type="radio" name="selectedService" value={service.value} />
+                                <input type="radio"
+                                       name="selectedService"
+                                       value={service.value}
+                                       data-quote-id={service.quoteId}
+                                       data-carrier={carrier.name}
+                                       data-cost={service.price}
+                                       onchange={handleSelectQuote}
+                                        
+                                        />
+                                        
                                 <span class="slds-radio_faux"></span>
                                 <span class="slds-form-element__label slds-m-left_small">{service.name}</span>
                             </label>
                         </div>
-                        
+
                         <div class="slds-col slds-text-align_right">
                             {service.price} <span class="slds-text-body_small slds-text-color_weak">Total cost</span>
                         </div>
+
+                      
+
                     </div>
                 </div>
             </template>
+
         </div>
     </div>
 </template>
 
-<div class="slds-grid slds-grid_align-end slds-m-top_medium">
-    <lightning-button 
-    variant="neutral" 
-    label="Go back" 
-    title="Go to a step back" 
-    onclick={handleNext} 
-    class="slds-m-left_x-small">
-    </lightning-button>
-    <lightning-button 
-        variant="brand" 
-        label="Ready to ship" 
-        title="Go to the next step" 
-        onclick={handleNext} 
-        class="slds-m-left_x-small">
-    </lightning-button>
-</div>
-        </div>
 
-        
-    </div>
+                    <div class="slds-docked-form-footer">
+                        <lightning-button variant="neutral" label="Go back" title="Go to a step back"
+                            onclick={handleBackFromQuotes} class="slds-m-left_x-small">
+                        </lightning-button>
+                        <lightning-button variant="brand" label="Ready to ship" title="Go to the next step"
+                            onclick={handleReadyToShip} class="slds-m-left_x-small">
+                        </lightning-button>
+                    </div>
+                </div>
 
-    <div class="modern-card slds-p-around_large slds-text-align_center">
-                
-                <lightning-icon 
-                    icon-name="utility:success" 
-                    size="large" 
-                    variant="success" 
-                    class="slds-m-bottom_medium">
-                </lightning-icon>
-                
-                <h1 class="slds-text-heading_large slds-m-bottom_small">Shipment Finalized!</h1>
-                
-                <p class="slds-text-body_regular slds-m-bottom_large slds-text-color_weak">
-                    Your shipment and carrier selection have been successfully confirmed. Tracking details will be available shortly.
-                </p>
 
-                <lightning-button 
-                    variant="brand" 
-                    label="Go Back to Form" 
-                    title="Return to the shipment entry page" 
-                    onclick={handleGoBackToForm}>
-                </lightning-button>
             </div>
-        
+            </template>
+        </template>
+
+        <!-- get rates end here  -->
+
+
     </div>
+    </template>
+    <template if:true={showSuccessScreen}>
+    
+    <div class="slds-p-around_medium">
+
+        <article class="slds-card slds-card_boundary">
+            
+            <div class="slds-card__header slds-grid slds-grid_vertical slds-align_absolute-center slds-p-top_large slds-p-bottom_medium slds-text-align_center">
+                <div class="slds-m-bottom_small">
+                    <lightning-icon icon-name="action:check" size="medium" alternative-text="Success"></lightning-icon>
+                </div>
+                <h2 class="slds-text-heading_medium slds-m-bottom_xx-small">
+                    Shipment Ready for Pickup
+                </h2>
+                <p class="slds-text-color_weak slds-text-body_regular">
+                    Your shipment has been booked and documents stored.
+                </p>
+            </div>
+
+            <div class="slds-card__body slds-card__body_inner slds-p-top_large">
+                
+                <div class="slds-grid slds-wrap slds-gutters slds-m-bottom_large">
+                    
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-m-bottom_medium">
+                        <div class="modern-card slds-p-around_large">
+                            <p class="slds-text-title_caps slds-text-color_weak">Tracking Number</p>
+                            <p class="slds-text-heading_small slds-text-title_bold">{bookingResult.trackingNumber}</p>
+                        </div>
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-m-bottom_medium">
+                         <div class="modern-card slds-p-around_large">
+                        <p class="slds-text-title_caps slds-text-color_weak">Shipment ID</p>
+                        <a href="#" onclick={openShipmentRecord} data-id={bookingResult.shipmentSalesforceId} class="slds-text-heading_small">
+                            {bookingResult.shipmentSalesforceId}
+                        </a>
+                         </div>
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-m-bottom_medium">
+                         <div class="modern-card slds-p-around_large">
+                        <p class="slds-text-title_caps slds-text-color_weak">Carrier</p>
+                        <div class="slds-grid slds-grid_vertical-align-center">
+                            <lightning-icon icon-name="standard:shipment" size="xx-small" class="slds-m-right_x-small"></lightning-icon>
+                            <span class="slds-text-body_regular">{bookingResult.carrier}</span>
+                        </div>
+                         </div>
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-m-bottom_medium">
+                         <div class="modern-card slds-p-around_large">
+                        <p class="slds-text-title_caps slds-text-color_weak">Total Cost</p>
+                        <p class="slds-text-heading_medium slds-text-color_success slds-text-title_bold">
+                            {bookingResult.amount} {bookingResult.currencyCode}
+                        </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="slds-border_top slds-m-vertical_medium"></div>
+
+                <div class="slds-grid slds-wrap slds-gutters">
+                    
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-m-bottom_medium">
+                        <div class="slds-box slds-box_x-small slds-theme_shade">
+                            <p class="slds-text-title_caps slds-m-bottom_xx-small"><strong>FROM</strong></p>
+                            
+                            <template if:true={fromContact.Company__r}>
+                                <p class="slds-text-title_bold">{fromContact.Company__r.Name}</p>
+                            </template>
+                            
+                            <template if:true={fromAddress}>
+                                <p>{fromAddress.Address_Line1__c}</p>
+                                <p>{fromAddress.City__c}, {fromAddress.State__c}</p>
+                            </template>
+                        </div>
+                    </div>
+
+                    <div class="slds-col slds-size_1-of-1 slds-medium-size_1-of-2 slds-m-bottom_medium">
+                        <div class="slds-box slds-box_x-small slds-theme_shade">
+                            <p class="slds-text-title_caps slds-m-bottom_xx-small"><strong>TO</strong></p>
+                            
+                            <template if:true={toContact.Company__r}>
+                                <p class="slds-text-title_bold">{toContact.Company__r.Name}</p>
+                            </template>
+                            
+                            <template if:true={toAddress}>
+                                <p>{toAddress.Address_Line1__c}</p>
+                                <p>{toAddress.City__c}, {toAddress.State__c}</p>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <footer class="slds-card__footer slds-text-align_center slds-p-around_medium">
+                <div class="slds-button-group-row slds-align_absolute-center slds-m-bottom_small">
+                    <template if:true={docIds.label}>
+                        <lightning-button class="slds-m-horizontal_x-small" label="View Label" icon-name="utility:preview" onclick={openPreview} data-type="label"></lightning-button>
+                    </template>
+                    <template if:true={docIds.bol}>
+                        <lightning-button class="slds-m-horizontal_x-small" label="View BOL" icon-name="utility:file" onclick={openPreview} data-type="bol"></lightning-button>
+                    </template>
+                </div>
+
+                <div class="slds-m-top_medium">
+                    <lightning-button variant="brand" label="Done" onclick={backToForm} class="slds-size_1-of-1 slds-max-medium-size_1-of-1 slds-large-size_1-of-4"></lightning-button>
+                </div>
+            </footer>
+
+        </article>
+    </div>
+</template>
+
 </template>

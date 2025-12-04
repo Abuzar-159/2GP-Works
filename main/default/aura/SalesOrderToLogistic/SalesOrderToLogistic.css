@@ -1,0 +1,251 @@
+.THIS .bg-grey {
+    background: #f6f6f6;
+    padding: 10px;
+    font-size:15px;
+}
+.THIS .standard-address {
+    background-color: #04844b !important;
+}
+.THIS .slds-form-element__label{
+    font-weight:bold;
+}
+.THIS .maq-neutral{
+    background:#ffffff;
+    border:1px solid #ddd;
+}
+.THIS .h2overides {
+    font-size: 14px;
+    margin-bottom: 0px;
+}
+.THIS .pd-5{
+    padding-top: 18px;
+}
+.THIS .table-extra{
+    margin-bottom:100px; outline: none;
+}
+.THIS .bg-white{
+   background-color: #FFF;
+}
+.THIS .salesordertologistic-max-height30{
+    max-height: 30px;
+}
+.THIS .salesordertologistic-p10{
+    padding:10px;
+}
+.THIS .red{
+    color:#ff0000;
+}
+
+.THIS .slds-truncate-overide{
+    max-width:160px; white-space:normal;
+}
+.THIS .slds-truncate-overide-180{
+     max-width:220px; white-space:normal;
+}   
+.THIS .salesordertologistic-spinner35{
+    cursor:pointer;width:35px;height:35px;
+}
+.THIS .table-extra{
+    margin-bottom:100px; outline: none;
+}
+.THIS .salesordertologistic-color1{
+    color: #2196f3;
+}
+.THIS .shadow-custom-extra{
+   background:#fff; border:1px solid #f7f7f7;margin-top: 10px;
+}
+.THIS .salesordertologistic-width200{
+    width:200px;float:left;
+}
+.THIS .salesordertologistic-pr-7{
+    padding-right:7px;
+}
+.THIS .salesordertologistic-mr-10{
+    margin-right:10px;
+}
+.THIS .salesordertologistic-red{
+    color:red;
+}
+.THIS .custominput input {
+    line-height: normal;
+    border: 1px solid #ddd !important;
+    width: 100% !important;
+    height: 31px !important;
+    border-radius: 3px !important;
+}
+.THIS .customstandard .slds-icon-standard-fulfillment-order {
+    background-color: #33b5e5;
+}
+.THIS .slds-tabs--default__item.slds-is-active .slds-tabs--default__link {
+    font-weight: 700;
+    color: #2196f3;
+}
+.THIS .slds-tabs--default__link{
+      color: #2196f3 !important;
+}
+.THIS .mainSpinClass{
+    width: 100%;
+    height: 100%;
+}
+
+
+.THIS .nolble .slds-form-element__label:empty {
+    margin: 0;
+    display: none;
+}
+
+.THIS .erp_mark7 a:focus, 
+.THIS .erp_mark7 a:hover {
+    text-decoration: underline;
+    color: #7cdbff;
+}
+.THIS a:focus, 
+.THIS a:hover {
+    text-decoration: underline;
+    color: #7cdbff;
+}
+.THIS .ERP7SalesOrderToLogistic .slds-tabs--default__item.slds-active .slds-tabs--default__link:hover, 
+.THIS .ERP7SalesOrderToLogistic .slds-tabs--default__item.slds-active .slds-tabs_default__link:hover, 
+.THIS .ERP7SalesOrderToLogistic .slds-tabs--default__item.slds-is-active .slds-tabs--default__link:hover, 
+.THIS .ERP7SalesOrderToLogistic .slds-tabs--default__item.slds-is-active .slds-tabs_default__link:hover,
+.THIS .ERP7SalesOrderToLogistic .slds-tabs_default__item.slds-active .slds-tabs--default__link:hover, 
+.THIS .ERP7SalesOrderToLogistic .slds-tabs_default__item.slds-active .slds-tabs_default__link:hover, 
+.THIS .ERP7SalesOrderToLogistic .slds-tabs_default__item.slds-is-active .slds-tabs--default__link:hover, 
+.THIS .ERP7SalesOrderToLogistic .slds-tabs_default__item.slds-is-active .slds-tabs_default__link:hover {
+    color: #7cdbff;
+}
+.THIS .slds-tabs--default__item.slds-active .slds-tabs--default__link:hover, 
+.THIS .slds-tabs--default__item.slds-active .slds-tabs_default__link:hover, 
+.THIS .slds-tabs--default__item.slds-is-active .slds-tabs--default__link:hover, 
+.THIS .slds-tabs--default__item.slds-is-active .slds-tabs_default__link:hover,
+.THIS .slds-tabs_default__item.slds-active .slds-tabs--default__link:hover, 
+.THIS .slds-tabs_default__item.slds-active .slds-tabs_default__link:hover, 
+.THIS .slds-tabs_default__item.slds-is-active .slds-tabs--default__link:hover, 
+.THIS .slds-tabs_default__item.slds-is-active .slds-tabs_default__link:hover {
+    color: #7cdbff !important;
+}
+.THIS .erp_mark7 .slds-tabs--default__item, 
+.THIS .erp_mark7 .slds-tabs_default__item {
+    color: #7cdbff;
+    position: relative;
+    padding: 0 .75rem;
+}
+.THIS .slds-tabs--default__item, 
+.THIS .slds-tabs_default__item {
+    color: #7cdbff;
+    position: relative;
+    padding: 0 .75rem;
+}
+.THIS .erp_mark7 .slds-tabs--default__item.slds-active .slds-tabs--default__link:hover, 
+.THIS .erp_mark7 .slds-tabs--default__item.slds-active .slds-tabs_default__link:hover, 
+.THIS .erp_mark7 .slds-tabs--default__item.slds-is-active .slds-tabs--default__link:hover, 
+.THIS .erp_mark7 .slds-tabs--default__item.slds-is-active .slds-tabs_default__link:hover, 
+.THIS .erp_mark7 .slds-tabs_default__item.slds-active .slds-tabs--default__link:hover, 
+.THIS .erp_mark7 .slds-tabs_default__item.slds-active .slds-tabs_default__link:hover, 
+.THIS .erp_mark7 .slds-tabs_default__item.slds-is-active .slds-tabs--default__link:hover, 
+.THIS .erp_mark7 .slds-tabs_default__item.slds-is-active .slds-tabs_default__link:hover {
+    color: #16325c;
+}
+.THIS .slds-tabs--default__item.slds-active .slds-tabs--default__link:hover, 
+.THIS .slds-tabs--default__item.slds-active .slds-tabs_default__link:hover, 
+.THIS .slds-tabs--default__item.slds-is-active .slds-tabs--default__link:hover, 
+.THIS .slds-tabs--default__item.slds-is-active .slds-tabs_default__link:hover, 
+.THIS .slds-tabs_default__item.slds-active .slds-tabs--default__link:hover, 
+.THIS .slds-tabs_default__item.slds-active .slds-tabs_default__link:hover, 
+.THIS .slds-tabs_default__item.slds-is-active .slds-tabs--default__link:hover, 
+.THIS .slds-tabs_default__item.slds-is-active .slds-tabs_default__link:hover {
+    color: #16325c;
+}
+.THIS .erp_mark7 .slds-tabs--default__item.slds-active, 
+.THIS .erp_mark7 .slds-tabs--default__item.slds-is-active, 
+.THIS .erp_mark7 .slds-tabs_default__item.slds-active, 
+.THIS .erp_mark7 .slds-tabs_default__item.slds-is-active {
+    color: #7cdbff;
+}
+.THIS .slds-tabs--default__item.slds-active, 
+.THIS .slds-tabs--default__item.slds-is-active, 
+.THIS .slds-tabs_default__item.slds-active, 
+.THIS .slds-tabs_default__item.slds-is-active {
+    color: #7cdbff;
+}
+
+.THIS .GrayClass{
+    background:LightGray !important;
+    cursor:not-allowed !important;
+}
+.THIS .CursorPointerClass{
+   cursor:pointer !important;
+}
+
+.THIS .a_disabled {
+  cursor:not-allowed !important;   
+  pointer-events: none;
+  opacity: 0.6;
+  color:#fff !important;
+  background:#ddd !important; 
+    border:1px solid #ddd !important;
+    /*Silver !important;   */
+}
+/*.THIS .a_disabled {
+  cursor:not-allowed !important;   
+  pointer-events: none;
+  background:LightGray !important;
+}*/
+
+.THIS.erp_mark7 .slds-button--brand, .THIS.erp_mark7 .slds-button_brand {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    text-align: center;
+    vertical-align: middle;
+    background-color: #31d0e5;
+    border: 1px solid #31d0e5;
+    color: #fff;
+}
+
+
+.THIS.erp_mark7 .slds-button--brand:hover,
+.THIS.erp_mark7 .slds-button_brand:hover,
+.THIS.erp_mark7 .slds-button--brand:focus,
+.THIS.erp_mark7 .slds-button_brand:focus {
+    background-color: #65d6e5 !important;
+    color: white;
+}
+
+
+.THIS .slds-button_brand {
+  background:#65d6e5 ;
+  border:1px solid #65d6e5;
+}
+.THIS .hasError{
+	border-color: rgb(194, 57, 52) !important;
+	box-shadow: rgb(194, 57, 52) 0 0 0 1px inset !important; 
+}
+ .THIS .slds-spinner_container {
+    position: fixed !important;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 99999 !important;
+    background-color: rgba(255, 255, 255, 0.75);
+    visibility: visible;
+    opacity: 1;
+    transition: opacity 0.2s ease, visibility 0s;
+    transition-delay: 0s, 0.3s;
+}
+.THIS .slds-spinner {
+    position: fixed !important;
+    top: 50%;
+    left: 50%;
+    z-index: 9051;
+    transform: translate(-50%, -50%) rotate(90deg);
+}
+.THIS .mainSpinClass::after {
+    position: fixed !important;
+    content: 'Please wait while loading';
+    width: 100%;
+    text-align: center;
+    font-size:16px !important;
+    top: calc(50% + 3em);
+    font-weight: bold;
+}
