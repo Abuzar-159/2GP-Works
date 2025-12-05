@@ -20,6 +20,9 @@
                           selected-name={selectedChannelName}
                           selected-name-url={channelUrl}
                           is-value-selected={channelSelected}
+                          icon-name="standard:channel_programs"
+                          onremove={handleChannelRemoval}
+                          onlookupselected={handleChannelSelection}
                           disabled>
           </c-input-lookup>
         </div>
@@ -32,6 +35,11 @@
                           selected-name={selectedDC.Name}
                           selected-name-url={distributionUrl}
                           is-value-selected={dcSelected}
+                          onlookupselected={handleDCSelection}
+                          onremove={handleDCRemoval}
+                          qry={dcFilter}
+                          
+                          icon-name="standard:channel_program_members"
                           disabled>
           </c-input-lookup>
         </div>
@@ -44,7 +52,9 @@
                          label="Logistic Name"
                          name="Name"
                          value={newLogistic.Name}
-                         onchange={handleShipmentFieldChange}>
+                         onchange={handleShipmentFieldChange}
+
+                         >
         </lightning-input>
       </div>
 
@@ -60,6 +70,8 @@
                             selected-name={accountName}
                             selected-name-url={accountUrl}
                             is-value-selected={accountSelected}
+                            icon-name="standard:account"
+                            hide-remove = "true"
                             disabled>
             </c-input-lookup>
           </div>
@@ -72,6 +84,9 @@
                             selected-name={fromContactName}
                             selected-name-url={fromContactUrl}
                             is-value-selected={fromContactSelected}
+                            icon-name="standard:contact"
+                                                        hide-remove = "true"
+
                             disabled>
             </c-input-lookup>
           </div>
@@ -84,6 +99,9 @@
                             selected-name={toContactName}
                             selected-name-url={toContactUrl}
                             is-value-selected={toContactSelected}
+                            icon-name="standard:contact"
+                                                        hide-remove = "true"
+
                             disabled>
             </c-input-lookup>
           </div>
@@ -96,6 +114,9 @@
                             selected-name={fromAddressName}
                             selected-name-url={fromAddressUrl}
                              is-value-selected={fromAddressSelected}
+                             icon-name="standard:address"
+                                                         hide-remove = "true"
+
                             disabled>
             </c-input-lookup>
           </div>
@@ -108,6 +129,9 @@
                             selected-name={toAddressName}
                             selected-name-url={toAddressUrl}
                             is-value-selected={toAddressSelected}
+                            icon-name="standard:address"
+                                                        hide-remove = "true"
+
                             disabled>
             </c-input-lookup>
           </div>
@@ -124,8 +148,11 @@
             <tr>
               <th>Line Name</th>
               <th>Product</th>
-              <th>Remaining Qty</th>
+                <th>Quantity</th>
+                <th>Logistic Quantity</th>
+                <th>Remaining Qty</th>
               <th>In Stock</th>
+              
             </tr>
           </thead>
 
@@ -146,8 +173,16 @@
                     {li.productName}
                   </a>
                 </td>
-
-                <td>{li.QuantityValue}</td>
+<td>{li.totalQty}</td>
+<td>{li.logisticQty}</td>
+                <td>
+    <lightning-input style="max-width: 50%;"
+    type="number"
+    value={li.newQuantityValue}
+    onchange={handleQuantityChange}
+    data-id={li.tempKey}>
+</lightning-input>
+                </td>
                 <td><strong>{li.StockValue}</strong></td>
 
 
@@ -194,12 +229,14 @@
 
 <tbody>
 <template for:each={orderLineAnalysis} for:item="item">
-<tr key={item.Id}>
+<tr key={item.Id} class={itemRowClass(item)>
     <!-- ✅ CHECKBOX COLUMN -->
     <td>
     <lightning-input
         type="checkbox"
         data-id={item.Id}
+        checked={item.isSelected}
+        disabled={item.isDisabled}
         onchange={handleRowSelect}>
     </lightning-input>
     </td>
@@ -225,7 +262,7 @@
 </table>
 
 <!-- ✅ BUTTONS UNDER TABLE -->
-<div class="slds-grid slds-grid_align-end slds-m-top_medium slds-grid_align-spread">
+<div class="slds-grid slds-grid_align-end slds-m-top_medium slds-grid_align-spread" style="gap: 10px;">
 <lightning-button
 variant="neutral"
 label="Skip"
@@ -574,10 +611,10 @@ disabled={isCreateDisabled}>
                                     <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input
                                             label="NMFC Code" name="NMFCCode" type="number" data-package-id={pkg.id}
                                             onchange={handlePackageChange} value={pkg.NMFCCode}></lightning-input></div>
-                                    <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input
+                                    <!-- <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input
                                             label="Is Hazmat?" name="IsHazmat" type="toggle" data-package-id={pkg.id}
                                             onchange={handlePackageChange} checked={pkg.IsHazmat}></lightning-input>
-                                    </div>
+                                    </div> -->
 
                                     <template if:true={pkg.IsHazmat}>
                                         <div class="slds-col slds-size_1-of-5 slds-p-bottom_small"><lightning-input
@@ -631,7 +668,7 @@ disabled={isCreateDisabled}>
                         class="sort-combobox"></lightning-combobox> -->
                     </div>
 
-                    <p class="slds-text-body_small slds-m-bottom_medium">03 services available for your shipment</p>
+                    <p class="slds-text-body_small slds-m-bottom_medium">services available for your shipment</p>
 
                    <div class="slds-m-bottom_medium">
                     <!-- <template for:each={carrierOptions} for:item="c">

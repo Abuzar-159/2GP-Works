@@ -386,3 +386,7 @@
 .divider {
     border-top:2px solid #e3e3e3;
 }
+.disabled-row {
+    opacity: 0.4;
+    pointer-events: none;
+}

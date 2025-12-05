@@ -1709,8 +1709,6 @@ global static stockwrapper getupdatedstocksDCs(String orditms, String chnId, Str
 //         throw new AuraHandledException(e.getMessage()+'; at line ~> '+e.getStackTraceString());
 //     }
 // }
-
-
 @AuraEnabled
 global static String getCreateLogistics(String LogisticJSON, String LLIListJSON,String OrderLIneItems,String BomItems){
     try{

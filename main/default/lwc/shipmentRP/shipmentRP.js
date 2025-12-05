@@ -16,9 +16,11 @@ import saveFreightviewDocs from '@salesforce/apex/shipmentRP.saveFreightviewDocs
 import getShipmentDocs from '@salesforce/apex/freightView.getShipmentDocs';
 import getTotalStockPerProduct from '@salesforce/apex/shipmentRP.getTotalStockPerProduct';
 import getOrderAndItemsAnalysis from '@salesforce/apex/shipmentRP.getOrderAndItemsAnalysis';
+import getOrderAndDcDetails from '@salesforce/apex/shipmentRP.getOrderAndDcDetails';
+import getCreateLogistics from '@salesforce/apex/shipmentRP.getCreateLogistics';
 
 
-import AXOLT_FV_KEY from '@salesforce/label/c.AxoltFreightViewERP';
+import AXOLT_FV_KEY from '@salesforce/label/c.AxoltFreightView';
 
 // Helper to generate unique IDs
 let packageId = 0;
@@ -1180,6 +1182,10 @@ async handleGetQuotes() {
             };
         }
 
+        if(name === 'Name'){
+            this.newLogistic.Name = value;
+        }
+
         console.log('Updated shipment:', JSON.stringify(this.shipment));
     }
 buildCarrierGroups() {
@@ -1673,6 +1679,8 @@ loadOrderData() {
     this.isLoading = true;
     getOrderAndItemsAnalysis({ orderId: this.recordId })
         .then(res => {
+
+            this.existingLogistics = res.logistics || res.logistics; 
             this.order = res.order || {};
             console.log('Order:', JSON.stringify(this.order));
             // ===== MAP CHANNEL FROM ORDER =====
@@ -1748,32 +1756,298 @@ loadOrderData() {
                     productName: rec?.Product2?.Name,
                     productId: rec?.Product2?.Id,
                     orderQty: rec?.Quantity,
-                    logisticQty: rec?.Logistic_Quantity_U__c || rec?.Logistic_Quantity__c || 0,
-                    remainingQty: x.remainingQty
+                    totalQty: rec?.Quantity || 0,
+                    priceProductC: rec?.UnitPrice || 0,
+                    logisticQty: x?.logisticQty || x?.logisticQty || 0,
+                    remainingQty: x.remainingQty,
+                    isDisabled: x.remainingQty <= 0
                 };
             });
 
             console.log('📦 Step-1 Analysis mapped →', JSON.stringify(this.orderLineAnalysis));
+            this.refreshSelections();
         })
         .catch(err => console.error('❌ Error', err))
         .finally(() => this.isLoading = false);
 }
-
 handleRowSelect(e) {
     const id = e.target.dataset.id;
     const checked = e.target.checked;
-    console.log('Row selected:', id, checked);
-    if (checked) {
-        const rec = this.orderLineAnalysis.find(x => x.Id === id);
-        console.log('Product:', JSON.stringify(rec))
-        if (rec?.productId) {
 
-            this.selectedProductIds = [...this.selectedProductIds, rec.productId];
+    console.log('Row selected:', id, checked);
+
+    // Find row in orderLineAnalysis
+    this.orderLineAnalysis = this.orderLineAnalysis.map(row => {
+        if (row.Id === id) {
+
+            // Prevent selecting disabled rows
+            if (row.isDisabled) {
+                e.target.checked = false;
+                return row;
+            }
+
+            // Update UI flag
+            row.isSelected = checked;
+
+            // Update selectedProductIds list
+            if (checked) {
+                if (!this.selectedProductIds.includes(row.productId)) {
+                    this.selectedProductIds = [
+                        ...this.selectedProductIds,
+                        row.productId
+                    ];
+                }
+            } else {
+                this.selectedProductIds = this.selectedProductIds.filter(
+                    pid => pid !== row.productId
+                );
+            }
         }
-    } else {
-        this.selectedProductIds = this.selectedProductIds.filter(pid => pid !== rec?.productId);
+        return row;
+    });
+
+    console.log('Selected Products:', JSON.stringify(this.selectedProductIds));
+}
+
+refreshSelections() {
+    this.orderLineAnalysis = this.orderLineAnalysis.map(row => ({
+        ...row,
+        isSelected: !row.isDisabled && this.selectedProductIds.includes(row.productId)
+    }));
+}
+
+itemRowClass(item) {
+    return item.isDisabled ? 'disabled-row' : '';
+}
+
+
+handleDCRemoval() {
+    this.selectedDC = {
+        Id: null,
+        Name: '',
+       
+    };
+    this.distributionUrl = null;
+    console.log('Distribution Channel cleared');
+}
+
+handleDCSelection(event) {
+    const selected = event.detail || {};
+console.log('selected',selected);
+
+    if(selected == null || selected?.Id == null){
+        console.log('Error', 'No Distribution Channel selected', 'error');
+        return;
+    }
+
+    if(this.recordId  == null){ // show tost that no order found
+        this.showToast('Error', 'No Order found to fetch details', 'error');
+        return;
+    }
+
+    this.isLoading = true;
+    getOrderAndDcDetails({orderId: this.recordId ,  dcId: selected?.Id  })
+        .then(res => {
+
+            this.existingLogistics = res.logistics || res.logistics; 
+            this.order = res.order || {};
+            console.log('Order:', JSON.stringify(this.order));
+            // ===== MAP CHANNEL FROM ORDER =====
+            this.selectedDC = this.selectedDC || {};
+            this.selectedChannel = this.order?.Channel__c || null;
+            this.selectedChannelName = this.order?.Channel__r?.Name || '';
+            this.channelUrl = this.selectedChannel ? '/' + this.selectedChannel : null;
+        
+            // ===== MAP TOP PRIORITY DC =====
+            const dc = res.distributionChannel || null;
+
+            console.log('Distribution Channel:', JSON.stringify(dc));
+            if (dc) {
+                this.selectedDC = {
+                    Id: dc.Id,
+                    Name: dc.Name,
+                    Active__c: true,
+                    Priority__c: dc.Priority__c || '',
+                    Site__c: dc.Site.siteId || null,
+
+                    Site__r: {
+                        Id: dc.Site.siteId || '',
+                        Name: dc.Site.siteName || '',
+                        Address__c: dc.Site.siteAddressId || '',
+                        Address__r: {
+                            Id: dc.Site.siteAddressId || '',
+                            Name: dc.Site.siteAddressName || ''
+                        },
+                        Primary_Contact__c: dc.Site.sitePrimaryContactId || '',
+                        Primary_Contact__r: {
+                            Id: dc.Site.sitePrimaryContactId || '',
+                            Name: dc.Site.sitePrimaryContactName || ''
+                        }
+                    }
+                };
+                this.distributionUrl = this.selectedDC?.Id ? '/' + this.selectedDC?.Id : null;
+                console.log('📍 Top priority DC mapped →', JSON.stringify(this.selectedDC));
+            }
+
+            // ===== AUTO-FILL STEP 2 VALUES FROM ORDER & DC =====
+            this.fromContactId = this.selectedDC?.Site__r?.Primary_Contact__c || null;
+            this.fromContactName = this.selectedDC?.Site__r?.Primary_Contact__r?.Name || '';
+            this.fromContactUrl = this.fromContactId ? '/' + this.fromContactId : null;
+
+            this.fromAddressId = this.selectedDC?.Site__r?.Address__c || null;
+            this.fromAddressName = this.selectedDC?.Site__r?.Address__r?.Name || '';
+            this.fromAddressUrl = this.fromAddressId ? '/' + this.fromAddressId : null;
+
+            this.toContactId = this.order?.Contact__c || null;
+            this.toContactName = this.order?.Contact__r?.Name || '';
+            this.toContactUrl = this.toContactId ? '/' + this.toContactId : null;
+
+            this.toAddressId = this.order?.Ship_To_Address__c || null;
+            this.toAddressName = this.order?.Ship_To_Address__r?.Name ||  '';
+            this.toAddressUrl = this.toAddressId ? '/' + this.toAddressId : null;
+
+            this.accountId = this.order?.AccountId || null;
+            this.accountName = this.order?.Account?.Name || this.order?.Account__r?.Name || '';
+            this.accountUrl = this.accountId ? '/' + this.accountId : null;
+
+            // Compare totals for step-1 visibility
+            const orderQty = Number(this.order?.Total_Quantity__c || 0);
+            const logisticQty = Number(this.order?.Total_Logistic_Quantity_U__c || 0);
+            this.showOrderToLogisticsStep = (orderQty !== logisticQty);
+
+            // Map order items for Step-1 table
+            //this.orderLineAnalysis = (res.items || []).map(x => x);
+             this.orderLineAnalysis = (res.items || []).map(x => {
+                const rec = x.record;
+                return {
+                    Id: rec?.Id,
+                    orderItemNumber: rec?.OrderItemNumber,
+                    productName: rec?.Product2?.Name,
+                    productId: rec?.Product2?.Id,
+                    orderQty: rec?.Quantity,
+                    totalQty: rec?.Quantity || 0,
+                    priceProductC: rec?.UnitPrice || 0,
+                    logisticQty: x?.logisticQty || x?.logisticQty || 0,
+                    remainingQty: x.remainingQty,
+                    isDisabled: x.remainingQty <= 0
+                };
+            });
+
+
+            if(this.selectedDC?.Id  != null){
+                this.handleCreateLogistic();
+            }
+
+            console.log('📦 Step-1 Analysis mapped →', JSON.stringify(this.orderLineAnalysis));
+            this.refreshSelections();
+
+        })
+        .catch(err => console.error('❌ Error', err))
+        .finally(() => this.isLoading = false);
+
+        
+}
+
+handleChannelSelection(event) {
+    const selected = event.detail || {};
+            if(this.selectedChannel != selected.Id){
+        this.handleDCRemoval();   
+        }
+    console.log('Channel selected:', JSON.stringify(selected));
+
+    if (selected == null || selected?.Id == null) {
+        console.log('Error', 'No Channel selected', 'error');
+        return;
+    }
+
+    this.selectedChannel = selected.Id;
+    this.selectedChannelName = selected.Name || '';
+    this.channelUrl = this.selectedChannel ? '/' + this.selectedChannel : null;
+
+    
+
+    console.log('✅ Channel set to:', this.selectedChannel);
+} 
+
+handleQuantityChange(event) {
+    try {
+        // Use currentTarget to read data-id from <lightning-input>
+        const recordId = event.currentTarget.dataset.id;
+        console.log('record id = ', recordId);
+
+        // Value from lightning-input comes in event.detail.value
+        let newQtyRaw = event.detail.value;
+        let newQty =
+            newQtyRaw === '' || newQtyRaw === null || newQtyRaw === undefined
+                ? 0
+                : Number(newQtyRaw);
+
+        // Validate numeric
+        if (isNaN(newQty)) {
+            this.showToast('Error', 'Quantity must be a number', 'error');
+            event.target.value = 0;
+            return;
+        }
+
+        // Negative check
+        if (newQty < 0) {
+            this.showToast('Error', 'Quantity cannot be negative', 'error');
+            event.target.value = 0;
+            newQty = 0;
+        }
+
+        // Find line item
+        const line = this.newLogisticLineItems.find(li => li.tempKey === recordId);
+        if (!line) {
+            this.showToast('Error', 'Line item not found', 'error');
+            return;
+        }
+
+        // Remaining qty (QuantityValue is remaining qty)
+        const maxQty = Number(line.QuantityValue) || 0;
+
+        if (newQty > maxQty) {
+            this.showToast(
+                'Error',
+                `Quantity cannot exceed remaining quantity of ${maxQty}`,
+                'error'
+            );
+            event.target.value = maxQty;
+            newQty = maxQty;
+        }
+
+        // Update lineItems with newQuantityValue
+        this.newLogisticLineItems = this.newLogisticLineItems.map(li => {
+            if (li.tempKey === recordId) {
+                return { ...li, newQuantityValue: newQty };
+            }
+            return li;
+        });
+
+    } catch (error) {
+        // eslint-disable-next-line no-console
+        console.log('in the qty change error = ', error);
     }
 }
+
+
+
+handleChannelRemoval() {
+    this.selectedChannel = null;
+    this.selectedChannelName = '';
+    this.channelUrl = null;
+    console.log('Channel cleared');
+}
+
+get dcFilter() {
+    //dc filter based on selected channel
+    if (this.selectedChannel) {
+        return ` AND Channel__c = '${this.selectedChannel}' `;
+    }
+    return '';
+}   
+
+
 async handleCreateLogistic() {
 
     this.isLoading = true;
@@ -1813,15 +2087,25 @@ buildNewLogisticAndLines() {
     // Build Logistic
     this.newLogistic = {
         Id: null,
-        Name: `${orderName} - Logistic-${nextNumber}`,
+        Name: `${orderName}-Logistic-${nextNumber}`,
         Order_S__c: this.recordId,
         Account__c: this.order?.AccountId || null,
-        From_Contact__c: this.fromContact?.Id || null,
+        From_Contact__c: this.fromContactId || null,
         Contact__c: this.order?.Contact__c || null,
-        From_Address__c: this.fromAddressId?.Id || null,
-        To_Address__c: this.toAddressId?.Id || null,
+        From_Address__c: this.fromAddressId || null,
+        To_Address__c: this.toAddressId || null,
         Channel__c: channel,
-        Distribution_Channel__c: distChannel
+        Distribution_Channel__c: distChannel,
+        Company__c: this.order?.Company__c || null,
+        Billing_Address__c: this.toAddressId || null,
+        Active__c: true,
+	    Type__c: "Outbound",
+        Shipment_type_Return__c: "--None--",
+        Bill_To_Return__c: "SENDER",
+        Active__c: true,
+        Shipment_type__c: "--None--",
+        Shipping_Preferences__c: "",
+        Shipping_Preferences_Return__c: "",
     };
 
     // Build Line Items + Stock + Temp Keys
@@ -1843,8 +2127,18 @@ buildNewLogisticAndLines() {
             Product__c: productId,
             productName: found.productName || '',
             QuantityValue: found.remainingQty || 0,
+            newQuantityValue: found.remainingQty || 0,
+            logisticQty: found.logisticQty || 0,
+            Order_Product__c: found.Id || null,
+            Price_Product__c: found.priceProductC || 0,
+            totalQty: found.totalQty || 0,
+            Logistic__c: "",
             StockValue: this.stockMap[productId].totalQty || 0,
-            Name: `${found.productName} - LogisticLine-${ln}`
+            Name: `${found.productName} - LogisticLine-${ln}`,
+            Product__r: {
+                Id: productId,
+                Name: found.productName || ''
+            }
         });
     });
 
@@ -1854,7 +2148,132 @@ buildNewLogisticAndLines() {
     console.log('📦 newLogisticLineItems →', JSON.stringify(this.newLogisticLineItems));
 }
 
+handleSaveLogistic() {
+    console.log('Saving new Logistic and Lines...');
+    if (!this.logisticNameSelected) {
+        this.showToast('Error', 'Please enter a name for the Logistic.', 'error');
+        return;
+    }
+    if (!this.dcSelected) {
+        this.showToast('Error', 'Please select a Distribution Channel.', 'error');
+        return;
+    }
+    if (!this.fromContactSelected) {
+        this.showToast('Error', 'Please select a From Contact.', 'error');
+        return;
+    }
+    if (!this.toContactSelected) {
+        this.showToast('Error', 'Please select a To Contact.', 'error');
+        return;
+    }
+    if (!this.fromAddressSelected) {
+        this.showToast('Error', 'Please select a From Address.', 'error');
+        return;
+    }
+    if (!this.toAddressSelected) {
+        this.showToast('Error', 'Please select a To Address.', 'error');
+        return;
+    }
 
+    // Validate line items quantities
+    for (const line of this.newLogisticLineItems) {
+        if (line.newQuantityValue <= 0) {
+            this.showToast('Error', `Quantity for product ${line.productName} must be greater than zero.`, 'error');
+            return;
+        }
+        if (line.newQuantityValue > line.StockValue) {
+            this.showToast('Error', `Quantity for product ${line.productName} exceeds available stock (${line.StockValue}).`, 'error');
+            return;
+        }
+    }
+
+    // Prepare data for Apex
+    const logisticToSave = { ...this.newLogistic };
+
+    const linesToSave = this.newLogisticLineItems.map(line => ({
+        Name: line.Name,
+        Product__c: line.Product__c,
+        Quantity__c: Number(line.newQuantityValue) || 0,
+        Price_Product__c: line.Price_Product__c || 0,
+        Order_Product__c: line.Order_Product__c || null,
+        Logistic__c: line.Logistic__c || '',
+        Product__r: {
+            Id: (line.Product__r && line.Product__r.Id) ? line.Product__r.Id : line.Product__c,
+            Name: (line.Product__r && line.Product__r.Name) ? line.Product__r.Name : (line.productName || '')
+        }
+    }));
+    
+    this.isLoading = true;
+
+    console.log('before saving logistic ');
+
+    console.log('JSON.stringify(logisticToSave), ', JSON.stringify(logisticToSave));
+    console.log('JSON.stringify(linesToSave), ', JSON.stringify(linesToSave));
+
+    getCreateLogistics({
+        LogisticJSON: JSON.stringify(logisticToSave),
+        LLIListJSON: JSON.stringify(linesToSave),
+        OrderLIneItems : '',
+        BomItems : ''
+    })
+    .then(res => {
+        // console.log('Logistic save response:', res);
+        // if (res?.includes('Upserted SOLI ID:')) {
+        //     this.showToast('Success', 'Logistic and Line Items created successfully.', 'success');
+        //     // Reset and go back to Step-1
+        //     this.showCreateLogisticStep = false;
+        //     this.showOrderToLogisticsStep = true;
+        //     this.loadOrderData(); // Refresh data
+        // } else {
+        //     this.showToast('Error', res?.message || 'Failed to save Logistic.', 'error');
+        // }
+        console.log('Logistic save response:', res);
+
+            // If Apex returned an error message
+            if (res == null  || res.logistic== null || res.logistic.Id == null) {
+                this.showToast('Error', res.message, 'error');
+                return;
+            }
+
+            // If success, Apex returned a Logistic__c object
+            const logisticRecord = res?.logistic;
+
+            if (logisticRecord && logisticRecord.Id) {
+                const logisticId = logisticRecord.Id;
+                const logisticName = logisticRecord.Name;
+
+                // SUCCESS TOAST
+                this.showToast('Success', `Logistic ${logisticName} created successfully.`, 'success');
+
+                // SET THE SELECTED LOGISTIC VALUES
+                this.logistics = {
+                    Id: logisticId,
+                    Name: logisticName
+                };
+                this.logisticsUrl = '/' + logisticId;
+                this.logisticsSelected = true;
+
+                console.log('📦 Selected Logistic__c from lookup:', this.logistics);
+
+                // Hide and show screens
+                this.showCreateLogisticStep = false;
+                this.showOrderToLogisticsStep = false;
+                // Load related details
+                this.fetchLogisticLineItems();
+                this.loadLogisticDetails(logisticId);
+
+            } else {
+                this.showToast('Error', 'Failed to save Logistic.', 'error');
+            }
+    })
+    .catch(err => {
+        console.error('Error saving Logistic:', err);
+        this.showToast('Error', err.body?.message || 'Unexpected error while saving Logistic.', 'error');
+    })
+    .finally(() => {
+        this.isLoading = false;
+    });
+}
 
 
 handleSkip() {
