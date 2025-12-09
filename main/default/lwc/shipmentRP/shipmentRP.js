@@ -18,6 +18,8 @@ import getTotalStockPerProduct from '@salesforce/apex/shipmentRP.getTotalStockPe
 import getOrderAndItemsAnalysis from '@salesforce/apex/shipmentRP.getOrderAndItemsAnalysis';
 import getOrderAndDcDetails from '@salesforce/apex/shipmentRP.getOrderAndDcDetails';
 import getCreateLogistics from '@salesforce/apex/shipmentRP.getCreateLogistics';
+import getShipmentDetails from '@salesforce/apex/shipmentRP.getShipmentDetails';
+
 
 
 import AXOLT_FV_KEY from '@salesforce/label/c.AxoltFreightView';
@@ -606,6 +608,16 @@ async handleGetQuotes() {
     this.isLoading = true;  // ✅ loader ON
 
     try {
+          // 🔴 NEW: Check if shipment already exists for selected Logistic
+        const hasShipment = await getShipmentDetails({ logisticId: this.logistics.Id });
+        if (hasShipment) {
+            this.showToast(
+                'Warning',
+                'Shipment already created for this Logistic. You cannot get rates again.',
+                'warning'
+            );
+            return;  // ⛔ stop here, do NOT call getQuoteRatesLTL
+        }
         console.log('==== Before Apex Call ====');
         console.log('Logistic:', JSON.stringify(this.logistics));
         console.log('From Address:', JSON.stringify(this.fromAddress));
@@ -731,7 +743,7 @@ async handleGetQuotes() {
                     if (!pkg.PackagingGroup) {
                         return `${pkgLabel}: Packaging Group is required for Hazmat shipment.`;
                     }
-                }
+                }       
             }
         }
 
@@ -2254,6 +2266,7 @@ handleSaveLogistic() {
                 this.logisticsSelected = true;
 
                 console.log('📦 Selected Logistic__c from lookup:', this.logistics);
+                
 
                 // Hide and show screens
                 this.showCreateLogisticStep = false;
@@ -2261,6 +2274,8 @@ handleSaveLogistic() {
                 // Load related details
                 this.fetchLogisticLineItems();
                 this.loadLogisticDetails(logisticId);
+                //hides tge button order to logistics
+                    this.orderToLogisticDone = true;
 
             } else {
                 this.showToast('Error', 'Failed to save Logistic.', 'error');
@@ -2280,6 +2295,39 @@ handleSkip() {
     this.showOrderToLogisticsStep = false;
     console.log('Skipping Order → Logistic creation step');
 }
+
+handlebacktoCreateLogistic() {
+    console.log('Creating Logistic from Order Items...');
+    this.showOrderToLogisticsStep = true;
+}
+
+   orderToLogisticDone = false;
+
+  get isCreateorderToLogisticDisabled() {
+    if (this.orderToLogisticDone) {
+            return true;
+        }
+        if (!this.orderLineAnalysis || this.orderLineAnalysis.length === 0) {
+            return true; // nothing to work with → disable
+        }
+
+        // If every row has remainingQty == 0 (or falsy), disable
+        return this.orderLineAnalysis.every(row => Number(row.remainingQty) === 0);
+    }
+
+    get toContactQuery() {
+    if (!this.accountId) {
+        return '';  // returns no rows
+    }
+    return  ` AND AccountId = '${this.accountId}' `;
+}
+ get toAddressQuery() {
+    if (!this.accountId) {
+        return '';  // returns no rows
+    }
+    return  ` AND Customer__c = '${this.accountId}' `;
+}
+
 
 openOrderItemRecord(e) {
     const id = e.currentTarget.dataset.id;
@@ -2305,7 +2353,12 @@ openProductRecord(e) {
     });
 }
 get isCreateDisabled() {
-    return this.selectedProductIds.length === 0;
+    // Disable when no product is selected OR there are no items with remainingQty > 0
+    const hasPositiveRemaining = Array.isArray(this.orderLineAnalysis)
+        && this.orderLineAnalysis.some(it => Number(it.remainingQty) > 0);
+    // Also require at least one selected product to create a logistic
+    const hasSelectedProducts = Array.isArray(this.selectedProductIds) && this.selectedProductIds.length > 0;
+    return !(hasPositiveRemaining && hasSelectedProducts);
 }
 handlePrevious() {
     console.log('Previous clicked');
