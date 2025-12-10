@@ -226,6 +226,7 @@ export default class ShipmentRP extends NavigationMixin(LightningElement) {
     @track bookingResult;
     @track isLoading = false;
     @track selectedQuote = [];
+    @track isGetRatesDisabled=true;
     // ====== Lifecycle ======
     // renderedCallback() {
     //     if (!this.orderFilter && this.recordId) {
@@ -233,7 +234,7 @@ export default class ShipmentRP extends NavigationMixin(LightningElement) {
     //         console.log('Order filter set:', this.orderFilter);
     //     }
     // }
-
+    
     connectedCallback() {
         this.loadInitData();
         this.loadOrderData();
@@ -685,7 +686,7 @@ async handleGetQuotes() {
         //     return 'Order is required.';
         // }
 
-        if (!this.logistics || !this.logistics.Id) {
+        if (!this.logistics || !this.logistics.Id) {            
             return 'Logistics is required.';
         }
 
@@ -867,6 +868,7 @@ async handleGetQuotes() {
         // Now load details from Apex and just log them
         this.fetchLogisticLineItems();
         this.loadLogisticDetails(logisticId);
+        this.isGetRatesDisabled=false;//added by raqeeb
     }
 
 
@@ -885,6 +887,7 @@ async handleGetQuotes() {
         this.shipToSelected = false;
         this.billToUrl = null;
         this.shipToUrl = null;
+        this.isGetRatesDisabled=true;//added by raqeeb
 
         console.log('✂️ Logistics selection cleared');
     }
@@ -2266,16 +2269,18 @@ handleSaveLogistic() {
                 this.logisticsSelected = true;
 
                 console.log('📦 Selected Logistic__c from lookup:', this.logistics);
-                
+                console.log('button enabled? :', this.isGetRatesDisabled);                
 
                 // Hide and show screens
                 this.showCreateLogisticStep = false;
                 this.showOrderToLogisticsStep = false;
-                // Load related details
+                // Load related details                
                 this.fetchLogisticLineItems();
-                this.loadLogisticDetails(logisticId);
+                this.loadLogisticDetails(logisticId);                
                 //hides tge button order to logistics
-                    this.orderToLogisticDone = true;
+                    this.orderToLogisticDone = true;  
+                    this.isGetRatesDisabled = false;
+                    console.log('button enabled? :', this.isGetRatesDisabled);              
 
             } else {
                 this.showToast('Error', 'Failed to save Logistic.', 'error');
@@ -2327,8 +2332,6 @@ handlebacktoCreateLogistic() {
     }
     return  ` AND Customer__c = '${this.accountId}' `;
 }
-
-
 openOrderItemRecord(e) {
     const id = e.currentTarget.dataset.id;
     this[NavigationMixin.Navigate]({

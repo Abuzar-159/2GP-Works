@@ -520,9 +520,11 @@
                     <lightning-button variant="neutral" label="Previous" title="Order To Logistic"
                         onclick={handlebacktoCreateLogistic} class="slds-m-left_x-small" disabled={isCreateorderToLogisticDisabled}>
                     </lightning-button>
-                    <lightning-button variant="brand" label="Get Quotes" title="Get Rates" onclick={handleGetQuotes}
+                    
+                    <lightning-button variant="brand" label="Get Quotes" title="Get Rates" onclick={handleGetQuotes} disabled={isGetRatesDisabled}
                         class="slds-m-left_x-small">
                     </lightning-button>
+                    
                     </div>
 
             </div>

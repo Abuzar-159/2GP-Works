@@ -399,184 +399,6 @@ private static Map<String,Object> buildLocationMap(Address__c addr, Contact con,
     }
     return m;
 }
-    // public static List<quoteWrapper> getRatesFEDEX(
-    //     List<Package__c> pkgList,
-    //     Shipment__c ship,
-    //     Address__c fromA,
-    //     Address__c toA,
-    //     Boolean schedulePickup,
-    //     DateTime pickupDT,
-    //     Credentials__c cred
-    // ){
-    //     List<quoteWrapper> out = new List<quoteWrapper>();
-    //     String jsonPayload = FedExPayloadBuilder.buildLTLRatePayload(
-    //         pkgList, cred, fromA, toA, schedulePickup, pickupDT
-    //     );
-
-    //     HttpRequest req = new HttpRequest();
-    //     req.setEndpoint(cred.Endpoint_URL__c);
-    //     req.setMethod('POST');
-    //     req.setHeader('Content-Type', 'application/json');
-    //     req.setHeader('Authorization', 'Bearer ' + FedExToken.getAccessToken(cred));
-    //     req.setBody(jsonPayload);
-
-    //     HttpResponse r = new Http().send(req);
-    //     if(r.getStatusCode() == 200){
-    //         Map<String,Object> m = (Map<String,Object>)JSON.deserializeUntyped(r.getBody());
-    //         for(Object o : (List<Object>)m.get('rateReplyDetails')){
-    //             Map<String,Object> q = (Map<String,Object>)o;
-    //             quoteWrapper w = new quoteWrapper();
-    //             w.provider = 'FedEx';
-    //             w.carrier = (String)q.get('serviceName');
-    //             w.service = (String)q.get('serviceType');
-    //             w.amount  = Decimal.valueOf((String)q.get('ratedShipmentDetails[0].totalNetCharge'));
-    //             w.currencyQ = (String)q.get('currency');
-    //             w.quoteId = (String)q.get('serviceType');
-    //             w.shipmentCreated = false;
-    //             out.add(w);
-    //         }
-    //     }
-    //     return out;
-    // }
-    // public static List<quoteWrapper> getRatesUPS(
-    //     List<Package__c> pkgList,
-    //     Shipment__c ship,
-    //     Address__c fromA,
-    //     Address__c toA,
-    //     Boolean schedulePickup,
-    //     DateTime pickupDT,
-    //     Credentials__c cred
-    // ){
-    //     List<quoteWrapper> out = new List<quoteWrapper>();
-    //     String token = UPSRestAPI.getAccessToken(cred);
-    //     String jsonPayload = UPSPayloadBuilder.buildLTLRatePayload(
-    //         pkgList, cred, fromA, toA, schedulePickup, pickupDT
-    //     );
-
-    //     HttpRequest req = new HttpRequest();
-    //     req.setEndpoint(cred.Endpoint_URL__c);
-    //     req.setMethod('POST');
-    //     req.setHeader('Content-Type', 'application/json');
-    //     req.setHeader('TransactionSrc', fromA.Account_Number__c);
-    //     req.setHeader('TransID', fromA.Account_Number__c);
-    //     req.setHeader('Authorization', 'Bearer ' + token);
-    //     req.setBody(jsonPayload);
-
-    //     HttpResponse r = new Http().send(req);
-    //     if(r.getStatusCode() == 200){
-    //         Map<String,Object> m = (Map<String,Object>)JSON.deserializeUntyped(r.getBody());
-    //         for(Object o : (List<Object>)m.get('ShipmentResponse.ShipmentResults.rateWrap')){
-    //             Map<String,Object> q = (Map<String,Object>)o;
-    //             quoteWrapper w = new quoteWrapper();
-    //             w.provider = 'UPS';
-    //             w.carrier = (String)q.get('Description');
-    //             w.service = (String)q.get('Code');
-    //             w.amount  = q.containsKey('TotalCharges.MonetaryValue')
-    //                            ? Decimal.valueOf((String)q.get('TotalCharges.MonetaryValue')) : 0;
-    //             w.currencyQ = (String)q.get('CurrencyCode');
-    //             w.quoteId = (String)q.get('Code');
-    //             w.shipmentCreated = false;
-    //             out.add(w);
-    //         }
-    //     }
-    //     return out;
-    // }
-
-//working this below
-    // public static List<quoteWrapper> getRatesFV(
-    //     List<Package__c> pkgList,
-    //     Address__c fromA,
-    //     Address__c toA,
-    //     Boolean schedulePickup,
-    //     String pickupDT,
-    //     Credentials__c cred,
-    //     String fromContact,
-    //     String toContact
-    // ){
-    //     List<quoteWrapper> out = new List<quoteWrapper>();
-    //     if (cred == null) return out; // safe exit, no crash
-
-    //     // ---- Token ----
-    //     String token = freightView.getAccessToken(cred.Username_Login__c,cred.Password_Transkey__c,cred.URL__c);
-    //      Contact shipFromContact = (Contact) JSON.deserialize(fromContact, Contact.class);
-    //     Contact shipToContact   = (Contact) JSON.deserialize(toContact,   Contact.class);
-    //     // ---- Build ONLY LTL payload (reuse your working mapping logic) ----
-    //     Map<String,Object> payload = new Map<String,Object>();
-    //     payload.put('pickupDate', pickupDT);
-
-    //     List<Map<String,Object>> itemsList = new List<Map<String,Object>>();
-    //     Boolean hasHazmat = false;
-
-    //     for(Package__c p : pkgList){
-    //         Map<String,Object> item = new Map<String,Object>{
-    //             'description' => 'test',
-    //             'quantity'    => 1,
-    //             'type'        => p.Package_Type__c != null ? p.Package_Type__c.toLowerCase() : '',
-    //             'weight'      => p.Weight__c,
-    //             'weightUOM'   => 'lbs',
-    //             'length'      => p.Length__c,
-    //             'width'       => p.Width__c,
-    //             'height'      => p.Height__c,
-    //             'dimensionsUOM' => 'in'
-    //         };
-
-    //         if(p.is_hazmat__c == true){
-    //             hasHazmat = true;
-
-    //             if (String.isNotBlank(p.Hazmat_ID__c) &&
-    //                 String.isNotBlank(p.Primary_Hazard_Class__c) &&
-    //                 String.isNotBlank(p.Packaging_Group__c)) {
-
-    //                 item.put('hazardous', new Map<String,Object>{
-    //                     'hazmatId'     => p.Hazmat_ID__c,
-    //                     'primaryClass' => p.Primary_Hazard_Class__c,
-    //                     'packingGroup' => p.Packaging_Group__c
-    //                 });
-    //             }
-    //         }
-
-    //         itemsList.add(item);
-    //     }
-
-    //     payload.put('items', itemsList);
-    //     payload.put('origin', buildLocationMap(fromA, shipFromContact,false,true));
-    //     payload.put('destination', buildLocationMap(toA, shipToContact,false,false));
-    //     // payload.put('pickupDate', pickupDT);
-    //     // payload.put('returnQuotes', true);
-    //    // payload.put('isHazardous', hasHazmat);
-    //     String path = '/v2.0/shipments/ltl?returnQuotes=true';
-    //     // ---- Callout ----
-    //     HttpRequest req = new HttpRequest();
-    //     req.setEndpoint(cred.URL__c + path);
-    //     req.setMethod('POST');
-    //     req.setHeader('Content-Type', 'application/json');
-    //     req.setHeader('Authorization', 'Bearer ' + token);
-    //     req.setTimeout(30000); // 30 sec
-    //     req.setBody(JSON.serialize(payload));
-    //      Http http = new Http();
-    //      HttpResponse r = http.send(req);
-    //     System.debug('FV LTL API Response => ' + r.getBody());
-
-    //     // ---- Parse quotes ----
-    //     if(r.getStatusCode() == 200 || r.getStatusCode() == 201){
-    //         Map<String,Object> m = (Map<String,Object>)JSON.deserializeUntyped(r.getBody());
-    //         if(m.containsKey('quotes')){
-    //             for(Object qObj : (List<Object>)m.get('quotes')){
-    //                 Map<String,Object> q = (Map<String,Object>)qObj;
-    //                 quoteWrapper w = new quoteWrapper();
-    //                 w.provider = 'FreightView';
-    //                 w.carrier = (String)q.get('assetCarrierName');
-    //                 w.service = (String)q.get('serviceDescription');
-    //                 w.amount  = q.containsKey('amount') ? (Decimal)q.get('amount') : 0;
-    //                 w.currencyQ = (String)q.get('currency');
-    //                 w.quoteId = (String)q.get('quoteId');
-    //                 w.shipmentCreated = true;
-    //                 out.add(w);
-    //             }
-    //         }
-    //     }
-    //     return out;
-    // }
     public static List<quoteWrapper> getRatesFV(
     List<PackageInputWrapper> pkgList,
     Address__c fromA,
@@ -591,7 +413,7 @@ private static Map<String,Object> buildLocationMap(Address__c addr, Contact con,
     if (cred == null) return out;
 
     // Token call stays same
-    String token = freightView.getAccessToken(cred.Username_Login__c, cred.Password_Transkey__c, cred.URL__c);
+    String token = freightView.getAccessToken(cred.Parent_Key__c, cred.Parent_Password__c, cred.URL__c);
 
     // Payload building
           Contact shipFromContact = (Contact) JSON.deserialize(fromContactJson, Contact.class);
@@ -729,10 +551,12 @@ public static RateResponseLTL getQuoteRatesLTL(
     Contact shipToContact   = (Contact) JSON.deserialize(toContact,   Contact.class);
     System.debug('AFR C');
     Boolean hasFD = cm.containsKey('FedEx');
-    Boolean hasUPS = cm.containsKey('UPS');
+    // Boolean hasUPS = cm.containsKey('UPS');
     
      String fvKey = System.Label.AxoltFreightViewERP;
+     String upsKey = System.Label.UPSRESTAPIName;
      Boolean hasFV  = cm.containsKey(fvKey); System.debug('hasFV '+hasFV);
+     Boolean hasUPS  = cm.containsKey(upsKey); System.debug('hasups'+hasUPS);
     if(providerList.contains('fedex') && !hasFD)  resp.missingCredentials.add('FedEx');
     if(providerList.contains('ups') && !hasUPS) resp.missingCredentials.add('UPS');
     if(providerList.contains('freightview') && !hasFV) resp.missingCredentials.add('FreightView');
@@ -742,7 +566,11 @@ public static RateResponseLTL getQuoteRatesLTL(
     }
         
 
-    if(providerList.contains('ups') && hasUPS){
+    // if(providerList.contains('ups') && hasUPS){
+    if(hasUPS){
+        System.debug('calling ups ');
+        Credentials__c upsCred = cm.get(upsKey);
+      //  resp.quotesUPS = getRatesUPS(pkgList, fromA2, toA2, schedulePickup, pickupDT, upsCred, fromContact, toContact);
         //resp.quotesUPS = getRatesUPS(pkgList, null, fromA, toA, schedulePickup, pickupDT,  cm.get(System.Label.UPSRESTAPIName));
     }
         

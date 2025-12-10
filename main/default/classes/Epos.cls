@@ -542,12 +542,339 @@ global with sharing class Epos{
         return prodWrap;
     }
 
+    // methord added by Abubakar
+    @AuraEnabled(cacheable = true)
+    global static List<ProductWrapper> initialProductsByDC(String currProfile, String billToAddId, String shipToAddId, String searchItem, String dcId, String productId){
+        List<ProductWrapper> prodWrap = new List<ProductWrapper>();
+        if(dcId == null || dcId == ''){
+            System.debug('Distribution channel not foud');
+            return prodWrap;
+        }
+        try{
+
+            Profiling__c profile = (Profiling__c)JSON.deserialize(currProfile, Profiling__c.class);
+
+            if (profile.Account_Profile__r.Tax_Sourcing_Rules__c == null) profile.Account_Profile__r.Tax_Sourcing_Rules__c = 'Destination';
+            Set<Id> siteIds = new Set<Id>();
+
+            List<Distribution_Channel__c> DistributionChannels = [Select Id, Name, Channel__c, Site__c, Priority__c
+                                                                  from Distribution_Channel__c
+                                                                  where id=:dcId AND Channel__c = :profile.Channel__c and Active__c = true
+                                                                  WITH SECURITY_ENFORCED
+                                                                  limit 100];
+
+
+            if (DistributionChannels.size() > 0){
+                for (Distribution_Channel__c DC : DistributionChannels){
+                    siteIds.add(DC.Site__c);
+                }
+            }else{
+                System.debug('No Distribution channel found for DC id = ' + dcId);
+                return prodWrap;
+            }
+            System.debug('siteIds->'+siteIds);
+
+            String searchProductBy = '%' + searchItem + '%';
+            List<Product2> searchProdList = new List<Product2>();
+
+            if(productId == null || productId == ''){
+                searchProdList = [Select Id, Name
+                                             from Product2
+                                             where (Name like:searchProductBy OR ProductCode like:searchProductBy)
+                                             WITH SECURITY_ENFORCED
+                                             Limit 50];
+            }else{
+                searchProdList = [Select Id, Name
+                                             from Product2
+                                             where Id =:productId AND (Name like:searchProductBy OR ProductCode like:searchProductBy)
+                                             WITH SECURITY_ENFORCED
+                                             Limit 50];
+            }
+            system.debug('searchProdList -> '+searchProdList);
+            Set<Id> searchProdIds = new Set<Id>();
+            for (Product2 pr : searchProdList)
+                searchProdIds.add(pr.Id);
+
+                system.debug('searchProdIds -> '+searchProdIds);
+                List<PricebookEntry> pbe = new List<PricebookEntry>();
+
+            if (searchProdIds.size() > 0)
+                pbe = [Select UnitPrice, Purchase_Price__c, Product2.Id, Product2.Name, Product2.ProductCode, Product2.Description, Product2.BOM__c, Product2.Configure__c, Product2.Allow_Back_Orders__c, Product2.Is_Kit__c, Product2.Picture__c, Product2.Serialise__c, Product2.QuantityUnitOfMeasure, Product2.Is_Subscribe__c
+                       from PricebookEntry
+                       where Pricebook2Id = :profile.Price_Book__c AND Product2Id IN (Select Id
+                                                                                      From Product2
+                                                                                      where IsActive = TRUE AND Id In:searchProdIds) AND IsActive = TRUE
+                       WITH SECURITY_ENFORCED ORDER BY CreatedDate DESC
+                       Limit 12 ];
+            if (searchItem == '')
+                pbe = [Select UnitPrice, Purchase_Price__c, Product2.Id, Product2.Name, Product2.ProductCode, Product2.Description, Product2.BOM__c, Product2.Configure__c, Product2.Allow_Back_Orders__c, Product2.Is_Kit__c,Product2.Picture__c, Product2.Serialise__c, Product2.QuantityUnitOfMeasure, Product2.Is_Subscribe__c
+                       from PricebookEntry
+                       where Pricebook2Id = :profile.Price_Book__c AND Product2Id IN (Select Id
+                                                                                      From Product2
+                                                                                      where IsActive = TRUE) AND IsActive = TRUE
+                       WITH SECURITY_ENFORCED ORDER BY CreatedDate DESC
+                       Limit 12];
+
+            System.debug('pbe ->'+pbe);
+                       Set<Id> productIds = new Set<Id>();
+            for (PricebookEntry pb1 : pbe){        productIds.add(pb1.Product2.Id); }System.debug('productIds ->'+productIds);
+
+
+
+                           List<Inventory_Stock__c> WarehouseItemInventoryStocks = new List<Inventory_Stock__c>();
+
+            if (productIds.size() > 0){
+                WarehouseItemInventoryStocks = [Select Id, Name, Active__c, Company__c, Organisation_Business_Unit__c, Warehouse__c, product__c, Number_of_Item_In_Stock__c, BOM__c
+                                                From Inventory_Stock__c
+                                                Where product__c In:productIds And Active__c = true And Warehouse__c In:siteIds And Number_of_Item_In_Stock__c > 0
+                                                WITH SECURITY_ENFORCED
+                                                limit 1000];
+            }
+
+            System.debug('WarehouseItemInventoryStocks->'+WarehouseItemInventoryStocks);
+            Map<String, Decimal> stockView = new Map<String, Decimal>();
+
+            for (Id prId : productIds){
+                Decimal stock = 0;
+                for (Inventory_Stock__c inven : WarehouseItemInventoryStocks){ if (prId == inven.product__c){ stock += inven.Number_of_Item_In_Stock__c;
+                    }
+                }
+                stockView.put(prId, stock);
+            }
+            System.debug('stockView ->'+stockView);
+
+            //=========Discount Plan==============
+            Integer currentQuantity = 1;
+            List<Tier_Discount_Allocation__c> TDAS = new List<Tier_Discount_Allocation__c>();
+            TDAS = [Select Id, Name, Active__c, Company__c, Organisation_Business_Unit__c, product__c, Tier__c, Tier__r.Ceiling_Unit__c, Tier__r.Floor_Unit__c, Tier__r.Active__c, Discount_Plan__c, Discount_Plan__r.Name, Discount_Plan__r.Active__c, Default__c, Discount_Plan__r.Default_Discount_Percentage__c, Discount_Plan__r.Floor_Discount_Percentage__c, Discount_Plan__r.Ceiling_Discount_Percentage__c, Discount_Plan__r.Default_Discount_Value__c, Discount_Plan__r.Floor_Discount_Value__c, Discount_Plan__r.Ceiling_Discount_Value__c
+                    From Tier_Discount_Allocation__c
+                    Where Order_Profile__c = :profile.Id And Price_Book__c = :profile.Price_Book__c AND product__c In:productIds And Tier__r.Floor_Unit__c <= :currentQuantity And Tier__r.Ceiling_Unit__c >= :currentQuantity And Tier__r.Active__c = true And Discount_Plan__r.Active__c = true And Active__c = true
+                    WITH SECURITY_ENFORCED
+                    limit 100];
+
+            List<Id> discountPlanIds = new List<Id>();
+            for (Tier_Discount_Allocation__c TDA : TDAS){ if (TDA.Discount_Plan__c != Null) discountPlanIds.add(TDA.Discount_Plan__c);
+            }
+            List<Discount_Plan__c> discounts = new List<Discount_Plan__c>();
+            discounts = [Select id, Name, Active__c, Ceiling_Discount_Percentage__c, Default_Discount_Percentage__c, Description__c, Floor_Discount_Percentage__c, Status__c, Default_Discount_Value__c, Ceiling_Discount_Value__c, Floor_Discount_Value__c
+                         From Discount_Plan__c
+                         Where Id In:discountPlanIds And Active__c = True
+                         WITH SECURITY_ENFORCED
+                         limit 100];
+
+            Map<Id, Discount_Plan__c> discountMap = new Map<Id, Discount_Plan__c>();
+            for (Discount_Plan__c dis : discounts){ discountMap.put(dis.id, dis);
+            }
+
+            Map<Id, List<Discount_Plan__c>> discountPlans = new Map<Id, List<Discount_Plan__c>>();
+            Map<Id, List<Tier_Discount_Allocation__c>> tierDiscAllocation = new Map<Id, List<Tier_Discount_Allocation__c>>();
+            for (PricebookEntry pbPro : pbe){
+                List<Discount_Plan__c> myDiscountPlans = new List<Discount_Plan__c>();
+                List<Tier_Discount_Allocation__c> myTierDiscAlc = new List<Tier_Discount_Allocation__c>();
+                for (Tier_Discount_Allocation__c TDA : TDAS){ if (pbPro.Product2.Id == TDA.product__c && TDA.Discount_Plan__c != Null){ myDiscountPlans.add(discountMap.get(TDA.Discount_Plan__c));myTierDiscAlc.add(TDA);
+                    }
+                }
+                discountPlans.put(pbPro.Product2.Id, myDiscountPlans);
+                tierDiscAllocation.put(pbPro.Product2.Id, myTierDiscAlc);
+            }
+
+            //==============/Discount Plan===========================
+
+            //=============Taxex Calculation start=====================
+            Date todayDate = system.today();
+            List<Tax__c> profileTax = new List<Tax__c>();
+            profileTax = [Select Id, Name, Active__c, Apply_Tax_On__c, City__c, Country__c, Effective_Date__c, Expiry_Date__c, Other_Tax_Rate__c, Other_Tax_Type__c, Postal_Code__c, Product__c, Province__c, Tax_Rate__c, Type__c
+                          from Tax__c
+                          where Account_Profile__c = :profile.Id AND Effective_Date__c <= :todayDate AND Expiry_Date__c >= :todayDate AND Type__c = :'Sales Tax' AND Tax_Rate__c != Null AND Product__c = Null AND Active__c = true
+                          WITH SECURITY_ENFORCED
+                          order by Province__c DESC
+                          limit 100];
+
+            List<Tax__c> productprofileTax = new List<Tax__c>();
+            productprofileTax = [Select Id, Name, Active__c, Apply_Tax_On__c, City__c, Country__c, Effective_Date__c, Expiry_Date__c, Other_Tax_Rate__c, Other_Tax_Type__c, Postal_Code__c, Product__c, Province__c, Tax_Rate__c, Type__c
+                                 from Tax__c
+                                 where Account_Profile__c = :profile.Id AND Effective_Date__c <= :todayDate AND Expiry_Date__c >= :todayDate AND Type__c = :'Sales Tax' AND Tax_Rate__c != Null AND Product__c != Null AND Product__c In:productIds AND Active__c = true
+                                 WITH SECURITY_ENFORCED
+                                 order by Province__c DESC
+                                 limit 100];
+
+            Address__c ordBillToAdd;
+            Address__c ordShipToAdd;
+            if (billToAddId != '' && billToAddId != null)
+                ordBillToAdd = [Select Id, Name, Active__c, City__c, Country__c, State__c, Postal_Code__c
+                                from Address__c
+                                where Id = :billToAddId AND Active__c = true
+                                WITH SECURITY_ENFORCED
+                                Limit 1];
+            if (shipToAddId != '' && shipToAddId != null)
+                ordShipToAdd = [Select Id, Name, Active__c, City__c, Country__c, State__c, Postal_Code__c
+                                from Address__c
+                                where Id = :shipToAddId AND Active__c = true
+                                WITH SECURITY_ENFORCED
+                                Limit 1];
+            String TaxPostalCode = '';
+            String TaxCity = '';
+            String TaxProvince = '';
+            String TaxCountry = '';
+            if (ordBillToAdd != Null){
+                if (profile.Account_Profile__r.Tax_Sourcing_Rules__c == 'Origin'){
+                    if (ordBillToAdd.Postal_Code__c != Null && ordBillToAdd.Postal_Code__c != '') TaxPostalCode = ordBillToAdd.Postal_Code__c;
+                    if (ordBillToAdd.City__c != Null && ordBillToAdd.City__c != '')
+                        TaxCity = ordBillToAdd.City__c;
+                    if (ordBillToAdd.State__c != Null && ordBillToAdd.State__c != '') TaxProvince = ordBillToAdd.State__c;
+                    if (ordBillToAdd.Country__c != Null && ordBillToAdd.Country__c != '')
+                        TaxCountry = ordBillToAdd.Country__c;
+                }
+            }
+
+            if (ordShipToAdd != Null){
+                if (profile.Account_Profile__r.Tax_Sourcing_Rules__c == 'Destination'){
+                    if (ordShipToAdd.Postal_Code__c != Null && ordShipToAdd.Postal_Code__c != '') TaxPostalCode = ordShipToAdd.Postal_Code__c;                }
+            }
+
+            //=============Taxex Calculation end=====================
+
+            //fetch subscription plans
+            List<Subscription_Plan__c> subPlans = new List<Subscription_Plan__c>();
+            subPlans = [Select Id, Name, Active__c, Duration_label__c, Duration_Unit__c, Description__c,
+                        Order_Delivery_Frequency__c, Billing_Period__c
+                        from Subscription_Plan__c
+                        where Active__c = true
+                        WITH SECURITY_ENFORCED
+                        limit 100];
+
+
+            for (PricebookEntry pb : pbe){
+
+                List<SelectOptions> options = new List<SelectOptions>();
+                options.add(new SelectOptions('', '--None--'));
+                if (discountPlans.get(pb.Product2.Id) != null){
+                    for (Discount_Plan__c dis : discountPlans.get(pb.Product2.Id)){ options.add(new SelectOptions(dis.Id, dis.Name));
+                    }
+                }
+
+                //=============taxes start==================
+                Tax__c tax;//=new Tax__c();
+                Boolean taxFound = false;
+                Decimal vatAmount = 0;
+                Decimal anotherTax = 0;
+                String taxId = '';
+
+                //Product Taxes
+                if (productprofileTax.size() > 0){
+                    for (Tax__c ProductTax : productprofileTax){
+                        if (pb.Product2.Id == ProductTax.Product__c){
+                            if ((TaxPostalCode != Null && TaxPostalCode != '' && TaxProvince != Null && TaxProvince != '' && TaxCountry != Null && TaxCountry != '') && (ProductTax.Postal_Code__c == TaxPostalCode && ProductTax.Province__c == TaxProvince && ProductTax.Country__c == TaxCountry)){
+                                tax = ProductTax;taxId = ProductTax.Id;taxFound = true;break;
+                            }
+                            if (!taxFound){
+                                if ((TaxProvince != Null && TaxProvince != '' && TaxCountry != Null && TaxCountry != '') && (ProductTax.Postal_Code__c == Null && ProductTax.Province__c == TaxProvince && ProductTax.Country__c == TaxCountry)){
+                                    tax = ProductTax;taxId = ProductTax.Id;taxFound = true;break;
+                                }
+                            }
+                            if (!taxFound){
+                                if ((TaxCountry != Null && TaxCountry != '') && (ProductTax.Postal_Code__c == Null && ProductTax.City__c == Null && ProductTax.Province__c == Null && ProductTax.Country__c == TaxCountry)){
+                                    tax = ProductTax;taxId = ProductTax.Id;taxFound = true;break;
+                                }
+                            }
+                            if (!taxFound){
+                                if (ProductTax.Postal_Code__c == Null && ProductTax.City__c == Null && ProductTax.Province__c == Null && ProductTax.Country__c == Null){ tax = ProductTax;taxId = ProductTax.Id;taxFound = true;break;
+                                }
+                            }
+                        }
+                    }
+                }
+                //Profile Taxes
+                if (!taxFound){
+                    if (profileTax.size() > 0){
+                        for (Tax__c profileTax1 : profileTax){ if ((TaxPostalCode != Null && TaxPostalCode != '' && TaxProvince != Null && TaxProvince != '' && TaxCountry != Null && TaxCountry != '') && (profileTax1.Postal_Code__c == TaxPostalCode && profileTax1.Province__c == TaxProvince && profileTax1.Country__c == TaxCountry)){ tax = profileTax1;taxId = profileTax1.Id;taxFound = true;break;
+                            }
+                            if (!taxFound){  if ((TaxProvince != Null && TaxProvince != '' && TaxCountry != Null && TaxCountry != '') && (profileTax1.Postal_Code__c == Null && profileTax1.Province__c == TaxProvince && profileTax1.Country__c == TaxCountry)){ tax = profileTax1;taxId = profileTax1.Id;taxFound = true;break;
+                                }
+                            }
+                            if (!taxFound){ if ((TaxCountry != Null && TaxCountry != '') && (profileTax1.Postal_Code__c == Null && profileTax1.City__c == Null && profileTax1.Province__c == Null && profileTax1.Country__c == TaxCountry)){ tax = profileTax1;taxId = profileTax1.Id;taxFound = true;break;
+                                }
+                            }
+                            if (!taxFound){ if (profileTax1.Postal_Code__c == Null && profileTax1.City__c == Null && profileTax1.Province__c == Null && profileTax1.Country__c == Null){ tax = profileTax1;taxId = profileTax1.Id;taxFound = true;break;
+                                }
+                            }
+                        }
+                    }
+                }
+                //=============taxes end==================
+
+                ProductWrapper pw = new ProductWrapper();
+                pw.pbe = pb;
+                if(pb.Product2.Is_Subscribe__c){ pw.subPlans = subPlans;}
+                if (pb.Product2.BOM__c != null){ pw.version = pb.Product2.BOM__c;}
+                pw.CurrentDiscounts = options;
+                pw.stock = stockView.get(pb.Product2.Id) != null ? stockView.get(pb.Product2.Id) : 0.00;
+                pw.disPlans = discountPlans.get(pb.Product2.Id) != null ? discountPlans.get(pb.Product2.Id) : new List<Discount_Plan__c>();
+                pw.tierDists = tierDiscAllocation.get(pb.Product2.Id) != null ? tierDiscAllocation.get(pb.Product2.Id) : new List<Tier_Discount_Allocation__c>();
+                pw.tax = tax != null ? tax : new Tax__c();
+                pw.vatAmount = vatAmount;
+                pw.otherTax = anotherTax;
+                pw.totalTaxAmount = vatAmount + anotherTax;
+                prodWrap.add(pw);
+
+            }
+        } catch (Exception e){
+        }
+        System.debug('prodWrap ->'+prodWrap);
+        return prodWrap;
+    }
+
+    // methord added by Abubakar
+    @AuraEnabled(cacheable = true)
+    public static List<DCInfo> getDistributionChannels(Id channelId) {
+        
+        // Initialize the custom list to return
+        List<DCInfo> customList = new List<DCInfo>();
+
+        // Safety check
+        if (channelId == null) {
+            return customList;
+        }
+
+        // 2. Query the database
+        List<Distribution_Channel__c> dcRecords = [
+            SELECT Id, Name 
+            FROM Distribution_Channel__c 
+            WHERE Channel__c = :channelId 
+            AND Active__c = TRUE 
+            WITH SECURITY_ENFORCED 
+            LIMIT 100
+        ];
+
+        // 3. Loop through records and map them to your Custom Object (Wrapper)
+        for (Distribution_Channel__c record : dcRecords) {
+            // Create new custom object instance
+            DCInfo info = new DCInfo(record.Id, record.Name);
+            
+            // Add to the list
+            customList.add(info);
+        }
+
+        return customList;
+    }
+
     @AuraEnabled
     global static List<ProductWrapper> getDiscountPlan(String profileId, String prodId, Integer quantity){
         return null;
     }
     @AuraEnabled
     global static List<ProductWrapper> getDiscountPlanupdated(String profileId, String prodId, Decimal quantity){ List<ProductWrapper> prWrapperList = new List<ProductWrapper>(); try{ Set<Id> productIds = new Set<Id>();productIds.add(prodId);List<Tier_Discount_Allocation__c> TDAS = new List<Tier_Discount_Allocation__c>();TDAS = [Select Id, Name, Active__c, Company__c, Organisation_Business_Unit__c, product__c, Tier__c, Tier__r.Ceiling_Unit__c, Tier__r.Floor_Unit__c, Tier__r.Active__c, Discount_Plan__c, Discount_Plan__r.Name, Discount_Plan__r.Active__c, Default__c, Discount_Plan__r.Default_Discount_Percentage__c, Discount_Plan__r.Floor_Discount_Percentage__c, Discount_Plan__r.Ceiling_Discount_Percentage__c, Discount_Plan__r.Default_Discount_Value__c, Discount_Plan__r.Floor_Discount_Value__c, Discount_Plan__r.Ceiling_Discount_Value__c From Tier_Discount_Allocation__c Where Order_Profile__c = :profileId And product__c In:productIds And Tier__r.Floor_Unit__c <= :quantity And Tier__r.Ceiling_Unit__c >= :quantity And Tier__r.Active__c = true And Discount_Plan__r.Active__c = true And Active__c = true WITH SECURITY_ENFORCED limit 100]; List<Id> discountPlanIds = new List<Id>();for (Tier_Discount_Allocation__c TDA : TDAS){if (TDA.Discount_Plan__c != Null) discountPlanIds.add(TDA.Discount_Plan__c); } List<Discount_Plan__c> discounts = new List<Discount_Plan__c>();discounts = [Select id, Name, Active__c, Ceiling_Discount_Percentage__c, Default_Discount_Percentage__c, Description__c, Floor_Discount_Percentage__c, Status__c, Default_Discount_Value__c, Ceiling_Discount_Value__c, Floor_Discount_Value__c From Discount_Plan__c Where Id In:discountPlanIds And Active__c = True WITH SECURITY_ENFORCED limit 100]; Map<Id, Discount_Plan__c> discountMap = new Map<Id, Discount_Plan__c>();for (Discount_Plan__c dis : discounts){  discountMap.put(dis.id, dis); } Map<Id, List<Discount_Plan__c>> discountPlans = new Map<Id, List<Discount_Plan__c>>();Map<Id, List<Tier_Discount_Allocation__c>> tierDiscAllocation = new Map<Id, List<Tier_Discount_Allocation__c>>();List<Discount_Plan__c> myDiscountPlans = new List<Discount_Plan__c>();List<Tier_Discount_Allocation__c> myTierDiscAlc = new List<Tier_Discount_Allocation__c>();for (Tier_Discount_Allocation__c TDA : TDAS){if (prodId == TDA.product__c && TDA.Discount_Plan__c != Null){ myDiscountPlans.add(discountMap.get(TDA.Discount_Plan__c)); myTierDiscAlc.add(TDA); } } discountPlans.put(prodId, myDiscountPlans);tierDiscAllocation.put(prodId, myTierDiscAlc); /*for(PricebookEntry pb : pbe){*/ List<SelectOptions> options = new List<SelectOptions>();options.add(new SelectOptions('', '--None--'));if (discountPlans.get(prodId) != null){for (Discount_Plan__c dis : discountPlans.get(prodId)){  options.add(new SelectOptions(dis.Id, dis.Name)); } } ProductWrapper prWrapper = new ProductWrapper();prWrapper.CurrentDiscounts = options;prWrapper.disPlans = (discountPlans.get(prodId) != null) ? discountPlans.get(prodId) : new List<Discount_Plan__c>();prWrapper.tierDists = (tierDiscAllocation.get(prodId) != null) ? tierDiscAllocation.get(prodId) : new List<Tier_Discount_Allocation__c>(); prWrapperList.add(prWrapper);} catch (Exception e){}return prWrapperList;
+    }
+
+    public class DCInfo {
+        @AuraEnabled public String dcId;
+        @AuraEnabled public String dcName;
+
+        // Constructor to easily create the object
+        public DCInfo(String id, String name) {
+            this.dcId = id;
+            this.dcName = name;
+        }
     }
 
     global class ProductWrapper{
@@ -627,7 +954,6 @@ global with sharing class Epos{
             discountPlan = '';
             subPlans = new List<Subscription_Plan__c>();
         }
-
     }
 
     @AuraEnabled
@@ -729,7 +1055,7 @@ global with sharing class Epos{
         try{
             if (String.isNotEmpty(OrderId)){
 
-                wr.ord = [Select Id, Name, Active__c, EffectiveDate, Payments_Status__c, OrderReferenceNumber, Expected_Date__c, Shipment_Type__c, Status, Description, Is_Back_Order__c, Is_Pre_Order__c, Issue_Invoice__c, Is_Closed__c, AccountId, Account.Name, Account.Account_Profile__c, Account.Account_Profile__r.Name, Account.Order_Profile__c, Account.Order_Profile__r.Name, Account.Order_Profile__r.Channel__c, Account.Order_Profile__r.Price_Book__c, Account.Order_Profile__r.Account_Profile__c, Account.Order_Profile__r.Account_Profile__r.Tax_Sourcing_Rules__c, Account.AccountNumber, Account.Company__c, Account.Organisation_Business_Unit__c, Account.Available_Credit_Balance__c, Account.Website, Account.Phone, Account.Fax, Account.VAT_registration_number__c, Employee__c, Employee__r.Name, Employee__r.Employee_User__c, Contact__c, Contact__r.Name, Contact__r.MobilePhone, Contact__r.Email,Contact__r.Title, Contact__r.Phone, Bill_To_Address__c, Bill_To_Address__r.Name, Bill_To_Address__r.Address_Line1__c, Bill_To_Address__r.Address_Line2__c, Bill_To_Address__r.Address_Line3__c, Bill_To_Address__r.City__c, Bill_To_Address__r.Country__c, Bill_To_Address__r.State__c, Bill_To_Address__r.Postal_Code__c, Ship_To_Address__c, Ship_To_Address__r.Name, Ship_To_Address__r.Address_Line1__c, Ship_To_Address__r.Address_Line2__c, Ship_To_Address__r.Address_Line3__c, Ship_To_Address__r.City__c, Ship_To_Address__r.Country__c, Ship_To_Address__r.State__c, Ship_To_Address__r.Postal_Code__c, Order_Profile__c, Order_Profile__r.Name, Order_Profile__r.Channel__c, Order_Profile__r.Price_Book__c, Order_Profile__r.Account_Profile__c, Order_Profile__r.Account_Profile__r.Tax_Sourcing_Rules__c, Project__c, Project__r.Name, Order_Discount__c, Order_Discount_Description__c, Order_Amount__c, Amount_Paid__c, Due_Amount__c, Company__c, Company__r.Name, Organisation_Business_Unit__c, Total_Quantity__c, Picked_Quantity__c, Packed_Quantity__c, Shipped_Quantity__c, UPS_Service__c, Estimated_Delivery_Date__c, Tracking_Number__c, Estimated_Shipping_Amount__c, Shipping_VAT__c, Total_Shipping_Amount__c, Total_Tax_Amount__c, TotalDiscount__c, Shipping_Discount__c, Sub_Total__c, TotalAmount
+                wr.ord = [Select Id, Name, Active__c, EffectiveDate, Payments_Status__c, OrderReferenceNumber, Expected_Date__c, Shipment_Type__c, Status, Description, Is_Back_Order__c, Is_Pre_Order__c, Issue_Invoice__c, Is_Closed__c, AccountId, Account.Name, Account.Account_Profile__c, Account.Account_Profile__r.Name, Account.Order_Profile__c, Account.Order_Profile__r.Name, Account.Order_Profile__r.Channel__c, Account.Order_Profile__r.Price_Book__c, Account.Order_Profile__r.Account_Profile__c, Account.Order_Profile__r.Account_Profile__r.Tax_Sourcing_Rules__c, Account.AccountNumber, Account.Company__c, Account.Organisation_Business_Unit__c, Account.Available_Credit_Balance__c, Account.Website, Account.Phone, Account.Fax, Account.VAT_registration_number__c, Employee__c, Employee__r.Name, Employee__r.Employee_User__c, Contact__c, Contact__r.Name, contact__r.FirstName, Contact__r.LastName, Contact__r.MobilePhone, Contact__r.Email,Contact__r.Title, Contact__r.Phone, Bill_To_Address__c, Bill_To_Address__r.Name, Bill_To_Address__r.Address_Line1__c, Bill_To_Address__r.Address_Line2__c, Bill_To_Address__r.Address_Line3__c, Bill_To_Address__r.City__c, Bill_To_Address__r.Country__c, Bill_To_Address__r.State__c, Bill_To_Address__r.Postal_Code__c, Ship_To_Address__c, Ship_To_Address__r.Name, Ship_To_Address__r.Address_Line1__c, Ship_To_Address__r.Address_Line2__c, Ship_To_Address__r.Address_Line3__c, Ship_To_Address__r.City__c, Ship_To_Address__r.Country__c, Ship_To_Address__r.State__c, Ship_To_Address__r.Postal_Code__c, Order_Profile__c, Order_Profile__r.Name, Order_Profile__r.Channel__c, Order_Profile__r.Price_Book__c, Order_Profile__r.Account_Profile__c, Order_Profile__r.Account_Profile__r.Tax_Sourcing_Rules__c, Project__c, Project__r.Name, Order_Discount__c, Order_Discount_Description__c, Order_Amount__c, Amount_Paid__c, Due_Amount__c, Company__c, Company__r.Name, Organisation_Business_Unit__c, Total_Quantity__c, Picked_Quantity__c, Packed_Quantity__c, Shipped_Quantity__c, UPS_Service__c, Estimated_Delivery_Date__c, Tracking_Number__c, Estimated_Shipping_Amount__c, Shipping_VAT__c, Total_Shipping_Amount__c, Total_Tax_Amount__c, TotalDiscount__c, Shipping_Discount__c, Sub_Total__c, TotalAmount
                           from Order
                           where Id = :OrderId
                           WITH SECURITY_ENFORCED
@@ -882,9 +1208,7 @@ global with sharing class Epos{
             comW.ExpiryYear.add(new SelectOptions(curMonth + '', curMonth++ + ''));
         List<Credentials__c> paymentSetup = [Select Id, Name
                                              from Credentials__c
-                                             Where Active__c = :true AND Type__c = 'Payment'
-                                             WITH SECURITY_ENFORCED
-                                             limit 100];
+                                             Where Active__c = :true AND Type__c = 'Payment' WITH SECURITY_ENFORCED ORDER BY Priority__c ASC NULLS LAST, CreatedDate ASC limit 100];
         for (Credentials__c cr : paymentSetup)
             comW.paymentGateways.add(new SelectOptions(cr.Id, cr.Name));
         return comW;
@@ -979,290 +1303,618 @@ global with sharing class Epos{
       return 'Success';
     }
     @SuppressWarnings('PMD')
-    @AuraEnabled
-    global static String createCardPaymentV2(String payments, String paymentMethods, String CVV, String billAddress, String selectedGateway, String myCur, String invAndAmount, Integer resCode,String ordID){
-             /*String invList,List<String> selInvList  (Multiple Invoice payment)*/
-        String ErrorMsgPayment = '';
-        Address__c billingAddress = (Address__c)JSON.deserialize(billAddress, Address__c.class);
-        List<Invoice__c> invIdList = (List<Invoice__c>)JSON.deserialize(invAndAmount, List<Invoice__c>.class);
-        System.debug('invandAmtIDLIST'+invIdList);
-        order ord=[Select Id, Amount_Paid__c from Order where Id=:ordID];
-        try{
+     @AuraEnabled
+ global static String createCardPaymentV2(String payments, String paymentMethods, String CVV, String billAddress, String selectedGateway, String myCur, String invAndAmount, Integer resCode, String ordID) {
+     /*String invList,List<String> selInvList  (Multiple Invoice payment)*/
+     String ErrorMsgPayment = '';
+     Address__c billingAddress = (Address__c) JSON.deserialize(billAddress, Address__c.class);
+     List < Invoice__c > invIdList = (List < Invoice__c > ) JSON.deserialize(invAndAmount, List < Invoice__c > .class);
+     System.debug('invandAmtIDLIST' + invIdList);
+     order ord = [Select Id, Amount_Paid__c from Order where Id =: ordID];
+     try {
 
 
-            Payment__c Payment = (Payment__c)JSON.deserialize(payments, Payment__c.class);
-            Payment_Method__c PaymentMethod = (Payment_Method__c)JSON.deserialize(paymentMethods, Payment_Method__c.class);
+         Payment__c Payment = (Payment__c) JSON.deserialize(payments, Payment__c.class);
+         Payment_Method__c PaymentMethod = (Payment_Method__c) JSON.deserialize(paymentMethods, Payment_Method__c.class);
 
-            Id rTypeP = Schema.SObjectType.Payment__c.getRecordTypeInfosByDeveloperName().get('Card_Payments').getRecordTypeId();
-            if (rTypeP != null)
-                payment.RecordTypeId = rTypeP;
-            Credentials__c credentialSetup;
-            for (Credentials__c crd : [Select Id, Name, Active__c, Password_Transkey__c, Signature__c, URL__c, Username_Login__c, Encrypted_Key__c, Channel_Id__c, Bank_COA_ID__c
-                                       From Credentials__c
-                                       Where Active__c = :true AND Id = :selectedGateway
-                                       WITH SECURITY_ENFORCED
-                                       Limit 1])
-                credentialSetup = crd;
-                system.debug('credentialSetup'+credentialSetup);
+         Id rTypeP = Schema.SObjectType.Payment__c.getRecordTypeInfosByDeveloperName().get('Card_Payments').getRecordTypeId();
+         if (rTypeP != null)
+             payment.RecordTypeId = rTypeP;
+         Credentials__c credentialSetup;
+         for (Credentials__c crd: [Select Id, Name, Active__c, Parent_Key__c, Parent_Password__c, Password_Transkey__c, Signature__c, URL__c, Username_Login__c, Encrypted_Key__c, Channel_Id__c, Bank_COA_ID__c
+                 From Credentials__c
+                 Where Active__c =: true AND Id =: selectedGateway
+                 WITH SECURITY_ENFORCED
+                 Limit 1
+             ])
+             credentialSetup = crd;
+         system.debug('credentialSetup' + credentialSetup);
+        System.debug('payment --> '+Payment);
+         if (credentialSetup == null) {
+             ErrorMsgPayment = 'Paymnet Credential Setup is not completed.';
+             return ErrorMsgPayment;
+         }
 
-            if (credentialSetup == null){ ErrorMsgPayment = 'Paymnet Credential Setup is not completed.';return ErrorMsgPayment;
+         if (credentialSetup.Bank_COA_ID__c != null) {
+             payment.Payment_Account__c = credentialSetup.Bank_COA_ID__c;
+         }
+         String TransId = '', Status = '', AVSCode = '', CVV2 = '', sErrMsg = '', ErrMsg = '', ErrCode = '', rawResponse = '', CorrID = '', Id = '', pgId = '', userAgent = '', FirstName = '', LastName = '', Email = '', City = '', State = '', Country = '', Zipcode = '', CardType = '', Expiry_Month = '', Card_Number = '', Expiry_Year = '', Amount = '', Card_Type = '', myCurrency = '', Address_Line1 = '', Address_Line2 = '', methodId = '', comAppend = '', ipstring = '';
+         if (payment.First_Name__c != Null) FirstName = payment.First_Name__c;
+         if (payment.Last_Name__c != Null) LastName = payment.Last_Name__c;
+         if (payment.Email_Address__c != Null) Email = payment.Email_Address__c;
+         if (payment.Address_Line1__c != Null) Address_Line1 = payment.Address_Line1__c;
+         if (payment.Address_Line2__c != Null) Address_Line2 = payment.Address_Line2__c;
+         if (payment.City__c != Null) City = payment.City__c;
+         if (payment.State__c != Null) State = payment.State__c;
+         if (payment.Country__c != Null) Country = payment.Country__c;
+         if (payment.Zipcode__c != Null) Zipcode = payment.Zipcode__c;
+         Card_Number = PaymentMethod.Card_Number__c.trim();
+         /*  System.debug('Sanitized Card Number: ' + Card_Number);*/
+         Card_Type = PaymentMethod.CardType__c;
+         Expiry_Month = PaymentMethod.Card_Expiration_Month__c;
+         Expiry_Year = PaymentMethod.Card_Expiration_Year__c;
+
+         myCurrency = myCur;
+
+         Amount = String.valueof(payment.Total_Amount__c);
+
+         ipstring = '';
+         String response_1;
+         String resStatus;
+
+            System.debug('---- ASSIGNED Billing Values ----');
+            System.debug('FirstName = "' + FirstName + '"');
+            System.debug('LastName = "' + LastName + '"');
+            System.debug('Email = "' + Email + '"');
+            System.debug('Address_Line1 = "' + Address_Line1 + '"');
+            System.debug('Address_Line2 = "' + Address_Line2 + '"');
+            System.debug('City = "' + City + '"');
+            System.debug('State = "' + State + '"');
+            System.debug('Country = "' + Country + '"');
+            System.debug('Zipcode = "' + Zipcode + '"');
+            System.debug('--------------------------------');
+
+         if (credentialSetup.Name.containsIgnoreCase('Paypal')) {
+
+             Http h = new Http();
+
+             HttpRequest req = new HttpRequest();
+
+             String url = String.valueof(credentialSetup.URL__c);
+             String soapXML;
+             Blob cryptoKey, userData, passwordData;
+             cryptoKey = encodingUtil.convertFromHex(credentialSetup.Encrypted_Key__c);
+
+             userData = Crypto.decryptWithManagedIV('AES256', cryptoKey, encodingUtil.convertFromHex(credentialSetup.Username_Login__c));
+             system.debug('username decrypted ' + userData);
+             passwordData = Crypto.decryptWithManagedIV('AES256', cryptoKey, encodingUtil.convertFromHex(credentialSetup.Password_Transkey__c));
+             system.debug('passwordData decrypted ' + passwordData);
+             if (userData != null)
+                 credentialSetup.Username_Login__c = userData.toString();
+             if (passwordData != null)
+                 credentialSetup.Password_Transkey__c = passwordData.toString();
+             soapXML = System.label.PayPalAPI;
+             soapXML += '<SOAP-ENV:Header><RequesterCredentials xmlns="urn:ebay:api:PayPalAPI"><Credentials xmlns="urn:ebay:apis:eBLBaseComponents">';
+             soapXML += '<Username>' + credentialSetup.Username_Login__c.escapeXml() + '</Username>';
+             soapXML += '<Password>' + credentialSetup.Password_Transkey__c.escapeXml() + '</Password>';
+             soapXML += '<Signature>' + credentialSetup.Signature__c.escapeXml() + '</Signature>';
+             soapXML += '<Subject/>';
+             soapXML += '</Credentials></RequesterCredentials></SOAP-ENV:Header><SOAP-ENV:Body><DoDirectPaymentReq xmlns="urn:ebay:api:PayPalAPI">';
+             soapXML += '<DoDirectPaymentRequest><Version xmlns=urn:ebay:apis:eBLBaseComponents">84.00</Version>';
+             soapXML += '<DoDirectPaymentRequestDetails xmlns="urn:ebay:apis:eBLBaseComponents">';
+             soapXML += '<PaymentAction>Sale</PaymentAction><PaymentDetails><OrderTotal currencyID=' + myCurrency.escapeXml() + '>' + Amount.escapeXml() + '</OrderTotal></PaymentDetails>';
+             soapXML += '<IPAddress>' + ipstring.escapeXml() + '</IPAddress><CreditCard><CreditCardType>' + Card_Type.escapeXml() + '</CreditCardType><CreditCardNumber>' + Card_Number.escapeXml() + '</CreditCardNumber>';
+             soapXML += '<ExpMonth>' + Expiry_Month.escapeXml() + '</ExpMonth><ExpYear>' + Expiry_Year.escapeXml() + '</ExpYear><CVV2>' + CVV.escapeXml() + '</CVV2>';
+             soapXML += '<CardOwner><Payer>' + Email.escapeXml() + '</Payer><PayerStatus></PayerStatus><PayerName><FirstName>' + FirstName.escapeXml() + '</FirstName><LastName>' + LastName.escapeXml() + '</LastName></PayerName>';
+             soapXML += '<Address><Street1>' + Address_Line1.escapeXml() + '</Street1><Street2>' + Address_Line2.escapeXml() + '</Street2><CityName>' + City.escapeXml() + '</CityName>';
+             soapXML += '<StateOrProvince>' + State.escapeXml() + '</StateOrProvince><Country>' + Country.escapeXml() + '</Country><PostalCode>' + Zipcode.escapeXml() + '</PostalCode><Phone></Phone></Address></CardOwner></CreditCard>';
+             soapXML += '</DoDirectPaymentRequestDetails></DoDirectPaymentRequest></DoDirectPaymentReq></SOAP-ENV:Body></SOAP-ENV:Envelope>';
+
+             req.setBody(soapXML);
+             req.setEndpoint(url);
+             req.setMethod('POST');
+             req.setHeader('Content-length', '1753');
+             req.setHeader('Content-Type', 'text/xml;charset=UTF-8');
+             req.setHeader('SOAPAction', '');
+             req.setHeader('Host', 'api-3t.sandbox.paypal.com');
+             req.setTimeout(20000);
+             HttpResponse res = new HttpResponse();
+             String Response;
+             String xml;
+             XmlStreamReader reader;
+             if (Test.isRunningTest()) {
+                 Response = '<?xml version="1.0" encoding="UTF-8"?><Response><Ack>Success</Ack><CorrelationID>12345</CorrelationID><CVV2Code>M</CVV2Code><AVSCode>Y</AVSCode><LongMessage>Transaction successful</LongMessage><ShortMessage>Success</ShortMessage><ErrorCode>0</ErrorCode><TransactionID>ABC123</TransactionID></Response>';
+                 reader = new XmlStreamReader(Response);
+             } else {
+                 res = h.send(req);
+                 xml = res.getBody();
+                 reader = res.getXmlStreamReader();
+             }
+             Status = readXMLResponse(reader, 'Ack');
+             System.debug('Status' + Status);
+             if (Test.isRunningTest()) {
+                 reader = new XmlStreamReader(Response);
+             } else {
+                 reader = res.getXmlStreamReader();
+             }
+             CorrID = readXMLResponse(reader, 'CorrelationID');
+             if (Test.isRunningTest()) {
+                 reader = new XmlStreamReader(Response);
+             } else {
+                 reader = res.getXmlStreamReader();
+             }
+             CVV2 = readXMLResponse(reader, 'CVV2Code');
+             if (Test.isRunningTest()) {
+                 reader = new XmlStreamReader(Response);
+             } else {
+                 reader = res.getXmlStreamReader();
+             }
+             AVSCode = readXMLResponse(reader, 'AVSCode');
+             rawResponse = xml;
+             System.debug('rawResponse' + rawResponse);
+             if (Test.isRunningTest()) {
+                 reader = new XmlStreamReader(Response);
+             } else {
+                 reader = res.getXmlStreamReader();
+             }
+             ErrMsg = readXMLResponse(reader, 'LongMessage');
+             if (Test.isRunningTest()) {
+                 reader = new XmlStreamReader(Response);
+             } else {
+                 reader = res.getXmlStreamReader();
+             }
+             sErrMsg = readXMLResponse(reader, 'ShortMessage');
+             if (Test.isRunningTest()) {
+                 reader = new XmlStreamReader(Response);
+             } else {
+                 reader = res.getXmlStreamReader();
+             }
+             ErrCode = readXMLResponse(reader, 'ErrorCode');
+             if (Test.isRunningTest()) {
+                 reader = new XmlStreamReader(Response);
+             } else {
+                 reader = res.getXmlStreamReader();
+             }
+             transid = readXMLResponse(reader, 'TransactionID');
+             payment.AVS_Code__c = AVSCode;
+             payment.CVV2_Code__c = CVV2;
+             payment.Transaction_Status__c = Status;
+             payment.Error_Code__c = ErrCode;
+             payment.Transaction_ID__c = transid;
+             payment.sError__c = sErrMsg;
+             payment.Correlation_ID__c = CorrID;
+             payment.Error_Message__c = ErrMsg;
+             if (Schema.sObjectType.Payment__c.fields.Payment_Gateway__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Payment_Gateway__c.isUpdateable()) {
+                 payment.Payment_Gateway__c = 'Paypal';
+             }
+             if (Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isUpdateable()) {
+                 payment.Transaction_Status__c = 'Approved';
+             }
+             if (Schema.sObjectType.Payment__c.fields.Status__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Status__c.isUpdateable()) {
+                 payment.Status__c = 'Paid';
+             }
+         } else if (credentialSetup.Name.containsIgnoreCase('Authorize')) {
+             Blob cryptoKey, userData, passwordData;
+             cryptoKey = encodingUtil.convertFromHex(credentialSetup.Encrypted_Key__c);
+             userData = Crypto.decryptWithManagedIV('AES256', cryptoKey, encodingUtil.convertFromHex(credentialSetup.Username_Login__c));
+             passwordData = Crypto.decryptWithManagedIV('AES256', cryptoKey, encodingUtil.convertFromHex(credentialSetup.Password_Transkey__c));
+             if (userData != null) {
+                 credentialSetup.Username_Login__c = userData.toString();
+                 system.debug('Username_Login__c ' + userData + 'to string' + userData.toString());
+             }
+             if (passwordData != null) {
+                 credentialSetup.Password_Transkey__c = passwordData.toString();
+                 system.debug('Password_Transkey__c ' + passwordData + 'to string' + passwordData.toString());
+             }
+             string url = credentialSetup.URL__c;
+             String Address = billingAddress.Address_Line1__c + ' ' + billingAddress.Address_Line2__c;
+             string expiryDate = Expiry_Year + '-' + Expiry_Month;
+             String soapXML = '<?xml version="1.0" encoding="UTF-8"?>';
+             soapXML += '<createTransactionRequest xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd">';
+             soapXML += '<merchantAuthentication>';
+             soapXML += '<name>' + credentialSetup.Username_Login__c.escapeXml() + '</name>';
+             soapXML += '<transactionKey>' + credentialSetup.Password_Transkey__c.escapeXml() + '</transactionKey>';
+             soapXML += '</merchantAuthentication>';
+             soapXML += '<transactionRequest>';
+             soapXML += '<transactionType>authCaptureTransaction</transactionType>';
+             soapXML += '<amount>' + Amount.escapeXml() + '</amount>';
+             soapXML += '<payment>';
+             soapXML += '<creditCard>';
+             soapXML += '<cardNumber>' + Card_Number.escapeXml() + '</cardNumber>';
+             soapXML += '<expirationDate>' + expiryDate.escapeXml() + '</expirationDate>';
+             soapXML += '<cardCode>' + CVV.escapeXml() + '</cardCode>';
+             soapXML += '</creditCard>';
+             soapXML += '</payment>';
+             soapXML += '<billTo>';
+             soapXML += '<firstName>' + FirstName.escapeXml() + '</firstName>';
+             soapXML += '<lastName>' + LastName.escapeXml() + '</lastName>';
+             soapXML += '<address>' + address.escapeXml() + '</address>';
+             soapXML += '<city>' + billingAddress.City__c.escapeXml() + '</city>';
+             system.debug('SOAP Request: ' + soapXML);
+             if (billingAddress.State__c != null) soapXML += '<state>' + billingAddress.State__c.escapeXml() + '</state>';
+             if (billingAddress.Postal_Code__c != null) soapXML += '<zip>' + billingAddress.Postal_Code__c.escapeXml() + '</zip>';
+             if (billingAddress.Country__c != null) soapXML += '<country>' + billingAddress.Country__c.escapeXml() + '</country>';
+             soapXML += '</billTo>';
+             soapXML += '</transactionRequest>';
+             soapXML += '</createTransactionRequest>';
+             HttpRequest reqr = new HttpRequest();
+             Http hr = new Http();
+             reqr.setBody(soapXML);
+             reqr.setMethod('POST');
+             reqr.setEndpoint(url);
+             reqr.setHeader('Content-length', '2000');
+             reqr.setHeader('Content-Type', 'text/xml');
+             if (Test.isRunningTest()) {
+                 if (resCode == 3) response_1 = '<createTransactionResponse xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="https://www.w3.org/2001/XMLSchema" xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd"><messages><resultCode>Error</resultCode><message><code>I00001</code><text>Successful.</text></message></messages><transactionResponse><responseCode>' + resCode + '</responseCode><authCode>9C9UEO</authCode><avsResultCode>Y</avsResultCode><cvvResultCode>P</cvvResultCode><cavvResultCode>2</cavvResultCode><transId>40017242270</transId><refTransID /><transHash>03A19FEF24F26163F4182D4B1BD7281D</transHash><testRequest>0</testRequest><accountNumber>XXXX4242</accountNumber><accountType>Visa</accountType><messages><message><code>1</code><description>This transaction has been approved.</description></message></messages><transHashSha2/></transactionResponse></createTransactionResponse>';
+                 else response_1 = '<createTransactionResponse xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="https://www.w3.org/2001/XMLSchema" xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd"><messages><resultCode>Ok</resultCode><message><code>I00001</code><text>Successful.</text></message></messages><transactionResponse><responseCode>' + resCode + '</responseCode><authCode>9C9UEO</authCode><avsResultCode>Y</avsResultCode><cvvResultCode>P</cvvResultCode><cavvResultCode>2</cavvResultCode><transId>40017242270</transId><refTransID /><transHash>03A19FEF24F26163F4182D4B1BD7281D</transHash><testRequest>0</testRequest><accountNumber>XXXX4242</accountNumber><accountType>Visa</accountType><messages><message><code>1</code><description>This transaction has been approved.</description></message></messages><transHashSha2/></transactionResponse></createTransactionResponse>';
+             } else {
+                 HttpResponse resr = hr.send(reqr);
+                 response_1 = soapXML;
+                 response_1 = resr.getBody();
+                 resStatus = resr.getStatus();
+             }
+             if (response_1 != null) {
+                 system.debug('response_1' + response_1);
+                 string resultCode = response_1.substringBetween('<resultCode>', '</resultCode>');
+                 string responseCode = response_1.substringBetween('<responseCode>', '</responseCode>');
+                 if (resultCode == 'Ok') {
+                     system.debug('resultCode' + resultCode + 'responseCode' + responseCode);
+                     if (responseCode == '1') {
+                         string description = response_1.substringBetween('<description>', '</description>');
+                         transId = response_1.substringBetween('<transId>', '</transId>');
+                         string transHash = response_1.substringBetween('<transHash>', '</transHash>');
+                         if (Schema.sObjectType.Payment__c.fields.Transaction_ID__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_ID__c.isUpdateable()) {
+                             payment.Transaction_ID__c = transId;
+                         }
+                         if (Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isUpdateable()) {
+                             payment.Transaction_Status__c = 'Approved';
+                             System.debug('Setting Transaction_Status__c to: ' + payment.Transaction_Status__c);
+                         }
+                         if (Schema.sObjectType.Payment__c.fields.sError__c.isCreateable() || Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable()) {
+                             payment.sError__c = description;
+                         }
+                         if (Schema.sObjectType.Payment__c.fields.Status__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Status__c.isUpdateable()) {
+                             payment.Status__c = 'Paid';
+                         }
+                     }
+                     if (responseCode == '2') {
+                         string description = response_1.substringBetween('<description>', '</description>');
+                         transId = response_1.substringBetween('<transId>', '</transId>');
+                         string errorMessage = 'Transaction Failed. ';
+                         string Text = response_1.substringBetween('<text>', '</text>');
+                         string errors = response_1.substringBetween('<errors>', '</errors>');
+                         string errorText = response_1.substringBetween('<errorText>', '</errorText>');
+                         if (errors != null) errorMessage += errorText;
+                         else errorMessage += Text;
+                         if (Schema.sObjectType.Payment__c.fields.Transaction_ID__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_ID__c.isUpdateable()) {
+                             payment.Transaction_ID__c = transId;
+                         }
+                         if (Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isUpdateable()) {
+                             payment.Transaction_Status__c = 'Declined';
+                         }
+                         if (Schema.sObjectType.Payment__c.fields.sError__c.isCreateable() || Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable()) {
+                             payment.sError__c = errorMessage;
+                         }
+                     }
+                     if (responseCode == '4') {
+                         string description = response_1.substringBetween('<description>', '</description>');
+                         transId = response_1.substringBetween('<transId>', '</transId>');
+                         if (Schema.sObjectType.Payment__c.fields.Transaction_ID__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_ID__c.isUpdateable()) {
+                             payment.Transaction_ID__c = transId;
+                         }
+                         if (Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isUpdateable()) {
+                             payment.Transaction_Status__c = 'Held for Review';
+                         }
+                         if (Schema.sObjectType.Payment__c.fields.sError__c.isCreateable() || Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable()) {
+                             payment.sError__c = description;
+                         }
+                     }
+                 } else {
+                     if (responseCode == '3') {
+                         string description = response_1.substringBetween('<description>', '</description>');
+                         string errorMessage = 'Transaction Failed. ';
+                         string Text = response_1.substringBetween('<text>', '</text>');
+                         string errors = response_1.substringBetween('<errors>', '</errors>');
+                         string errorText = response_1.substringBetween('<errorText>', '</errorText>');
+                         if (errors != null) errorMessage += errorText;
+                         else errorMessage += Text;
+                         if (Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isUpdateable()) {
+                             payment.Transaction_Status__c = 'Error';
+                         }
+                         if (Schema.sObjectType.Payment__c.fields.sError__c.isCreateable() || Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable()) {
+                             payment.sError__c = errorMessage;
+                         }
+                     }
+                 }
+             } else payment.sError__c = 'Null Response.';
+             if (Schema.sObjectType.Payment__c.fields.Payment_Gateway__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Payment_Gateway__c.isUpdateable()) {
+                 payment.Payment_Gateway__c = 'Authorize.Net';
+             }
+         } else if (credentialSetup.Name.containsIgnoreCase('Stripe')) {
+             try {
+                 /* Prepare Stripe request details*/
+                 Decimal amountDecimal = Decimal.valueOf(Amount);
+                 Integer amountInCents = (amountDecimal * 100).intValue();
+                 String body = 'payment_method_data[type]=card' + '&payment_method_data[card][exp_month]=' + Expiry_Month + '&payment_method_data[card][exp_year]=' + Expiry_Year + '&payment_method_data[card][number]=' + Card_Number.escapeXml() + '&payment_method_data[card][cvc]=' + CVV.escapeXml() + '&amount=' + amountInCents + '&currency=' + myCurrency + '&payment_method_types[]=card'; /*Setup HTTP request*/
+                 HttpRequest req = new HttpRequest();
+                 req.setEndpoint(credentialSetup.URL__c);
+                 req.setMethod('POST');
+                 req.setHeader('Content-Type', 'application/x-www-form-urlencoded');
+                 req.setHeader('Authorization', 'Bearer ' + credentialSetup.Encrypted_Key__c);
+                 req.setBody(body); /* Send HTTP request*/
+                 HttpResponse res = new Http().send(req);
+                 String responseBody = res.getBody();
+                 System.debug('Stripe Response: ' + responseBody); /*Parse response*/
+                 Map < String, Object > responseMap = (Map < String, Object > ) JSON.deserializeUntyped(responseBody);
+                 if (responseMap == null || !responseMap.containsKey('status')) {
+                     return ErrorMsgPayment = 'Unexpected response from Stripe.';
+                 }
+                 String paymentStatus = (String) responseMap.get('status');
+                 String paymentIntentId = (String) responseMap.get('id');
+                 if (paymentStatus == 'requires_confirmation') {
+                     /* Confirm payment*/
+                     String confirmEndpoint = 'https://api.stripe.com/v1/payment_intents/' + paymentIntentId + '/confirm';
+                     HttpRequest confirmReq = new HttpRequest();
+                     confirmReq.setEndpoint(confirmEndpoint);
+                     confirmReq.setMethod('POST');
+                     confirmReq.setHeader('Authorization', 'Bearer ' + credentialSetup.Encrypted_Key__c);
+                     HttpResponse confirmRes = new Http().send(confirmReq);
+                     String confirmResponseBody = confirmRes.getBody();
+                     System.debug('Stripe Confirmation Response: ' + confirmResponseBody);
+                     Map < String, Object > confirmResponseMap = (Map < String, Object > ) JSON.deserializeUntyped(confirmResponseBody);
+                     if (confirmResponseMap.containsKey('status') && confirmResponseMap.get('status') == 'succeeded') {
+                         /* Successful payment */
+                         payment.Transaction_Status__c = 'Approved';
+                         payment.Status__c = 'Paid';
+                         payment.Payment_Gateway__c = 'Stripe';
+                         payment.Transaction_ID__c = (String) confirmResponseMap.get('id'); /*added by matheen to get the transaction id*/
+                     } else {
+                         return ErrorMsgPayment = 'Stripe payment confirmation failed.';
+                     }
+                 } else if (paymentStatus == 'succeeded') {
+                     /* Payment already succeeded*/
+                     payment.Transaction_Status__c = 'Approved';
+                     payment.Status__c = 'Paid';
+                     payment.Payment_Gateway__c = 'Stripe';
+                     payment.Transaction_ID__c = paymentIntentId; /*added*/
+                 } else {
+                     return ErrorMsgPayment = 'Stripe payment failed with status: ' + paymentStatus;
+                 }
+             } catch (Exception e) {
+                 System.debug('Stripe Exception: ' + e.getMessage());
+                 return ErrorMsgPayment = 'Unexpected error during payment processing.';
+             }
+         } else if (credentialSetup.Name.containsIgnoreCase('CyberSource')) {
+
+            Map<String, Object> body = new Map<String, Object>();
+            body.put('clientReferenceInformation', new Map<String, Object>{ 'code' => ordID});
+
+            body.put('processingInformation', new Map<String, Object>{ 'capture' => true });
+
+            body.put('paymentInformation', new Map<String, Object>{
+                'card' => new Map<String, Object>{
+                    'number' => Card_Number,
+                    'expirationMonth' => Expiry_Month,
+                    'expirationYear' => Expiry_Year,
+                    'securityCode' => CVV
+                }
+            });
+
+            body.put('orderInformation', new Map<String, Object>{
+                'amountDetails' => new Map<String, Object>{
+                    'totalAmount' => Amount,
+                    'currency' => myCurrency
+                },
+                'billTo' => new Map<String, Object>{
+                    'firstName' => FirstName,
+                    'lastName' => LastName,
+                    'address1' => Address_Line1,
+                    'locality' => City,
+                    'administrativeArea' => State,
+                    'postalCode' => Zipcode,
+                    'country' => Country,
+                    'email' => Email
+                }
+            });
+
+            String jsonBody = JSON.serialize(body);
+            String resourcePath = '/pts/v2/payments';
+
+            // ----------- CyberSource Credentials from Custom Metadata ------------
+            String host = credentialSetup.URL__c; //host 
+            String merchantId = credentialSetup.Username_Login__c;//merchant id 
+            String keyId = credentialSetup.Parent_Key__c; // key id 
+            String secretKey = credentialSetup.Parent_Password__c; // shared secret 
+
+            // ----------------------------- Send Callout ---------------------------
+            HttpResponse csRes = cs_sendRequest(host, merchantId, keyId, secretKey, jsonBody, resourcePath);
+            System.debug('CyberSource Response: ' + csRes.getBody());
+
+            Map<String, Object> resMap = (Map<String, Object>) JSON.deserializeUntyped(csRes.getBody());
+
+             status = (String) resMap.get('status');
+            String transactionId = (String) resMap.get('id');
+
+            payment.Transaction_ID__c = transactionId;
+            payment.Transaction_Status__c = status;
+            payment.Payment_Gateway__c = 'CyberSource';
+
+            if (status == 'AUTHORIZED' || status == 'PENDING_SETTLEMENT') {
+                payment.Status__c = 'Paid';
+            } 
+            else {
+                payment.Status__c = 'Failed';
+                //return 'CyberSource Error: ' + JSON.serialize(resMap.get('errorInformation'));
+                String csError = '';
+
+                if (resMap.containsKey('errorInformation')) {
+                    Map<String, Object> err = (Map<String, Object>) resMap.get('errorInformation');
+                    csError = (String) err.get('message');
+                } else {
+                    // fallback errors (like DUPLICATE_REQUEST, INVALID_REQUEST)
+                    if (resMap.containsKey('message')) {
+                        csError = (String) resMap.get('message');
+                    }
+                    if (resMap.containsKey('reason')) {
+                        csError += ' (' + (String) resMap.get('reason') + ')';
+                    }
+                }
+
+                // Make sure we never return null
+                if (csError == null || csError == '') {
+                    csError = 'Unknown CyberSource error';
+                }
+
+                return 'CyberSource Error: ' + csError;
             }
-
-            if (credentialSetup.Bank_COA_ID__c != null){ payment.Payment_Account__c = credentialSetup.Bank_COA_ID__c;
-            }
-            String TransId = '', Status = '', AVSCode = '', CVV2 = '', sErrMsg = '', ErrMsg = '', ErrCode = '', rawResponse = '', CorrID = '', Id = '', pgId = '', userAgent = '', FirstName = '', LastName = '', Email = '', City = '', State = '', Country = '', Zipcode = '', CardType = '', Expiry_Month = '', Card_Number = '', Expiry_Year = '', Amount = '', Card_Type = '', myCurrency = '', Address_Line1 = '', Address_Line2 = '', methodId = '', comAppend = '', ipstring = '';
-            if (payment.First_Name__c != Null) FirstName = payment.First_Name__c;
-            if (payment.Last_Name__c != Null) LastName = payment.Last_Name__c;
-            if (payment.Email_Address__c != Null) Email = payment.Email_Address__c;
-            if (payment.Address_Line1__c != Null) Address_Line1 = payment.Address_Line1__c;
-            if (payment.Address_Line2__c != Null) Address_Line2 = payment.Address_Line2__c;
-            if (payment.City__c != Null) City = payment.City__c;
-            if (payment.State__c != Null) State = payment.State__c;
-            if (payment.Country__c != Null) Country = payment.Country__c;
-            if (payment.Zipcode__c != Null) Zipcode = payment.Zipcode__c;
-               Card_Number = PaymentMethod.Card_Number__c.trim();
-          /*  System.debug('Sanitized Card Number: ' + Card_Number);*/
-            Card_Type = PaymentMethod.CardType__c;
-            Expiry_Month = PaymentMethod.Card_Expiration_Month__c;
-            Expiry_Year = PaymentMethod.Card_Expiration_Year__c;
-
-            myCurrency = myCur;
-
-            Amount = String.valueof(payment.Total_Amount__c);
-
-            ipstring = '';
-            String response_1;
-            String resStatus;
-            if (credentialSetup.Name.containsIgnoreCase('Paypal')){
-
-                Http h = new Http();
-
-                HttpRequest req = new HttpRequest();
-
-                String url = String.valueof(credentialSetup.URL__c);
-                String soapXML;
-                Blob cryptoKey, userData, passwordData;
-                cryptoKey = encodingUtil.convertFromHex(credentialSetup.Encrypted_Key__c);
-
-                userData = Crypto.decryptWithManagedIV('AES256', cryptoKey, encodingUtil.convertFromHex(credentialSetup.Username_Login__c));
-                system.debug('username decrypted '+userData);
-                passwordData = Crypto.decryptWithManagedIV('AES256', cryptoKey, encodingUtil.convertFromHex(credentialSetup.Password_Transkey__c));
-                system.debug('passwordData decrypted '+passwordData);
-                if (userData != null)
-                    credentialSetup.Username_Login__c = userData.toString();
-                if (passwordData != null)
-                    credentialSetup.Password_Transkey__c = passwordData.toString();
-                soapXML = System.label.PayPalAPI;
-                soapXML += '<SOAP-ENV:Header><RequesterCredentials xmlns="urn:ebay:api:PayPalAPI"><Credentials xmlns="urn:ebay:apis:eBLBaseComponents">';
-                soapXML += '<Username>' + credentialSetup.Username_Login__c.escapeXml() + '</Username>';
-                soapXML += '<Password>' + credentialSetup.Password_Transkey__c.escapeXml() + '</Password>';
-                soapXML += '<Signature>' + credentialSetup.Signature__c.escapeXml() + '</Signature>';
-                soapXML += '<Subject/>';
-                soapXML += '</Credentials></RequesterCredentials></SOAP-ENV:Header><SOAP-ENV:Body><DoDirectPaymentReq xmlns="urn:ebay:api:PayPalAPI">';
-                soapXML += '<DoDirectPaymentRequest><Version xmlns=urn:ebay:apis:eBLBaseComponents">84.00</Version>';
-                soapXML += '<DoDirectPaymentRequestDetails xmlns="urn:ebay:apis:eBLBaseComponents">';
-                soapXML += '<PaymentAction>Sale</PaymentAction><PaymentDetails><OrderTotal currencyID=' + myCurrency.escapeXml() + '>' + Amount.escapeXml() + '</OrderTotal></PaymentDetails>';
-                soapXML += '<IPAddress>' + ipstring.escapeXml() + '</IPAddress><CreditCard><CreditCardType>' + Card_Type.escapeXml() + '</CreditCardType><CreditCardNumber>' + Card_Number.escapeXml() + '</CreditCardNumber>';
-                soapXML += '<ExpMonth>' + Expiry_Month.escapeXml() + '</ExpMonth><ExpYear>' + Expiry_Year.escapeXml() + '</ExpYear><CVV2>' + CVV.escapeXml() + '</CVV2>';
-                soapXML += '<CardOwner><Payer>' + Email.escapeXml() + '</Payer><PayerStatus></PayerStatus><PayerName><FirstName>' + FirstName.escapeXml() + '</FirstName><LastName>' + LastName.escapeXml() + '</LastName></PayerName>';
-                soapXML += '<Address><Street1>' + Address_Line1.escapeXml() + '</Street1><Street2>' + Address_Line2.escapeXml() + '</Street2><CityName>' + City.escapeXml() + '</CityName>';
-                soapXML += '<StateOrProvince>' + State.escapeXml() + '</StateOrProvince><Country>' + Country.escapeXml() + '</Country><PostalCode>' + Zipcode.escapeXml() + '</PostalCode><Phone></Phone></Address></CardOwner></CreditCard>';
-                soapXML += '</DoDirectPaymentRequestDetails></DoDirectPaymentRequest></DoDirectPaymentReq></SOAP-ENV:Body></SOAP-ENV:Envelope>';
-
-                req.setBody(soapXML);
-                req.setEndpoint(url);
-                req.setMethod('POST');
-                req.setHeader('Content-length', '1753');
-                req.setHeader('Content-Type', 'text/xml;charset=UTF-8');
-                req.setHeader('SOAPAction', '');
-                req.setHeader('Host', 'api-3t.sandbox.paypal.com');
-                req.setTimeout(20000);
-                HttpResponse res = new HttpResponse();
-                String Response;
-                String xml;
-                XmlStreamReader reader;
-                if(Test.isRunningTest()){
-                    Response = '<?xml version="1.0" encoding="UTF-8"?><Response><Ack>Success</Ack><CorrelationID>12345</CorrelationID><CVV2Code>M</CVV2Code><AVSCode>Y</AVSCode><LongMessage>Transaction successful</LongMessage><ShortMessage>Success</ShortMessage><ErrorCode>0</ErrorCode><TransactionID>ABC123</TransactionID></Response>';
-                    reader = new XmlStreamReader(Response); }else{res = h.send(req);xml = res.getBody();reader = res.getXmlStreamReader();
-                }
-                Status = readXMLResponse(reader, 'Ack');
-                System.debug('Status'+Status);
-                if(Test.isRunningTest()){ reader = new XmlStreamReader(Response); } else{reader = res.getXmlStreamReader();}
-                CorrID = readXMLResponse(reader, 'CorrelationID');
-                if(Test.isRunningTest()){ reader = new XmlStreamReader(Response); } else{reader = res.getXmlStreamReader();}
-                CVV2 = readXMLResponse(reader, 'CVV2Code');
-                if(Test.isRunningTest()){ reader = new XmlStreamReader(Response); } else{reader = res.getXmlStreamReader();}
-                AVSCode = readXMLResponse(reader, 'AVSCode');
-                rawResponse = xml;
-                System.debug('rawResponse'+rawResponse);
-                if(Test.isRunningTest()){ reader = new XmlStreamReader(Response); } else{reader = res.getXmlStreamReader();}
-                ErrMsg = readXMLResponse(reader, 'LongMessage');
-                if(Test.isRunningTest()){ reader = new XmlStreamReader(Response); } else{reader = res.getXmlStreamReader();}
-                sErrMsg = readXMLResponse(reader, 'ShortMessage');
-                if(Test.isRunningTest()){ reader = new XmlStreamReader(Response); } else{reader = res.getXmlStreamReader();}
-                ErrCode = readXMLResponse(reader, 'ErrorCode');
-                if(Test.isRunningTest()){ reader = new XmlStreamReader(Response); } else{reader = res.getXmlStreamReader();}
-                transid = readXMLResponse(reader, 'TransactionID');
-                payment.AVS_Code__c = AVSCode;
-                payment.CVV2_Code__c = CVV2;
-                payment.Transaction_Status__c = Status;
-                payment.Error_Code__c = ErrCode;
-                payment.Transaction_ID__c = transid;
-                payment.sError__c = sErrMsg;
-                payment.Correlation_ID__c = CorrID;
-                payment.Error_Message__c = ErrMsg;
-                if (Schema.sObjectType.Payment__c.fields.Payment_Gateway__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Payment_Gateway__c.isUpdateable()){
-                    payment.Payment_Gateway__c = 'Paypal';
-                }
-                if (Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isUpdateable()){
-                    payment.Transaction_Status__c = 'Approved';
-                }
-                if (Schema.sObjectType.Payment__c.fields.Status__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Status__c.isUpdateable()){
-                    payment.Status__c = 'Paid';
-                }
-            } else if (credentialSetup.Name.containsIgnoreCase('Authorize')){ Blob cryptoKey, userData, passwordData; cryptoKey = encodingUtil.convertFromHex(credentialSetup.Encrypted_Key__c); userData = Crypto.decryptWithManagedIV('AES256', cryptoKey, encodingUtil.convertFromHex(credentialSetup.Username_Login__c)); passwordData = Crypto.decryptWithManagedIV('AES256', cryptoKey, encodingUtil.convertFromHex(credentialSetup.Password_Transkey__c)); if (userData != null){ credentialSetup.Username_Login__c = userData.toString(); system.debug('Username_Login__c '+userData + 'to string'+userData.toString()); } if (passwordData != null){ credentialSetup.Password_Transkey__c = passwordData.toString(); system.debug('Password_Transkey__c '+passwordData + 'to string'+passwordData.toString()); } string url = credentialSetup.URL__c; String Address = billingAddress.Address_Line1__c + ' ' + billingAddress.Address_Line2__c; string expiryDate = Expiry_Year + '-' + Expiry_Month; String soapXML = '<?xml version="1.0" encoding="UTF-8"?>'; soapXML += '<createTransactionRequest xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd">'; soapXML += '<merchantAuthentication>'; soapXML += '<name>' + credentialSetup.Username_Login__c.escapeXml() + '</name>'; soapXML += '<transactionKey>' + credentialSetup.Password_Transkey__c.escapeXml() + '</transactionKey>'; soapXML += '</merchantAuthentication>'; soapXML += '<transactionRequest>'; soapXML += '<transactionType>authCaptureTransaction</transactionType>'; soapXML += '<amount>' + Amount.escapeXml() + '</amount>'; soapXML += '<payment>'; soapXML += '<creditCard>'; soapXML += '<cardNumber>' + Card_Number.escapeXml() + '</cardNumber>'; soapXML += '<expirationDate>' + expiryDate.escapeXml() + '</expirationDate>'; soapXML += '<cardCode>' + CVV.escapeXml() + '</cardCode>'; soapXML += '</creditCard>'; soapXML += '</payment>'; soapXML += '<billTo>'; soapXML += '<firstName>' + FirstName.escapeXml() + '</firstName>'; soapXML += '<lastName>' + LastName.escapeXml() + '</lastName>'; soapXML += '<address>' + address.escapeXml() + '</address>'; soapXML += '<city>' + billingAddress.City__c.escapeXml() + '</city>'; system.debug('SOAP Request: ' + soapXML); if(billingAddress.State__c != null) soapXML += '<state>' + billingAddress.State__c.escapeXml() + '</state>'; if(billingAddress.Postal_Code__c != null) soapXML += '<zip>' + billingAddress.Postal_Code__c.escapeXml() + '</zip>'; if(billingAddress.Country__c!=null) soapXML += '<country>' + billingAddress.Country__c.escapeXml() + '</country>'; soapXML += '</billTo>'; soapXML += '</transactionRequest>'; soapXML += '</createTransactionRequest>'; HttpRequest reqr = new HttpRequest(); Http hr = new Http(); reqr.setBody(soapXML); reqr.setMethod('POST'); reqr.setEndpoint(url); reqr.setHeader('Content-length', '2000'); reqr.setHeader('Content-Type', 'text/xml'); if (Test.isRunningTest()){ if (resCode == 3) response_1 = '<createTransactionResponse xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="https://www.w3.org/2001/XMLSchema" xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd"><messages><resultCode>Error</resultCode><message><code>I00001</code><text>Successful.</text></message></messages><transactionResponse><responseCode>' + resCode + '</responseCode><authCode>9C9UEO</authCode><avsResultCode>Y</avsResultCode><cvvResultCode>P</cvvResultCode><cavvResultCode>2</cavvResultCode><transId>40017242270</transId><refTransID /><transHash>03A19FEF24F26163F4182D4B1BD7281D</transHash><testRequest>0</testRequest><accountNumber>XXXX4242</accountNumber><accountType>Visa</accountType><messages><message><code>1</code><description>This transaction has been approved.</description></message></messages><transHashSha2/></transactionResponse></createTransactionResponse>'; else response_1 = '<createTransactionResponse xmlns:xsi="https://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="https://www.w3.org/2001/XMLSchema" xmlns="AnetApi/xml/v1/schema/AnetApiSchema.xsd"><messages><resultCode>Ok</resultCode><message><code>I00001</code><text>Successful.</text></message></messages><transactionResponse><responseCode>' + resCode + '</responseCode><authCode>9C9UEO</authCode><avsResultCode>Y</avsResultCode><cvvResultCode>P</cvvResultCode><cavvResultCode>2</cavvResultCode><transId>40017242270</transId><refTransID /><transHash>03A19FEF24F26163F4182D4B1BD7281D</transHash><testRequest>0</testRequest><accountNumber>XXXX4242</accountNumber><accountType>Visa</accountType><messages><message><code>1</code><description>This transaction has been approved.</description></message></messages><transHashSha2/></transactionResponse></createTransactionResponse>'; } else{ HttpResponse resr = hr.send(reqr);response_1 = soapXML;response_1 = resr.getBody();resStatus = resr.getStatus(); } if (response_1 != null){ system.debug('response_1'+response_1); string resultCode = response_1.substringBetween('<resultCode>', '</resultCode>'); string responseCode = response_1.substringBetween('<responseCode>', '</responseCode>'); if (resultCode == 'Ok'){ system.debug('resultCode'+resultCode+'responseCode'+responseCode); if (responseCode == '1'){ string description = response_1.substringBetween('<description>', '</description>'); transId = response_1.substringBetween('<transId>', '</transId>'); string transHash = response_1.substringBetween('<transHash>', '</transHash>'); if (Schema.sObjectType.Payment__c.fields.Transaction_ID__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_ID__c.isUpdateable()){ payment.Transaction_ID__c = transId; } if (Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isUpdateable()){ payment.Transaction_Status__c = 'Approved'; System.debug('Setting Transaction_Status__c to: ' + payment.Transaction_Status__c); } if (Schema.sObjectType.Payment__c.fields.sError__c.isCreateable() || Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable()){ payment.sError__c = description; } if (Schema.sObjectType.Payment__c.fields.Status__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Status__c.isUpdateable()){ payment.Status__c = 'Paid'; } } if (responseCode == '2'){ string description = response_1.substringBetween('<description>', '</description>'); transId = response_1.substringBetween('<transId>', '</transId>'); string errorMessage = 'Transaction Failed. '; string Text = response_1.substringBetween('<text>', '</text>'); string errors = response_1.substringBetween('<errors>', '</errors>'); string errorText = response_1.substringBetween('<errorText>', '</errorText>'); if (errors != null) errorMessage += errorText; else errorMessage += Text; if (Schema.sObjectType.Payment__c.fields.Transaction_ID__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_ID__c.isUpdateable()){ payment.Transaction_ID__c = transId; } if (Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isUpdateable()){ payment.Transaction_Status__c = 'Declined'; } if (Schema.sObjectType.Payment__c.fields.sError__c.isCreateable() || Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable()){ payment.sError__c = errorMessage; } } if (responseCode == '4'){ string description = response_1.substringBetween('<description>', '</description>'); transId = response_1.substringBetween('<transId>', '</transId>'); if (Schema.sObjectType.Payment__c.fields.Transaction_ID__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_ID__c.isUpdateable()){ payment.Transaction_ID__c = transId; } if (Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isUpdateable()){ payment.Transaction_Status__c = 'Held for Review'; } if (Schema.sObjectType.Payment__c.fields.sError__c.isCreateable() || Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable()){ payment.sError__c = description; } } } else{ if (responseCode == '3'){ string description = response_1.substringBetween('<description>', '</description>'); string errorMessage = 'Transaction Failed. '; string Text = response_1.substringBetween('<text>', '</text>'); string errors = response_1.substringBetween('<errors>', '</errors>'); string errorText = response_1.substringBetween('<errorText>', '</errorText>'); if (errors != null) errorMessage += errorText; else errorMessage += Text; if (Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isUpdateable()){ payment.Transaction_Status__c = 'Error'; } if (Schema.sObjectType.Payment__c.fields.sError__c.isCreateable() || Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable()){ payment.sError__c = errorMessage; } } } } else payment.sError__c = 'Null Response.'; if (Schema.sObjectType.Payment__c.fields.Payment_Gateway__c.isCreateable() || Schema.sObjectType.Payment__c.fields.Payment_Gateway__c.isUpdateable()){ payment.Payment_Gateway__c = 'Authorize.Net'; } }else if (credentialSetup.Name.containsIgnoreCase('Stripe')) { try { /* Prepare Stripe request details*/ Decimal amountDecimal = Decimal.valueOf(Amount); Integer amountInCents = (amountDecimal * 100).intValue(); String body = 'payment_method_data[type]=card' + '&payment_method_data[card][exp_month]=' + Expiry_Month + '&payment_method_data[card][exp_year]=' + Expiry_Year + '&payment_method_data[card][number]=' + Card_Number.escapeXml() + '&payment_method_data[card][cvc]=' + CVV.escapeXml() + '&amount=' + amountInCents + '&currency=' + myCurrency + '&payment_method_types[]=card'; /*Setup HTTP request*/ HttpRequest req = new HttpRequest(); req.setEndpoint(credentialSetup.URL__c); req.setMethod('POST'); req.setHeader('Content-Type', 'application/x-www-form-urlencoded'); req.setHeader('Authorization', 'Bearer ' + credentialSetup.Encrypted_Key__c); req.setBody(body); /* Send HTTP request*/ HttpResponse res = new Http().send(req); String responseBody = res.getBody(); System.debug('Stripe Response: ' + responseBody); /*Parse response*/ Map<String, Object> responseMap = (Map<String, Object>) JSON.deserializeUntyped(responseBody); if (responseMap == null || !responseMap.containsKey('status')) { return ErrorMsgPayment = 'Unexpected response from Stripe.'; } String paymentStatus = (String) responseMap.get('status'); String paymentIntentId = (String) responseMap.get('id'); if (paymentStatus == 'requires_confirmation') { /* Confirm payment*/ String confirmEndpoint = 'https://api.stripe.com/v1/payment_intents/' + paymentIntentId + '/confirm'; HttpRequest confirmReq = new HttpRequest(); confirmReq.setEndpoint(confirmEndpoint); confirmReq.setMethod('POST'); confirmReq.setHeader('Authorization', 'Bearer ' + credentialSetup.Encrypted_Key__c); HttpResponse confirmRes = new Http().send(confirmReq); String confirmResponseBody = confirmRes.getBody(); System.debug('Stripe Confirmation Response: ' + confirmResponseBody); Map<String, Object> confirmResponseMap = (Map<String, Object>) JSON.deserializeUntyped(confirmResponseBody); if (confirmResponseMap.containsKey('status') && confirmResponseMap.get('status') == 'succeeded') { /* Successful payment */ payment.Transaction_Status__c = 'Approved'; payment.Status__c = 'Paid'; payment.Payment_Gateway__c = 'Stripe'; payment.Transaction_ID__c= (String) confirmResponseMap.get('id');/*added by matheen to get the transaction id*/ } else { return ErrorMsgPayment = 'Stripe payment confirmation failed.'; } } else if (paymentStatus == 'succeeded') { /* Payment already succeeded*/ payment.Transaction_Status__c = 'Approved'; payment.Status__c = 'Paid'; payment.Payment_Gateway__c = 'Stripe'; payment.Transaction_ID__c =paymentIntentId;/*added*/ } else { return ErrorMsgPayment = 'Stripe payment failed with status: ' + paymentStatus; } } catch (Exception e) { System.debug('Stripe Exception: ' + e.getMessage()); return ErrorMsgPayment = 'Unexpected error during payment processing.'; } } else return ErrorMsgPayment = 'Please select correct payment gateway';
-
-
-            if (Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isCreateable() && Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable() && (payment.Transaction_Status__c == 'Completed' || payment.Transaction_Status__c == 'SuccessWithWarning' || payment.Transaction_Status__c == 'Success' || payment.Transaction_Status__c == 'Approved')){
-                if (Schema.sObjectType.Payment__c.fields.Type__c.isCreateable() && Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable())
-                    payment.Type__c = 'Debit';
-                if (Schema.sObjectType.Payment__c.fields.Payment_Type__c.isCreateable() && Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable())
-                    Payment.Payment_Type__c = 'Card';
-                if (Schema.sObjectType.Payment__c.fields.Payment_Date__c.isCreateable() && Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable())
-                    payment.Payment_Date__c = System.today();
-                if (Schema.sObjectType.Payment__c.isCreateable() && Schema.sObjectType.Payment__c.isUpdateable())
-                    upsert payment;
-
-                system.debug('payment.Id '+payment.Id);
-                if (payment.Id != null)
-                    ErrorMsgPayment = 'Payment Created Successfully';
-                // if (payment.Id != null && invIdList.size() >= 1){
-                //     System.debug('invIdList.size()'+invIdList.size());
-                //     List<Payment_Applied_on_Invoice__c> PAIList = new List<Payment_Applied_on_Invoice__c>();
-                //     for (Invoice__c inv : invIdList){
-                //         Payment_Applied_on_Invoice__c pai = new Payment_Applied_on_Invoice__c();
-                //         if (Schema.sObjectType.Payment_Applied_on_Invoice__c.fields.Amount__c.isCreateable()){
-                //             pai.Amount__c = inv.Invoice_Amount__c;
-                //             System.debug('pai.Amount__c'+pai.Amount__c);
-                //         }
-                //         if (Schema.sObjectType.Payment_Applied_on_Invoice__c.fields.Applied_Date__c.isCreateable())
-                //             pai.Applied_Date__c = payment.Payment_Date__c;
-                //         if (Schema.sObjectType.Payment_Applied_on_Invoice__c.fields.Invoice__c.isCreateable())
-                //             pai.Invoice__c = inv.Id;
-                //         if (Schema.sObjectType.Payment_Applied_on_Invoice__c.fields.Payment__c.isCreateable())
-                //             pai.Payment__c = payment.Id;
-                //         if (Schema.sObjectType.Payment_Applied_on_Invoice__c.fields.Type__c.isCreateable())
-                //             pai.Type__c = 'Debit';
-                //         PAIList.add(pai);
-                //     }
-                //     if (PAIList.size() > 0 && Schema.sObjectType.Payment_Applied_on_Invoice__c.isCreateable())
-                //         insert PAIList;
-                // }
-                if (payment.Id != null && invIdList.size() >= 1) {
-                    // Fetch existing Payment_Applied_on_Invoice__c records to avoid duplicates
-                    Map<Id, Payment_Applied_on_Invoice__c> existingPaiMap = new Map<Id, Payment_Applied_on_Invoice__c>();
-                    for (Payment_Applied_on_Invoice__c existingPai : [
-                        SELECT Invoice__c, Payment__c
-                        FROM Payment_Applied_on_Invoice__c
-                        WHERE Payment__c = :payment.Id
-                    ]) {
-                        existingPaiMap.put(existingPai.Invoice__c, existingPai);
-                    }
-
-                    // List to hold new Payment_Applied_on_Invoice__c records
-                    List<Payment_Applied_on_Invoice__c> paiList = new List<Payment_Applied_on_Invoice__c>();
-
-                    // Iterate over the invoices in invIdList
-                    Decimal ordAmount=0.0;//added by matheen
-                    for (Invoice__c inv : invIdList) {
-                        if (!existingPaiMap.containsKey(inv.Id)) {
-                            // Create a new Payment_Applied_on_Invoice__c record
-                            Payment_Applied_on_Invoice__c pai = new Payment_Applied_on_Invoice__c();
-
-
-                            Decimal amountPaid = inv.Amount_Paid__c != null ? inv.Amount_Paid__c : 0; // fixed by syed matheen 15/1/25 sets 0 by default if its null
-
-                            Decimal remainingDue = inv.Invoice_Amount__c - amountPaid;
-                            pai.Amount__c = Math.min(payment.Total_Amount__c, remainingDue);
-
-                            System.debug('Payment Applied Amount: ' + pai.Amount__c);
-
-                            pai.Applied_Date__c = payment.Payment_Date__c;
-                            pai.Invoice__c = inv.Id;
-                            pai.Payment__c = payment.Id;
-                            pai.Type__c = 'Debit';
-
-                            ordAmount=ordAmount+pai.Amount__c;//added by matheen
-                            System.debug('Payment Applied on Invoice: ' + pai);
-                            paiList.add(pai);
-
-
-                        } else {
-                            System.debug('Skipping duplicate Payment_Applied_on_Invoice__c for Invoice: ' + inv.Id);
-                        }
-                    }
-
-                    // Insert the new Payment_Applied_on_Invoice__c records by matheen
-                    if (!paiList.isEmpty()) { insert paiList;
-
-                        System.debug('Inserted Payment_Applied_on_Invoice__c records: ' + paiList);
-                        if (ord == null || ord.Id == null) {
-                            System.debug('Error: Order object is null or invalid.');
-                        }
-                        // Ensure FLS for Amount_Paid__c
-                        if (!Schema.sObjectType.Order.fields.Amount_Paid__c.isUpdateable()) {
-                            System.debug('Error: Amount_Paid__c field is not updateable.');
-                        }
-                        // Initialize Amount_Paid__c if null and add ordAmount
-                        // ord.Amount_Paid__c = (ord.Amount_Paid__c == null ? 0 : ord.Amount_Paid__c + ordAmount);
-                      //  ord.Amount_Paid__c = ord.Amount_Paid__c + ordAmount;
-                        System.debug('Updated Amount_Paid__c: ' + ord.Amount_Paid__c);
-
-                        // Update the Order object
-                        System.debug('Order before update: ' + ord);
-                     //   update ord;
-                        System.debug('Order updated successfully.');
-                    } else {
-                        System.debug('No new Payment_Applied_on_Invoice__c records to insert.');
-                    }
-                            // System.debug('Payment Applied Amount: ' + pai.Amount__c);
-                            Decimal addAllamount=0.0;
-                    List<Payment_Applied_on_Invoice__c> paaInv = [Select id,Amount__c from Payment_Applied_on_Invoice__c where Invoice__r.Order_S__c= :ord.Id];
-                    for(Payment_Applied_on_Invoice__c pa:paaInv){
-                        addAllamount+=pa.Amount__c;
-
-                    }
-                    ord.Amount_Paid__c =addAllamount;
-                   //  update ord;
-                    List<SObject> safeOrd = FLSHelper.getSafeRecords(
-                        new List<Order>{ord},
-                        'Order',
-                        AccessType.UPDATABLE
-                    );
-                    List<Order> typeOrd = new List<Order>();
-                    for (SObject s : safeOrd) {
-                        typeOrd.add((Order)s);
-                    }
-                    if (!typeOrd.isEmpty()) {
-                        update typeOrd; // or insert/update as needed
-                    }
-                    System.debug('Updated Amount_Paid__c: ' + ord.Amount_Paid__c);
-                }
-
-            } else{
-                system.debug('in else');
-                if (payment.sError__c != Null)
-                    ErrorMsgPayment = payment.sError__c;
-            }
-            return ErrorMsgPayment;
-        } catch (exception ex){
-            ErrorMsgPayment = ex.getMessage();
-            ErrorMsgPayment += ' Line No: ' + ex.getLineNumber();
-            ErrorMsgPayment += ' getStackTraceString: ' + ex.getStackTraceString();
-
-            return ErrorMsgPayment;
         }
-    }
+
+         else return ErrorMsgPayment = 'Please select correct payment gateway';
+
+
+         if (Schema.sObjectType.Payment__c.fields.Transaction_Status__c.isCreateable() && Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable() && (payment.Transaction_Status__c == 'Completed' || payment.Transaction_Status__c == 'SuccessWithWarning' || payment.Transaction_Status__c == 'Success' || payment.Transaction_Status__c == 'Approved' || payment.Transaction_Status__c == 'AUTHORIZED' || payment.Transaction_Status__c == 'PENDING_SETTLEMENT')) {
+             if (Schema.sObjectType.Payment__c.fields.Type__c.isCreateable() && Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable())
+                 payment.Type__c = 'Debit';
+             if (Schema.sObjectType.Payment__c.fields.Payment_Type__c.isCreateable() && Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable())
+                 Payment.Payment_Type__c = 'Card';
+             if (Schema.sObjectType.Payment__c.fields.Payment_Date__c.isCreateable() && Schema.sObjectType.Payment__c.fields.sError__c.isUpdateable())
+                 payment.Payment_Date__c = System.today();
+             if (Schema.sObjectType.Payment__c.isCreateable() && Schema.sObjectType.Payment__c.isUpdateable())
+                 upsert payment;
+
+             system.debug('payment.Id ' + payment.Id);
+             if (payment.Id != null)
+                 ErrorMsgPayment = 'Payment Created Successfully';
+             // if (payment.Id != null && invIdList.size() >= 1){
+             //     System.debug('invIdList.size()'+invIdList.size());
+             //     List<Payment_Applied_on_Invoice__c> PAIList = new List<Payment_Applied_on_Invoice__c>();
+             //     for (Invoice__c inv : invIdList){
+             //         Payment_Applied_on_Invoice__c pai = new Payment_Applied_on_Invoice__c();
+             //         if (Schema.sObjectType.Payment_Applied_on_Invoice__c.fields.Amount__c.isCreateable()){
+             //             pai.Amount__c = inv.Invoice_Amount__c;
+             //             System.debug('pai.Amount__c'+pai.Amount__c);
+             //         }
+             //         if (Schema.sObjectType.Payment_Applied_on_Invoice__c.fields.Applied_Date__c.isCreateable())
+             //             pai.Applied_Date__c = payment.Payment_Date__c;
+             //         if (Schema.sObjectType.Payment_Applied_on_Invoice__c.fields.Invoice__c.isCreateable())
+             //             pai.Invoice__c = inv.Id;
+             //         if (Schema.sObjectType.Payment_Applied_on_Invoice__c.fields.Payment__c.isCreateable())
+             //             pai.Payment__c = payment.Id;
+             //         if (Schema.sObjectType.Payment_Applied_on_Invoice__c.fields.Type__c.isCreateable())
+             //             pai.Type__c = 'Debit';
+             //         PAIList.add(pai);
+             //     }
+             //     if (PAIList.size() > 0 && Schema.sObjectType.Payment_Applied_on_Invoice__c.isCreateable())
+             //         insert PAIList;
+             // }
+             if (payment.Id != null && invIdList.size() >= 1) {
+                 // Fetch existing Payment_Applied_on_Invoice__c records to avoid duplicates
+                 Map < Id, Payment_Applied_on_Invoice__c > existingPaiMap = new Map < Id, Payment_Applied_on_Invoice__c > ();
+                 for (Payment_Applied_on_Invoice__c existingPai: [
+                         SELECT Invoice__c, Payment__c
+                         FROM Payment_Applied_on_Invoice__c
+                         WHERE Payment__c =: payment.Id
+                     ]) {
+                     existingPaiMap.put(existingPai.Invoice__c, existingPai);
+                 }
+
+                 // List to hold new Payment_Applied_on_Invoice__c records
+                 List < Payment_Applied_on_Invoice__c > paiList = new List < Payment_Applied_on_Invoice__c > ();
+
+                 // Iterate over the invoices in invIdList
+                 Decimal ordAmount = 0.0; //added by matheen
+                 for (Invoice__c inv: invIdList) {
+                     if (!existingPaiMap.containsKey(inv.Id)) {
+                         // Create a new Payment_Applied_on_Invoice__c record
+                         Payment_Applied_on_Invoice__c pai = new Payment_Applied_on_Invoice__c();
+
+
+                         Decimal amountPaid = inv.Amount_Paid__c != null ? inv.Amount_Paid__c : 0; // fixed by syed matheen 15/1/25 sets 0 by default if its null
+
+                         Decimal remainingDue = inv.Invoice_Amount__c - amountPaid;
+                         pai.Amount__c = Math.min(payment.Total_Amount__c, remainingDue);
+
+                         System.debug('Payment Applied Amount: ' + pai.Amount__c);
+
+                         pai.Applied_Date__c = payment.Payment_Date__c;
+                         pai.Invoice__c = inv.Id;
+                         pai.Payment__c = payment.Id;
+                         pai.Type__c = 'Debit';
+
+                         ordAmount = ordAmount + pai.Amount__c; //added by matheen
+                         System.debug('Payment Applied on Invoice: ' + pai);
+                         paiList.add(pai);
+
+
+                     } else {
+                         System.debug('Skipping duplicate Payment_Applied_on_Invoice__c for Invoice: ' + inv.Id);
+                     }
+                 }
+
+                 // Insert the new Payment_Applied_on_Invoice__c records by matheen
+                 if (!paiList.isEmpty()) {
+                     insert paiList;
+
+                     System.debug('Inserted Payment_Applied_on_Invoice__c records: ' + paiList);
+                     if (ord == null || ord.Id == null) {
+                         System.debug('Error: Order object is null or invalid.');
+                     }
+                     // Ensure FLS for Amount_Paid__c
+                     if (!Schema.sObjectType.Order.fields.Amount_Paid__c.isUpdateable()) {
+                         System.debug('Error: Amount_Paid__c field is not updateable.');
+                     }
+                     // Initialize Amount_Paid__c if null and add ordAmount
+                     // ord.Amount_Paid__c = (ord.Amount_Paid__c == null ? 0 : ord.Amount_Paid__c + ordAmount);
+                     //  ord.Amount_Paid__c = ord.Amount_Paid__c + ordAmount;
+                     System.debug('Updated Amount_Paid__c: ' + ord.Amount_Paid__c);
+
+                     // Update the Order object
+                     System.debug('Order before update: ' + ord);
+                     //   update ord;
+                     System.debug('Order updated successfully.');
+                 } else {
+                     System.debug('No new Payment_Applied_on_Invoice__c records to insert.');
+                 }
+                 // System.debug('Payment Applied Amount: ' + pai.Amount__c);
+                 Decimal addAllamount = 0.0;
+                 List < Payment_Applied_on_Invoice__c > paaInv = [Select id, Amount__c from Payment_Applied_on_Invoice__c where Invoice__r.Order_S__c =: ord.Id];
+                 for (Payment_Applied_on_Invoice__c pa: paaInv) {
+                     addAllamount += pa.Amount__c;
+
+                 }
+                 ord.Amount_Paid__c = addAllamount;
+                 //  update ord;
+                 List < SObject > safeOrd = FLSHelper.getSafeRecords(
+                     new List < Order > {
+                         ord
+                     },
+                     'Order',
+                     AccessType.UPDATABLE
+                 );
+                 List < Order > typeOrd = new List < Order > ();
+                 for (SObject s: safeOrd) {
+                     typeOrd.add((Order) s);
+                 }
+                 if (!typeOrd.isEmpty()) {
+                     update typeOrd; // or insert/update as needed
+                 }
+                 System.debug('Updated Amount_Paid__c: ' + ord.Amount_Paid__c);
+             }
+
+         } else {
+             system.debug('in else');
+             if (payment.sError__c != Null)
+                 ErrorMsgPayment = payment.sError__c;
+         }
+         return ErrorMsgPayment;
+     } catch (exception ex) {
+         ErrorMsgPayment = ex.getMessage();
+         ErrorMsgPayment += ' Line No: ' + ex.getLineNumber();
+         ErrorMsgPayment += ' getStackTraceString: ' + ex.getStackTraceString();
+
+         return ErrorMsgPayment;
+     }
+ }
 
     @AuraEnabled
     global static cardDetails fetchInitialBankDetails(){
@@ -1535,7 +2187,7 @@ global static String createBankOrCashPaymentV2(String payments, String invAndAmo
     }
 
     @AuraEnabled
-    global static String applyCreditToInvoice(String inv, String creditNotes, Decimal totalDebitAmount) { String message = ''; try { List<CNWrapper> cnList = (List<CNWrapper>) JSON.deserialize(creditNotes, List<CNWrapper>.class);Invoice__c invoices = (Invoice__c) JSON.deserialize(inv, Invoice__c.class);PreventRecursiveLedgerEntry.proceed = false;List<SObject> sObjectsToUpdate = new List<SObject>{invoices};System.SObjectAccessDecision accessDecisions = Security.stripInaccessible(AccessType.UPDATABLE, sObjectsToUpdate);List<Invoice__c> invoicesToUpdate = new List<Invoice__c>(); if (accessDecisions.getRecords() != null) { invoicesToUpdate.addAll((List<Invoice__c>) accessDecisions.getRecords()); } System.debug('invoicestoUpdate: ' + invoicesToUpdate); update invoicesToUpdate; List<Credit_Note_Applied_on_Invoice__c> appliedNotes = new List<Credit_Note_Applied_on_Invoice__c>();List<Credit_Note__c> cn2Update = new List<Credit_Note__c>();List<Account> account2Update = new List<Account>(); system.debug('before ord update'); System.debug('invoices.Order_S__c: ' + invoices.Order_S__c); /* // if (invoices.Order_S__c != null) { //     Order ord = [SELECT Id, Name, Amount_Paid__c FROM Order WHERE Id = :invoices.Order_S__c WITH SECURITY_ENFORCED LIMIT 1]; //         System.debug('ord: ' + ord); //         System.debug('ord.Amount_Paid__c: ' + ord.Amount_Paid__c); //     if (ord.Amount_Paid__c == null ) { if (Schema.sObjectType.Order.fields.Amount_Paid__c.isUpdateable()) {ord.Amount_Paid__c = totalDebitAmount; //         } else { ord.Amount_Paid__c = ord.Amount_Paid__c + totalDebitAmount; //         } //         // DML Operation //         if (Schema.sObjectType.Order.isUpdateable()) {  system.debug('updating ord'); update ord; //         } //     } // }*/ if (invoices.Order_S__c != null) { Order ord = [ SELECT Id, Name, Amount_Paid__c FROM Order WHERE Id = :invoices.Order_S__c WITH SECURITY_ENFORCED LIMIT 1 ]; System.debug('ord: ' + ord); System.debug('ord.Amount_Paid__c: ' + ord.Amount_Paid__c); if (Schema.sObjectType.Order.fields.Amount_Paid__c.isUpdateable()) { if (ord.Amount_Paid__c == null) { ord.Amount_Paid__c = totalDebitAmount; } else { ord.Amount_Paid__c += totalDebitAmount; } if (Schema.sObjectType.Order.isUpdateable()) { System.debug('updating ord'); update ord; } } } System.debug('after ord update'); if (cnList != null && cnList.size() > 0) { for (CNWrapper cwrap : cnList) { if (cwrap != null && cwrap.debitAmount > 0) { Credit_Note_Applied_on_Invoice__c capplied = new Credit_Note_Applied_on_Invoice__c(); if (Schema.sObjectType.Credit_Note_Applied_on_Invoice__c.fields.Amount__c.isCreateable() && Schema.sObjectType.Credit_Note_Applied_on_Invoice__c.fields.Amount__c.isUpdateable()) { capplied.Amount__c = cwrap.debitAmount; } if (Schema.sObjectType.Credit_Note_Applied_on_Invoice__c.fields.Credit_Note__c.isCreateable()) { capplied.Credit_Note__c = cwrap.credNote.Id; } if (Schema.sObjectType.Credit_Note_Applied_on_Invoice__c.fields.Invoice__c.isCreateable() && Schema.sObjectType.Credit_Note_Applied_on_Invoice__c.fields.Invoice__c.isUpdateable()) { capplied.Invoice__c = invoices.Id; } if (Schema.sObjectType.Credit_Note_Applied_on_Invoice__c.fields.Name.isCreateable() && Schema.sObjectType.Credit_Note_Applied_on_Invoice__c.fields.Name.isUpdateable()) { capplied.Name = invoices.Name + ' ' + cwrap.credNote.Name; } appliedNotes.add(capplied); if (cwrap.credNote.Debit__c != null && Schema.sObjectType.Credit_Note__c.fields.Debit__c.isUpdateable()) { cwrap.credNote.Debit__c = cwrap.credNote.Debit__c + cwrap.debitAmount; } else if (Schema.sObjectType.Credit_Note__c.fields.Debit__c.isUpdateable()) { cwrap.credNote.Debit__c = cwrap.debitAmount; } cn2Update.add(cwrap.credNote); } } } sObjectsToUpdate = new List<SObject>();sObjectsToUpdate = appliedNotes;accessDecisions = Security.stripInaccessible(AccessType.UPDATABLE, sObjectsToUpdate);List<Credit_Note_Applied_on_Invoice__c> appliedNotesToUpdate = new List<Credit_Note_Applied_on_Invoice__c>();if (accessDecisions.getRecords() != null) { appliedNotesToUpdate.addAll((List<Credit_Note_Applied_on_Invoice__c>) accessDecisions.getRecords()); } if (!appliedNotesToUpdate.isEmpty()) { List<SObject> safeappliedNotesToUpdate = FLSHelper.getSafeRecords( appliedNotesToUpdate, 'Credit_Note_Applied_on_Invoice__c', AccessType.UPDATABLE ); List<Credit_Note_Applied_on_Invoice__c> typeappliedNotesToUpdate = new List<Credit_Note_Applied_on_Invoice__c>(); for (SObject s : safeappliedNotesToUpdate) { typeappliedNotesToUpdate.add((Credit_Note_Applied_on_Invoice__c)s); } if (!typeappliedNotesToUpdate.isEmpty()) { upsert typeappliedNotesToUpdate; } } if (!cn2Update.isEmpty()) {PreventRecursiveLedgerEntry.testCasesTransactions = true;sObjectsToUpdate = new List<SObject>();sObjectsToUpdate = cn2Update;accessDecisions = Security.stripInaccessible(AccessType.UPDATABLE, sObjectsToUpdate);List<Credit_Note__c> cn2UpdateToUpdate = new List<Credit_Note__c>();if (accessDecisions.getRecords() != null) { cn2UpdateToUpdate.addAll((List<Credit_Note__c>) accessDecisions.getRecords()); } if (!cn2UpdateToUpdate.isEmpty()) { update cn2UpdateToUpdate; } } if (invoices != null && invoices.Account__c != null) {Account acc2update = [SELECT Id, Name, Debit_Balance__c FROM Account WHERE Id = :invoices.Account__c WITH SECURITY_ENFORCED LIMIT 1];SObjectAccessDecision accAccessDecisions = Security.stripInaccessible(AccessType.UPDATABLE, new List<Account>{acc2update});List<Account> accToUpdate = new List<Account>(); if (accAccessDecisions.getRecords() != null) { accToUpdate.addAll((List<Account>)accAccessDecisions.getRecords()); } if (acc2update.Debit_Balance__c == null && Schema.sObjectType.Account.fields.Debit_Balance__c.isUpdateable()) {   acc2update.Debit_Balance__c = totalDebitAmount;} else if (Schema.sObjectType.Account.fields.Debit_Balance__c.isUpdateable()) { acc2update.Debit_Balance__c = acc2update.Debit_Balance__c + totalDebitAmount; } PreventRecursiveLedgerEntry.proceed = false; if (Schema.sObjectType.Account.isUpdateable()) { update acc2update; } } message = 'Credit Applied Successfully';} catch (Exception e) {  message = e.getMessage() + ' ' + e.getLineNumber(); } return message;
+    global static String applyCreditToInvoice(String inv, String creditNotes, Decimal totalDebitAmount) { String message = ''; try { List<CNWrapper> cnList = (List<CNWrapper>) JSON.deserialize(creditNotes, List<CNWrapper>.class);Invoice__c invoices = (Invoice__c) JSON.deserialize(inv, Invoice__c.class);PreventRecursiveLedgerEntry.proceed = false;List<SObject> sObjectsToUpdate = new List<SObject>{invoices};System.SObjectAccessDecision accessDecisions = Security.stripInaccessible(AccessType.UPDATABLE, sObjectsToUpdate);List<Invoice__c> invoicesToUpdate = new List<Invoice__c>(); if (accessDecisions.getRecords() != null) { invoicesToUpdate.addAll((List<Invoice__c>) accessDecisions.getRecords()); } System.debug('invoicestoUpdate: ' + invoicesToUpdate); update invoicesToUpdate; List<Credit_Note_Applied_on_Invoice__c> appliedNotes = new List<Credit_Note_Applied_on_Invoice__c>();List<Credit_Note__c> cn2Update = new List<Credit_Note__c>();List<Account> account2Update = new List<Account>(); system.debug('before ord update'); System.debug('invoices.Order_S__c: ' + invoices.Order_S__c); /* // if (invoices.Order_S__c != null) { //     Order ord = [SELECT Id, Name, Amount_Paid__c FROM Order WHERE Id = :invoices.Order_S__c WITH SECURITY_ENFORCED LIMIT 1]; //         System.debug('ord: ' + ord); //         System.debug('ord.Amount_Paid__c: ' + ord.Amount_Paid__c); //     if (ord.Amount_Paid__c == null ) { if (Schema.sObjectType.Order.fields.Amount_Paid__c.isUpdateable()) {ord.Amount_Paid__c = totalDebitAmount; //         } else { ord.Amount_Paid__c = ord.Amount_Paid__c + totalDebitAmount; //         } //          DML Operation         if (Schema.sObjectType.Order.isUpdateable()) {  system.debug('updating ord'); update ord; //         } //     } // }*/ if (invoices.Order_S__c != null) { Order ord = [ SELECT Id, Name, Amount_Paid__c FROM Order WHERE Id = :invoices.Order_S__c WITH SECURITY_ENFORCED LIMIT 1 ]; System.debug('ord: ' + ord); System.debug('ord.Amount_Paid__c: ' + ord.Amount_Paid__c); if (Schema.sObjectType.Order.fields.Amount_Paid__c.isUpdateable()) { if (ord.Amount_Paid__c == null) { ord.Amount_Paid__c = totalDebitAmount; } else { ord.Amount_Paid__c += totalDebitAmount; } if (Schema.sObjectType.Order.isUpdateable()) { System.debug('updating ord'); update ord; } } } System.debug('after ord update'); if (cnList != null && cnList.size() > 0) { for (CNWrapper cwrap : cnList) { if (cwrap != null && cwrap.debitAmount > 0) { Credit_Note_Applied_on_Invoice__c capplied = new Credit_Note_Applied_on_Invoice__c(); if (Schema.sObjectType.Credit_Note_Applied_on_Invoice__c.fields.Amount__c.isCreateable() && Schema.sObjectType.Credit_Note_Applied_on_Invoice__c.fields.Amount__c.isUpdateable()) { capplied.Amount__c = cwrap.debitAmount; } if (Schema.sObjectType.Credit_Note_Applied_on_Invoice__c.fields.Credit_Note__c.isCreateable()) { capplied.Credit_Note__c = cwrap.credNote.Id; } if (Schema.sObjectType.Credit_Note_Applied_on_Invoice__c.fields.Invoice__c.isCreateable() && Schema.sObjectType.Credit_Note_Applied_on_Invoice__c.fields.Invoice__c.isUpdateable()) { capplied.Invoice__c = invoices.Id; } if (Schema.sObjectType.Credit_Note_Applied_on_Invoice__c.fields.Name.isCreateable() && Schema.sObjectType.Credit_Note_Applied_on_Invoice__c.fields.Name.isUpdateable()) { capplied.Name = invoices.Name + ' ' + cwrap.credNote.Name; } appliedNotes.add(capplied); if (cwrap.credNote.Debit__c != null && Schema.sObjectType.Credit_Note__c.fields.Debit__c.isUpdateable()) { cwrap.credNote.Debit__c = cwrap.credNote.Debit__c + cwrap.debitAmount; } else if (Schema.sObjectType.Credit_Note__c.fields.Debit__c.isUpdateable()) { cwrap.credNote.Debit__c = cwrap.debitAmount; } cn2Update.add(cwrap.credNote); } } } sObjectsToUpdate = new List<SObject>();sObjectsToUpdate = appliedNotes;accessDecisions = Security.stripInaccessible(AccessType.UPDATABLE, sObjectsToUpdate);List<Credit_Note_Applied_on_Invoice__c> appliedNotesToUpdate = new List<Credit_Note_Applied_on_Invoice__c>();if (accessDecisions.getRecords() != null) { appliedNotesToUpdate.addAll((List<Credit_Note_Applied_on_Invoice__c>) accessDecisions.getRecords()); } if (!appliedNotesToUpdate.isEmpty()) { List<SObject> safeappliedNotesToUpdate = FLSHelper.getSafeRecords( appliedNotesToUpdate, 'Credit_Note_Applied_on_Invoice__c', AccessType.UPDATABLE ); List<Credit_Note_Applied_on_Invoice__c> typeappliedNotesToUpdate = new List<Credit_Note_Applied_on_Invoice__c>(); for (SObject s : safeappliedNotesToUpdate) { typeappliedNotesToUpdate.add((Credit_Note_Applied_on_Invoice__c)s); } if (!typeappliedNotesToUpdate.isEmpty()) { upsert typeappliedNotesToUpdate; } } if (!cn2Update.isEmpty()) {PreventRecursiveLedgerEntry.testCasesTransactions = true;sObjectsToUpdate = new List<SObject>();sObjectsToUpdate = cn2Update;accessDecisions = Security.stripInaccessible(AccessType.UPDATABLE, sObjectsToUpdate);List<Credit_Note__c> cn2UpdateToUpdate = new List<Credit_Note__c>();if (accessDecisions.getRecords() != null) { cn2UpdateToUpdate.addAll((List<Credit_Note__c>) accessDecisions.getRecords()); } if (!cn2UpdateToUpdate.isEmpty()) { update cn2UpdateToUpdate; } } if (invoices != null && invoices.Account__c != null) {Account acc2update = [SELECT Id, Name, Debit_Balance__c FROM Account WHERE Id = :invoices.Account__c WITH SECURITY_ENFORCED LIMIT 1];SObjectAccessDecision accAccessDecisions = Security.stripInaccessible(AccessType.UPDATABLE, new List<Account>{acc2update});List<Account> accToUpdate = new List<Account>(); if (accAccessDecisions.getRecords() != null) { accToUpdate.addAll((List<Account>)accAccessDecisions.getRecords()); } if (acc2update.Debit_Balance__c == null && Schema.sObjectType.Account.fields.Debit_Balance__c.isUpdateable()) {   acc2update.Debit_Balance__c = totalDebitAmount;} else if (Schema.sObjectType.Account.fields.Debit_Balance__c.isUpdateable()) { acc2update.Debit_Balance__c = acc2update.Debit_Balance__c + totalDebitAmount; } PreventRecursiveLedgerEntry.proceed = false; if (Schema.sObjectType.Account.isUpdateable()) { update acc2update; } } message = 'Credit Applied Successfully';} catch (Exception e) {  message = e.getMessage() + ' ' + e.getLineNumber(); } return message;
     }
 
 
@@ -2703,6 +3355,64 @@ global static String createBankOrCashPaymentV2(String payments, String invAndAmo
         }
         return message;
     }
+// ========================= CYBERSOURCE HELPERS ==============================
+
+// Compute SHA-256 digest for CyberSource
+private static String cs_computeDigest(String payload) {
+    Blob bodyBlob = Blob.valueOf(payload);
+    Blob sha256 = Crypto.generateDigest('SHA-256', bodyBlob);
+    return 'SHA-256=' + EncodingUtil.base64Encode(sha256);
+}
+
+// Build CyberSource signature header
+private static String cs_generateSignature(String host, String merchantId, String keyId, String secretKey,
+                                          String resourcePath, String httpMethod, String payload, String dateHeader) {
+
+    // Required headers for the signature string
+    String requestTarget = '(request-target): ' + httpMethod.toLowerCase() + ' ' + resourcePath;
+
+    String signingString =
+        'host: ' + host + '\n' +
+        'date: ' + dateHeader + '\n' +
+        requestTarget + '\n' +
+        'digest: ' + cs_computeDigest(payload) + '\n' +
+        'v-c-merchant-id: ' + merchantId;
+
+    Blob decodedKey = EncodingUtil.base64Decode(secretKey);
+    Blob mac = Crypto.generateMac('HmacSHA256', Blob.valueOf(signingString), decodedKey);
+    String signatureEncoded = EncodingUtil.base64Encode(mac);
+
+    return 'keyid="' + keyId +
+           '", algorithm="HmacSHA256", headers="host date (request-target) digest v-c-merchant-id", signature="' +
+           signatureEncoded + '"';
+}
+
+// Perform CyberSource callout
+private static HttpResponse cs_sendRequest(String host, String merchantId, String keyId, String secretKey,
+                                           String payload, String resourcePath) {
+
+    String url = host + resourcePath;
+    String method = 'post';
+
+    String dateHeader = Datetime.now().formatGMT('EEE, dd MMM yyyy HH:mm:ss \'GMT\'');
+
+    String digest = cs_computeDigest(payload);
+    String signature = cs_generateSignature(host, merchantId, keyId, secretKey, resourcePath, method, payload, dateHeader);
+
+    HttpRequest req = new HttpRequest();
+    req.setMethod('POST');
+    req.setEndpoint(url);
+    req.setHeader('Content-Type', 'application/json');
+    req.setHeader('v-c-merchant-id', merchantId);
+    req.setHeader('date', dateHeader);
+    req.setHeader('host', host);
+    req.setHeader('digest', digest);
+    req.setHeader('signature', signature);
+    req.setBody(payload);
+
+    Http http = new Http();
+    return http.send(req);
+}
 
 
 public class InvoicePageResult {        @AuraEnabled public List<Invoice__c> invoices;        @AuraEnabled public Integer totalRecords;        @AuraEnabled public Integer pageNumber;        @AuraEnabled public Integer pageSize;    } @AuraEnabled(cacheable=true)public static InvoicePageResult getInvoicesForAccount(    Id accountId,    Integer pageNumber,    Integer pageSize,    String searchText) {    InvoicePageResult result = new InvoicePageResult();    result.invoices = new List<Invoice__c>();    result.pageNumber = (pageNumber == null || pageNumber < 1) ? 1 : pageNumber; result.pageSize = (pageSize == null || pageSize <= 0 || pageSize > 200) ? 10 : pageSize; if (accountId == null) { result.totalRecords = 0; return result; } String trimmedSearch = (searchText == null) ? '' : searchText.trim(); String likeSearch = (trimmedSearch == '') ? null : '%' + String.escapeSingleQuotes(trimmedSearch) + '%'; String whereClause = ' FROM Invoice__c' + ' WHERE Account__c = :accountId' + ' AND Status__c != \'paid\'' + ' AND Paid__c = false'; if (likeSearch != null) { whereClause += ' AND (Order_S__r.OrderNumber LIKE :likeSearch' + ' OR Name LIKE :likeSearch)'; } Integer totalCount = Database.countQuery( 'SELECT COUNT()' + whereClause ); result.totalRecords = totalCount; if (totalCount == 0) { return result; } Integer offsetValue = (result.pageNumber - 1) * result.pageSize; List<Invoice__c> invoices = Database.query( 'SELECT Id,' + '       Name,' + '       Order_S__c,' + '       Order_S__r.OrderNumber,' + '       Account__c,' + '       Account__r.Name,' + '       Contact__c,' + '       Contact__r.Name,' + '       Company__c,' + '       Company__r.Name,' + '       Invoice_Date__c,' + '       Due_Date__c' + whereClause + ' ORDER BY Invoice_Date__c DESC, CreatedDate DESC' + ' LIMIT :result.pageSize OFFSET :offsetValue' ); result.invoices = invoices; return result; } @AuraEnabled(cacheable=true) public static List<Order> getOrdersForAccount(Id accountId) { if (accountId == null) return new List<Order>(); return [ SELECT Id, Name, OrderNumber, Order_Amount__c, Amount_Paid__c, Due_Amount__c, EffectiveDate FROM Order WHERE AccountId = :accountId AND Status != 'Cancelled' ORDER BY EffectiveDate DESC ]; }

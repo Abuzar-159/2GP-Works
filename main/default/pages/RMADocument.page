@@ -1,0 +1,241 @@
+<apex:page controller="RMADocument" sidebar="false" showHeader="false" id="SO" docType="html-5.0" readOnly="false" renderAs="{!if($CurrentPage.parameters.val == 'pdf' || $CurrentPage.parameters.pdf != null, 'pdf', null)}" action="{!Email_Details}">
+  <apex:includeScript value="{!URLFOR($Resource.jQuery,'/jQuery/js/jquery_3.5.0.min.js')}"/>
+    <apex:stylesheet value="{!URLFOR($Resource.SLDS2134, 'assets/styles/salesforce-lightning-design-system-vf.css')}"/>
+    <html>
+
+    <head>
+    <script>
+        function resizeIframe(obj) {
+        obj.style.height = obj.contentWindow.document.body.scrollHeight + 'px';
+        }
+    </script>
+        <style>
+
+         .Custom28Tab .secondaryPalette, .individualPalette .Custom28Block .secondaryPalette {
+    background-color: #690;
+    border-color: #f9f9f9;
+}
+            input[type=text],
+            textarea,
+            select {
+                -webkit-transition: all 0.30s ease-in-out;
+                -moz-transition: all 0.30s ease-in-out;
+                -ms-transition: all 0.30s ease-in-out;
+                -o-transition: all 0.30s ease-in-out;
+                outline: none;
+                padding: 3px 0px 3px 3px;
+                /*margin: 5px 1px 3px 0px;*/
+                border: 1px solid #DDDDDD;
+            }
+
+            input[type=text]:focus,
+            textarea:focus,
+            select:focus {
+                outline: 0;
+      border-color: #1589ee;
+      background-color: white;
+      box-shadow: 0 0 3px #0070D2;
+            }
+
+            .wrapper {
+                width: 800px;
+                height: auto;
+                margin: 50px auto 50px;
+            }
+        </style>
+    </head>
+
+    <script type="text/javascript">
+        function setupclosepopup() {
+            top.window.returnValue = 1;
+            top.window.close();
+        }
+        var j$ = jQuery.noConflict();
+        j$(document).ready(function() {
+            function moveItems(origin, dest) {
+                j$(origin).find(':selected').appendTo(dest);
+            }
+            j$("[id$='btnRight']").click(function(e) {
+                moveItems('#available', '#selected');
+            });
+            j$("[id$='btnLeft']").click(function(e) {
+                moveItems('#selected', '#available');
+            });
+        });
+
+        function appendids() {
+            var dname = new Array();
+            var x = document.getElementById('selected');
+            var y = x.options.length;
+            for (var j = 0; j < y; j++) {
+                dname[j] = x.options[j].value;
+            }
+            if (dname != '') {
+                AssignId(dname.toString());
+            } else {
+                callOnComplete();
+            }
+        }
+    </script>
+
+    <body>
+        <div class="erp_mark7">
+        <apex:form id="mainform">
+
+            <apex:actionFunction name="AssignId" action="{!buildCcEmail}" reRender=";" oncomplete="callOnComplete();">
+                <apex:param name="param1" value="" assignTo="{!contactids}" />
+            </apex:actionFunction>
+
+            <apex:actionFunction name="callOnComplete" action="{!sendRMA}" />
+
+            <div class="wrapper">
+
+                <apex:outputPanel >
+                    <table width="100%" border="0" cellspacing="0" cellpadding="0">
+                        <apex:outputPanel >
+                            <tr>
+                                <td>
+                                    <apex:pageMessages />
+                                </td>
+                            </tr>
+
+                        </apex:outputPanel>
+                        <apex:outputPanel >
+                            <tr>
+                                <td height="20"  Style="vertical-align:middle;text-align: center;margin-bottom:1%">
+                                    <apex:commandLink value="Send RMA"  onclick="appendids();" reRender=";" styleClass="slds-button slds-button--brand slds-m-bottom--small" />
+                                    <apex:commandLink value="PDF" styleClass="slds-button slds-button--brand slds-m-bottom--small" action="{!createPDF}" immediate="true"/>
+                                    <apex:commandLink rendered="{!if($CurrentPage.parameters.retUrl != null, false, true)}" value="{!$Label.Invoice_Close}" styleClass="slds-button slds-button--neutral slds-m-bottom--small" action="{!Back2RMA}" immediate="true"/>
+                                    <apex:commandLink rendered="{!if($CurrentPage.parameters.retUrl != null, true, false)}" value="Back" styleClass="slds-button slds-button--neutral slds-m-bottom--small" action="{!Back2RMA}" immediate="true"/>
+
+                                </td>
+                            </tr>
+                        </apex:outputPanel>
+                        <tr>
+                            <td>
+                                <div style="width:100%; height:35px; background:#54698d; color:#fff;" onclick="var element = document.getElementById('{!$Component.MainBlock}'),style = window.getComputedStyle(element),top = style.getPropertyValue('display');if(top =='none'){document.getElementById('{!$Component.MainBlock}').style.display='block'; document.getElementById('offExpand').style.display='none';document.getElementById('onExpand').style.display='block';}else {document.getElementById('{!$Component.MainBlock}').style.display='none';document.getElementById('offExpand').style.display='block';document.getElementById('onExpand').style.display='none';}">
+                                    <a href="#" style="text-decoration:none; color:#fff;line-height:0px;padding-left:0px; ">
+                                        <table width="100%">
+                                            <tr>
+                                                <td height="30" align="left" valign="middle" width="3%"><img src="{!URLFOR($Resource.SCM,'SCM/Images/plus.png')}" id="offExpand" title="click to Expand" style="display: block;" /><img src="{!URLFOR($Resource.SCM,'SCM/Images/minus.png')}" id="onExpand" style="display:none" /></td>
+
+                                                <td align="left" valign="middle" width="97%" style="text-decoration:none; color:#fff;">Add Recipients</td>
+                                            </tr>
+                                        </table>
+                                    </a>
+                                </div>
+                                <apex:outputPanel id="MainBlock" style="display:none;background:none;">
+                                    <apex:pageBlock id="MainPB">
+                                        <table border="0" align="center" width="100%" style="border:0px solid black;" bgcolor="#f9f9f9">
+                                            <tr>
+                                                <td>&nbsp;</td>
+                                            </tr>
+                                            <tr>
+                                                <td>&nbsp;</td>
+                                                <th>
+                                                    <apex:outputLabel value="To" />
+                                                </th>
+                                                <td>
+                                                    <apex:input required="true" type="email" value="{!toEmail_id}" style="border-radius : 5px; height : 20px; width : 80%; border:1px solid #ddd; padding:5px;" rendered="{!$ObjectType.Contact.fields.Email.Accessible}"/>
+                                                </td>
+                                            </tr>
+
+                                            <tr width="100%">
+                                                <td>&nbsp;</td>
+                                                <th>
+                                                    <apex:outputLabel value="Cc" />
+                                                </th>
+                                                <td>
+                                                    <table>
+                                                        <tr>
+                                                            <td>
+                                                                <h4>Available</h4>
+                                                            </td>
+                                                            <td>
+                                                            </td>
+                                                            <td>
+                                                                <h4>Selected</h4>
+                                                            </td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>
+                                                                <apex:selectList id="available" value="{!selectedEmail}" size="5" multiselect="true" rendered="false">
+                                                                    <apex:selectOptions value="{!AvailableRecipients}"></apex:selectOptions>
+                                                                </apex:selectList>
+                                                                <select size="5" id="available" mulitple="multiple" title="Available" style="width:150px;">
+                                                           <apex:repeat value="{!AvailableRecipients}" var="list">
+                                                           <option value="{!list.value}">{!list.label}</option>
+                                                           </apex:repeat>
+                                                            </select>
+                                                            <!--<apex:input type="email" value="{!ccEmail_Addresses}" style="border-radius : 5px; height : 20px; width :97%; border:1px solid #ddd; padding:5px;"/>-->
+                                                            </td>
+                                                            <td style="vertical-align:top;">
+                                                                <br/>
+                                                                <br/>
+                                                                <apex:commandLink id="btnRight" value="" reRender=";" styleClass="btn" style=" margin-left: 2px;">
+                                                                    <img src="{!URLFOR($Resource.SCM,'SCM/Images/arrow_right.png')}" width="13" height="10" />
+
+                                                                </apex:commandLink>
+                                                                <br/>
+                                                                <br/>
+                                                                <apex:commandLink id="btnLeft" value="" reRender=";" styleClass="btn">
+                                                                    <img src="{!URLFOR($Resource.SCM,'SCM/Images/arrow_left.png')}" width="13" height="10" />
+                                                                </apex:commandLink>
+                                                            </td>
+                                                            <td>
+                                                                <select size="5" id="selected" mulitple="multiple" title="Available" style="width:150px;"></select>
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                            </tr>
+
+                                            <tr>
+                                                <td>&nbsp;</td>
+                                                <th>
+                                                    <apex:outputLabel value="Subject" />
+                                                </th>
+                                                <td>
+                                                    <apex:inputText style="width:340px; border:1px solid #ddd; padding:5px;" value="{!EmailSubject}" required="false" />
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td>&nbsp;</td>
+                                                <th style="vertical-align:top;">
+                                                    <apex:outputLabel value="Text Body" />
+                                                </th>
+                                                <td>
+                                                    <apex:inputTextarea id="editTemplate" value="{!TextBody}" cols="100" rows="15" style="border:1px solid #ddd; padding:5px;" richText="true"/>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        <apex:pageBlockButtons location="bottom">
+                                            <apex:commandButton rendered="false" onclick="openTemplateSelector(function(){return true});" styleClass="primary-btn" value="Send Email" />
+                                        </apex:pageBlockButtons>
+                                    </apex:pageBlock>
+                                </apex:outputPanel>
+
+                            </td>
+                        </tr>
+                        <tr height="10">
+                            <td align="center">
+                            </td>
+                        </tr>
+                    </table>
+                </apex:outputPanel>
+                <table border="0" Style="background-color:#FFF;" width="100%" height="100%"><!--height="1200"-->
+                    <tr>
+                        <td>
+                            <apex:iframe scrolling="true" id="previewFrame" title="HTML Preview" src="https://{!sfdcBaseURL}/email/templaterenderer?id={!MailselectedTemplate.id}&recipient_type_id={!currentContact.id}&related_to_id={!RMA.id}&base_href=https://{!sfdcBaseURL}salesforce.com&preview_frame=previewFrame&render_type=REPLACED_HTML_BODY&setupid=CommunicationTemplatesEmail" frameborder="false" width="100%"/>
+                            <!--<apex:iframe scrolling="true" id="previewFrame" title="HTML Preview" src="https://{!sfdcBaseURL}/email/templaterenderer?id={!MailselectedTemplate.id}&recipient_type_id={!currentContact.id}&related_to_id={!RMA.id}&base_href=https://{!sfdcBaseURL}salesforce.com&preview_frame=previewFrame&render_type=REPLACED_HTML_BODY&setupid=CommunicationTemplatesEmail" frameborder="false" width="100%"/>--><!-- height="1680"-->
+                        </td>
+                    </tr>
+                </table>
+            </div>
+
+        </apex:form>
+        </div>
+    </body>
+
+    </html>
+</apex:page>
