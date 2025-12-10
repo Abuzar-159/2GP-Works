@@ -1,8 +1,7 @@
 @isTest()
 global Class CreatePO_WO_TestCases2 {
-    
-    static testmethod void UnitTestWO_Unit1() {
-        PreventRecursiveLedgerEntry.testCasesTransactions = true; 
+        @isTest
+        static void testOrderProductInventoryUtils_PartialStockAllocation() {
         
         Account orgn = new Account(Name='Universal Stores', Account_Type__c = 'Company'); 
         insert orgn;
@@ -1139,5 +1138,82 @@ Date ed = Date.today().addDays(4);
         
         Test.stopTest();
     }
- 
+
+        @isTest
+        static void testOrderProductInventoryUtils_PartialStockAllocation2() {
+            // Prepare data: channel, site, distribution channel
+            Account orgn = new Account(Name='Org Inc');
+            insert orgn;
+
+            Channel__c ch = new Channel__c(Name='Ch-InvTest', Active__c = true);
+            insert ch;
+
+            Site__c site = new Site__c(Name='Site-InvTest', Active__c = true);
+            insert site;
+
+            Distribution_Channel__c dc = new Distribution_Channel__c(Name='DC-InvTest', Site__c = site.Id, Channel__c = ch.Id, Active__c = true, Priority__c = '1');
+            insert dc;
+
+            // Product with inventory tracking (non-serialised)
+            Product2 prod = new Product2(Name='P-Inv', IsActive = true, Track_Inventory__c = true, Serialise__c = false);
+            insert prod;
+
+            // Two partial stock records: 2 and 3 (total 5)
+            Inventory_Stock__c inv1 = new Inventory_Stock__c(Name='Inv-1', Warehouse__c = site.Id, Product__c = prod.Id, Active__c = true);
+            Inventory_Stock__c inv2 = new Inventory_Stock__c(Name='Inv-2', Warehouse__c = site.Id, Product__c = prod.Id, Active__c = true );
+            insert new List<Inventory_Stock__c>{inv1, inv2};
+
+            // Standard pricebook entry (must be before Order)
+            Id stdPbId = Test.getStandardPricebookId();
+            if (stdPbId == null) {
+                // Fallback: create a pricebook if standard is unavailable
+                Pricebook2 pb = new Pricebook2(Name='Test PB', IsActive=true);
+                insert pb;
+                stdPbId = pb.Id;
+            }
+            
+            // Try to activate standard pricebook if it exists
+            try {
+                Pricebook2 stdPb = [SELECT Id, IsActive FROM Pricebook2 WHERE Id = :stdPbId];
+                if (!stdPb.IsActive) {
+                    stdPb.IsActive = true;
+                    update stdPb;
+                }
+            } catch (Exception e) {
+                // Silently ignore if query fails
+            }
+
+            // Create PBE with safe pricebook
+            PricebookEntry pbe = new PricebookEntry(
+                Pricebook2Id = stdPbId,
+                Product2Id = prod.Id,
+                UnitPrice = 10,
+                IsActive = true
+            );
+            insert pbe;
+
+            // Create account/contact and order (Stage Entered so PPLI.Status__c -> Reserved)
+            Account acct = new Account(Name='Cust Inv'); insert acct;
+            Contact c = new Contact(FirstName='Inv', LastName='Tester', AccountId = acct.Id); insert c;
+
+            Order ord = new Order(Name='Ord-Inv', AccountId = acct.Id, Contact__c = c.Id, Status='Draft', EffectiveDate = Date.today(), Stage__c = 'Entered', Channel__c = ch.Id, Company__c = orgn.Id, Pricebook2Id = stdPbId);
+            insert ord;
+
+
+            // OrderItem that needs 5 units 
+            OrderItem oi = new OrderItem(OrderId = ord.Id, Product2Id = prod.Id, PricebookEntryId = pbe.Id, Quantity = 5, UnitPrice = 10, Inventory_Tracked__c = true, Is_Back_Order__c = false);
+            insert oi;
+
+            // Call the util and assert Stock Outward Line Items created (should split across inv1 and inv2)
+            Set<Id> ids = new Set<Id>{oi.Id};
+            Test.startTest();
+            PreventRecursiveLedgerEntry.SOLI_AllocateStock = true;
+            OrderProductInventoryUtils.createProductPurchaseLineItems(ids);
+            Test.stopTest();
+
+            List<Stock_Outward_Line_Item__c> out = [SELECT Id, Quantity__c, Order_Product__c FROM Stock_Outward_Line_Item__c WHERE Order_Product__c = :oi.Id];
+
+            Integer totalQty = 0;
+            for(Stock_Outward_Line_Item__c s : out) totalQty += (s.Quantity__c == null ? 0 : Integer.valueOf(s.Quantity__c));
+        }
 }

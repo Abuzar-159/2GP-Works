@@ -296,6 +296,7 @@ if(prodInventoryList[i].BOM__c != null) PPLI.BOM__c = prodInventoryList[i].BOM__
                                             succeed = true;
                                             break;
                                         }
+                                        /*from here its not been covered in the test class */
                                         else if(currProductSite.Number_of_Item_In_Stock__c > 0) {
                                             system.debug('First else condition');
                                             Integer loopquantity = 1;
@@ -358,6 +359,7 @@ if(prodInventoryList[i].BOM__c != null) PPLI.BOM__c = prodInventoryList[i].BOM__
                                     PPLI.Order_Product__c = lineItem.Id;
                                     PPLI.Status__c = 'Requested';
                                     pplis2Insert.add(PPLI);
+                                /* until here we need to increase the coverage */
                                 }
                             }
                         }

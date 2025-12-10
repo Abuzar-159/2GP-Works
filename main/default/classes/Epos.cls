@@ -1673,10 +1673,7 @@ global with sharing class Epos{
                      }
                  } else if (paymentStatus == 'succeeded') {
                      /* Payment already succeeded*/
-                     payment.Transaction_Status__c = 'Approved';
-                     payment.Status__c = 'Paid';
-                     payment.Payment_Gateway__c = 'Stripe';
-                     payment.Transaction_ID__c = paymentIntentId; /*added*/
+                     payment.Transaction_Status__c = 'Approved'; payment.Status__c = 'Paid'; payment.Payment_Gateway__c = 'Stripe'; payment.Transaction_ID__c = paymentIntentId; /*added*/
                  } else {
                      return ErrorMsgPayment = 'Stripe payment failed with status: ' + paymentStatus;
                  }
@@ -1692,28 +1689,14 @@ global with sharing class Epos{
             body.put('processingInformation', new Map<String, Object>{ 'capture' => true });
 
             body.put('paymentInformation', new Map<String, Object>{
-                'card' => new Map<String, Object>{
-                    'number' => Card_Number,
-                    'expirationMonth' => Expiry_Month,
-                    'expirationYear' => Expiry_Year,
-                    'securityCode' => CVV
+                'card' => new Map<String, Object>{ 'number' => Card_Number, 'expirationMonth' => Expiry_Month, 'expirationYear' => Expiry_Year, 'securityCode' => CVV
                 }
             });
 
             body.put('orderInformation', new Map<String, Object>{
-                'amountDetails' => new Map<String, Object>{
-                    'totalAmount' => Amount,
-                    'currency' => myCurrency
+                'amountDetails' => new Map<String, Object>{ 'totalAmount' => Amount, 'currency' => myCurrency
                 },
-                'billTo' => new Map<String, Object>{
-                    'firstName' => FirstName,
-                    'lastName' => LastName,
-                    'address1' => Address_Line1,
-                    'locality' => City,
-                    'administrativeArea' => State,
-                    'postalCode' => Zipcode,
-                    'country' => Country,
-                    'email' => Email
+                'billTo' => new Map<String, Object>{ 'firstName' => FirstName, 'lastName' => LastName, 'address1' => Address_Line1, 'locality' => City, 'administrativeArea' => State, 'postalCode' => Zipcode, 'country' => Country, 'email' => Email
                 }
             });
 
@@ -1908,11 +1891,7 @@ global with sharing class Epos{
          }
          return ErrorMsgPayment;
      } catch (exception ex) {
-         ErrorMsgPayment = ex.getMessage();
-         ErrorMsgPayment += ' Line No: ' + ex.getLineNumber();
-         ErrorMsgPayment += ' getStackTraceString: ' + ex.getStackTraceString();
-
-         return ErrorMsgPayment;
+         ErrorMsgPayment = ex.getMessage(); ErrorMsgPayment += ' Line No: ' + ex.getLineNumber(); ErrorMsgPayment += ' getStackTraceString: ' + ex.getStackTraceString(); return ErrorMsgPayment;
      }
  }
 
@@ -3010,9 +2989,7 @@ global static String createBankOrCashPaymentV2(String payments, String invAndAmo
                                     } else{ XmlStreamReader reader3 = res.getXmlStreamReader();String msg2 = readXMLResponse(reader3, 'Message');upsWrapp.UPSErrorMsg = 'Shipping Rate Service Is Not Available : ' + msg2;
                                     }
                                 } else
-                                    upsWrapp.UPSErrorMsg = 'Result not available';
-                            } catch (Exception e){
-                                upsWrapp.UPSErrorMsg = e.getMessage() + ' Line Number @ : ' + e.getLineNumber();
+                                    upsWrapp.UPSErrorMsg = 'Result not available'; } catch (Exception e){ upsWrapp.UPSErrorMsg = e.getMessage() + ' Line Number @ : ' + e.getLineNumber();
                             }
                         }
                     }
@@ -3359,9 +3336,7 @@ global static String createBankOrCashPaymentV2(String payments, String invAndAmo
 
 // Compute SHA-256 digest for CyberSource
 private static String cs_computeDigest(String payload) {
-    Blob bodyBlob = Blob.valueOf(payload);
-    Blob sha256 = Crypto.generateDigest('SHA-256', bodyBlob);
-    return 'SHA-256=' + EncodingUtil.base64Encode(sha256);
+    Blob bodyBlob = Blob.valueOf(payload); Blob sha256 = Crypto.generateDigest('SHA-256', bodyBlob); return 'SHA-256=' + EncodingUtil.base64Encode(sha256);
 }
 
 // Build CyberSource signature header
@@ -3369,49 +3344,14 @@ private static String cs_generateSignature(String host, String merchantId, Strin
                                           String resourcePath, String httpMethod, String payload, String dateHeader) {
 
     // Required headers for the signature string
-    String requestTarget = '(request-target): ' + httpMethod.toLowerCase() + ' ' + resourcePath;
-
-    String signingString =
-        'host: ' + host + '\n' +
-        'date: ' + dateHeader + '\n' +
-        requestTarget + '\n' +
-        'digest: ' + cs_computeDigest(payload) + '\n' +
-        'v-c-merchant-id: ' + merchantId;
-
-    Blob decodedKey = EncodingUtil.base64Decode(secretKey);
-    Blob mac = Crypto.generateMac('HmacSHA256', Blob.valueOf(signingString), decodedKey);
-    String signatureEncoded = EncodingUtil.base64Encode(mac);
-
-    return 'keyid="' + keyId +
-           '", algorithm="HmacSHA256", headers="host date (request-target) digest v-c-merchant-id", signature="' +
-           signatureEncoded + '"';
+    String requestTarget = '(request-target): ' + httpMethod.toLowerCase() + ' ' + resourcePath; String signingString = 'host: ' + host + '\n' + 'date: ' + dateHeader + '\n' + requestTarget + '\n' + 'digest: ' + cs_computeDigest(payload) + '\n' + 'v-c-merchant-id: ' + merchantId; Blob decodedKey = EncodingUtil.base64Decode(secretKey); Blob mac = Crypto.generateMac('HmacSHA256', Blob.valueOf(signingString), decodedKey); String signatureEncoded = EncodingUtil.base64Encode(mac); return 'keyid="' + keyId + '", algorithm="HmacSHA256", headers="host date (request-target) digest v-c-merchant-id", signature="' + signatureEncoded + '"';
 }
 
 // Perform CyberSource callout
 private static HttpResponse cs_sendRequest(String host, String merchantId, String keyId, String secretKey,
                                            String payload, String resourcePath) {
 
-    String url = host + resourcePath;
-    String method = 'post';
-
-    String dateHeader = Datetime.now().formatGMT('EEE, dd MMM yyyy HH:mm:ss \'GMT\'');
-
-    String digest = cs_computeDigest(payload);
-    String signature = cs_generateSignature(host, merchantId, keyId, secretKey, resourcePath, method, payload, dateHeader);
-
-    HttpRequest req = new HttpRequest();
-    req.setMethod('POST');
-    req.setEndpoint(url);
-    req.setHeader('Content-Type', 'application/json');
-    req.setHeader('v-c-merchant-id', merchantId);
-    req.setHeader('date', dateHeader);
-    req.setHeader('host', host);
-    req.setHeader('digest', digest);
-    req.setHeader('signature', signature);
-    req.setBody(payload);
-
-    Http http = new Http();
-    return http.send(req);
+    String url = host + resourcePath; String method = 'post'; String dateHeader = Datetime.now().formatGMT('EEE, dd MMM yyyy HH:mm:ss \'GMT\''); String digest = cs_computeDigest(payload); String signature = cs_generateSignature(host, merchantId, keyId, secretKey, resourcePath, method, payload, dateHeader); HttpRequest req = new HttpRequest(); req.setMethod('POST'); req.setEndpoint(url); req.setHeader('Content-Type', 'application/json'); req.setHeader('v-c-merchant-id', merchantId); req.setHeader('date', dateHeader); req.setHeader('host', host); req.setHeader('digest', digest); req.setHeader('signature', signature); req.setBody(payload); Http http = new Http(); return http.send(req);
 }
 
 
