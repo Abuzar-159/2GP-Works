@@ -9,13 +9,15 @@ import getShipToAddress from '@salesforce/apex/Epos.shipToAddress';
 import getOrderProfile from '@salesforce/apex/Epos.OrderProfile';
 import getCurrentEmployee from '@salesforce/apex/Epos.currentEmp';
 import getInitialProducts from '@salesforce/apex/Epos.initialProducts';
+import initialProductsByDC from '@salesforce/apex/Epos.initialProductsByDC';
+import getDistributionChannels from '@salesforce/apex/Epos.getDistributionChannels';
 import { ShowToastEvent } from 'lightning/platformShowToastEvent';
-import saveOrderAndLine from '@salesforce/apex/Epos.saveOrderAndLines';
+import saveOrderAndLine from '@salesforce/apex/Epos.saveOrderAndLines1';
 import { NavigationMixin } from 'lightning/navigation';
 
 export default class AccountOrderTabs extends NavigationMixin(LightningElement) {
     @api recordId;
-    
+
     // main tab state (for future tabs; currently only order)
     activeTab = 'order';
 
@@ -58,6 +60,7 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
     shipToFilter = '';
     orderProfileFilter = '';
     employeeFilter = " AND Employee_User__c != null AND Active__c=true ";
+    @track dcOptions = [];
 
     // display address strings
     billToAddFull;
@@ -71,6 +74,7 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
 
     // misc
     spinner = false;
+    @track modalSpinner = false;
     @track errorList = [];
 
     // edit product modal
@@ -116,52 +120,53 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
     }
 
 
-   handleProductsResponse(data) {
-    this.listOfProducts = data.map(prod => {
-        const rawStock = prod.stock; // could be number or 'Back Order' or 'Kit'
-        let displayStock = rawStock;
-        let levelClass = 'stock-pill--ok';  // default
-        let numericStock = null;
+    handleProductsResponse(data) {
+        this.listOfProducts = data.map(prod => {
+            const rawStock = prod.stock; // could be number or 'Back Order' or 'Kit'
+            let displayStock = rawStock;
+            let levelClass = 'stock-pill--ok';  // default
+            let numericStock = null;
 
-        // Special text cases first
-        if (rawStock === 'Back Order') {
-            levelClass = 'stock-pill--backorder';
-        } else if (rawStock === 'Kit') {
-            levelClass = 'stock-pill--kit';
-        } else {
-            // Normal numeric stock
-            numericStock = Number(rawStock);
-            displayStock = numericStock; // what we show in {prod.stock}
+            // Special text cases first
+            if (rawStock === 'Back Order') {
+                levelClass = 'stock-pill--backorder';
+            } else if (rawStock === 'Kit') {
+                levelClass = 'stock-pill--kit';
+            } else {
+                // Normal numeric stock
+                numericStock = Number(rawStock);
+                displayStock = numericStock; // what we show in {prod.stock}
 
-            if (numericStock === 0) {
-                levelClass = 'stock-pill--none';
-            } else if (numericStock > 0 && numericStock <= 10) {
-                levelClass = 'stock-pill--low';
-            } else if (numericStock > 10 && numericStock <= 50) {
-                levelClass = 'stock-pill--medium';
-            } // else keep --ok
-        }
+                if (numericStock === 0) {
+                    levelClass = 'stock-pill--none';
+                } else if (numericStock > 0 && numericStock <= 10) {
+                    levelClass = 'stock-pill--low';
+                } else if (numericStock > 10 && numericStock <= 50) {
+                    levelClass = 'stock-pill--medium';
+                } // else keep --ok
+            }
 
-        const stockClass = `stock-pill ${levelClass}`;
+            const stockClass = `stock-pill ${levelClass}`;
 
-        console.log(
-            'Product:',
-            prod.pbe?.Product2?.Name,
-            '| rawStock:',
-            rawStock,
-            '| displayStock:',
-            displayStock,
-            '| class:',
-            stockClass
-        );
+            console.log(
+                'Product:',
+                prod.pbe?.Product2?.Name,
+                '| rawStock:',
+                rawStock,
+                '| displayStock:',
+                displayStock,
+                '| class:',
+                stockClass
+            );
 
-        return {
-            ...prod,
-            stock: displayStock, // this is what {prod.stock} shows
-            stockClass
-        };
-    });
-}
+            return {
+                ...prod,
+                stock: displayStock, // this is what {prod.stock} shows
+                stockClass,
+                selectedDC: prod.selectedDC || 'All'
+            };
+        });
+    }
 
 
 
@@ -506,6 +511,29 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
 
             this.showAddProductsModal = true;
 
+            // Fetch Distribution Channels if not already loaded
+            let channelId = this.order.Channel__c || (this.order.Order_Profile__r ? this.order.Order_Profile__r.Channel__c : null);
+
+            if (channelId) {
+                getDistributionChannels({ channelId: channelId })
+                    .then(result => {
+                        // Default "All" option
+                        let options = [{ label: 'All', value: 'All' }];
+
+                        // Map result to options
+                        if (result && result.length > 0) {
+                            result.forEach(dc => {
+                                // Adjust property names based on your Apex Wrapper return (e.g., dc.dcName vs dc.Name)
+                                options.push({ label: dc.dcName || dc.Name, value: dc.dcId || dc.Id });
+                            });
+                        }
+                        this.dcOptions = options;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching DCs', error);
+                    });
+            }
+
             // initial load with empty search
             this.fetchProducts({
                 currentTarget: { value: '' }
@@ -521,7 +549,7 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
 
     fetchProducts(event) {
         try {
-            this.spinner = true;
+            this.modalSpinner = true;
             this.searchItem = event.currentTarget.value;
             console.log('searchItem:', this.searchItem);
 
@@ -539,35 +567,53 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
                     let res = JSON.parse(JSON.stringify(result));
 
                     if (res.length > 0) {
-    for (let i in res) {
-        if (res[i].stock == 0 && res[i].pbe.Product2.Allow_Back_Orders__c)
-            res[i].stock = 'Back Order';
+                        for (let i in res) {
+                            if (res[i].stock == 0 && res[i].pbe.Product2.Allow_Back_Orders__c)
+                                res[i].stock = 'Back Order';
 
-        if (res[i].pbe.Product2.Is_Kit__c)
-            res[i].stock = 'Kit';
+                            if (res[i].pbe.Product2.Is_Kit__c)
+                                res[i].stock = 'Kit';
 
-        const alreadySelected = this.listOfCheckedProucts.find(
-            prod => prod.pbe.Product2.Id === res[i].pbe.Product2.Id
-        );
-        res[i].checkSelected = !!alreadySelected;
-    }
+                            const alreadySelected = this.listOfCheckedProucts.find(
+                                prod => prod.pbe.Product2.Id === res[i].pbe.Product2.Id
+                            );
 
-    // 🔥 decorate with stockClass + numeric stock
-    this.handleProductsResponse(res);
+                            if (alreadySelected) {
+                                res[i].checkSelected = true;
 
-} else {
-    this.listOfProducts = undefined;
-}
+                                // --- NEW: Restore User Inputs ---
+                                res[i].quantity = alreadySelected.quantity;             // Restore Quantity
+                                res[i].discountPercent = alreadySelected.discountPercent; // Restore Discount
+                                res[i].description = alreadySelected.description;       // Restore Description
+
+                                // Optional: Restore selected DC if you want that persisted too
+                                if (alreadySelected.selectedDC) {
+                                    res[i].selectedDC = 'All';
+                                }
+                            } else {
+                                res[i].checkSelected = false;
+                                // Ensure default DC is set if not selected
+                                if (!res[i].selectedDC) res[i].selectedDC = 'All';
+                            }
+                        }
+
+                        // 🔥 decorate with stockClass + numeric stock
+                        this.handleProductsResponse(res);
+
+                    } else {
+                        this.listOfProducts = undefined;
+                    }
 
 
-                    this.spinner = false;
+                    this.modalSpinner = false;
                 })
                 .catch(error => {
-                    this.spinner = false;
+                    this.modalSpinner = false;
                     this.pushError(error);
                 });
         } catch (e) {
             console.log('Error:', e);
+            this.modalSpinner = false;
         }
     }
 
@@ -593,12 +639,95 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
         }
     }
 
+    handleDCChange(event) {
+        const index = event.target.dataset.index;
+        const newDcId = event.detail.value;
+        const products = [...this.listOfProducts];
+        const selectedRow = products[index];
+
+        // 1. Update the UI selection immediately
+        selectedRow.selectedDC = newDcId;
+
+        // 2. Prepare params for Apex
+        // Note: passing 'All' as dcId if selected, Apex should handle 'All' or empty string logic if needed
+        const prodName = selectedRow.pbe.Product2.Name;
+        const prodId = selectedRow.pbe.Product2.Id;
+        const passedDcId = (newDcId === 'All') ? '' : newDcId; // Pass empty if All, or adjust based on Apex requirement
+
+        this.modalSpinner = true;
+
+        initialProductsByDC({
+            currProfile: JSON.stringify(this.order.Order_Profile__r),
+            billToAddId: this.order.Bill_To_Address__c,
+            shipToAddId: this.order.Ship_To_Address__c,
+            searchItem: prodName, // Exact Name
+            dcId: passedDcId,
+            productId: prodId
+        })
+            .then(result => {
+                let res = JSON.parse(JSON.stringify(result));
+
+                if (res && res.length > 0) {
+                    // We expect one record back for the specific product
+                    let updatedProd = res[0];
+
+                    // Re-apply stock logic formatting locally since we aren't calling the bulk helper
+                    // (Or extract stock logic to a pure utility function to avoid code duplication)
+                    if (updatedProd.stock == 0 && updatedProd.pbe.Product2.Allow_Back_Orders__c)
+                        updatedProd.stock = 'Back Order';
+                    if (updatedProd.pbe.Product2.Is_Kit__c)
+                        updatedProd.stock = 'Kit';
+
+                    let rawStock = updatedProd.stock;
+                    let displayStock = rawStock;
+                    let levelClass = 'stock-pill--ok';
+                    let numericStock = Number(rawStock);
+
+                    if (rawStock === 'Back Order') levelClass = 'stock-pill--backorder';
+                    else if (rawStock === 'Kit') levelClass = 'stock-pill--kit';
+                    else {
+                        displayStock = numericStock;
+                        if (numericStock === 0) levelClass = 'stock-pill--none';
+                        else if (numericStock <= 10) levelClass = 'stock-pill--low';
+                        else if (numericStock <= 50) levelClass = 'stock-pill--medium';
+                    }
+
+                    // MERGE the new data into the existing row
+                    // We preserve 'checkSelected' and 'quantity' from the user's current session if desired,
+                    // OR overwrite them if the DC change implies a fresh start. Usually, we keep user input qty.
+
+                    selectedRow.stock = displayStock;
+                    selectedRow.stockClass = `stock-pill ${levelClass}`;
+                    selectedRow.pbe = updatedProd.pbe; // Updates Price (UnitPrice)
+                    selectedRow.tax = updatedProd.tax; // Updates Tax info
+
+                    // If you want to overwrite quantity/description from DB:
+                    // selectedRow.quantity = updatedProd.quantity; 
+
+                    // Force reactivity
+                    this.listOfProducts = products;
+
+                    // *** NEW: Sync changes to Checked Products List ***
+                    this.syncProductToCart(selectedRow);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching product by DC:', error);
+                this.pushError(error);
+            })
+            .finally(() => {
+                this.modalSpinner = false;
+            });
+    }
+
     handleUnitPrice(event) {
         const index = event.target.dataset.index;
         const value = event.target.value;
         const products = [...this.listOfProducts];
         products[index].pbe.UnitPrice = value;
         this.listOfProducts = products;
+
+        this.syncProductToCart(products[index]);
     }
 
     handleQuantity(event) {
@@ -607,6 +736,9 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
         const products = [...this.listOfProducts];
         products[index].quantity = value;
         this.listOfProducts = products;
+
+        // Sync change to checked list
+        this.syncProductToCart(products[index]);
     }
 
     handleDiscount(event) {
@@ -615,6 +747,9 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
         const products = [...this.listOfProducts];
         products[index].discountPercent = value;
         this.listOfProducts = products;
+
+        // Sync change to checked list
+        this.syncProductToCart(products[index]);
     }
 
     handleDescription(event) {
@@ -623,11 +758,38 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
         const products = [...this.listOfProducts];
         products[index].description = value;
         this.listOfProducts = products;
+
+        // Sync change to checked list
+        this.syncProductToCart(products[index]);
+    }
+
+    // Helper: Syncs a single product row change to the 'Cart' (listOfCheckedProucts)
+    syncProductToCart(productRow) {
+        try {
+            // Only proceed if we have a cart and the item is actually in it
+            if (this.listOfCheckedProucts && this.listOfCheckedProucts.length > 0) {
+
+                const index = this.listOfCheckedProucts.findIndex(
+                    item => item.pbe.Product2.Id === productRow.pbe.Product2.Id
+                );
+
+                if (index !== -1) {
+                    // Update the item in the checked list
+                    // We use object spread {...} to ensure the new values (Price, DC, etc) are copied
+                    this.listOfCheckedProucts[index] = { ...productRow };
+
+                    // console.log('Synced to Cart:', JSON.stringify(this.listOfCheckedProucts[index]));
+                }
+            }
+        } catch (e) {
+            console.error('Error syncing to cart:', e);
+        }
     }
 
     addProducts() {
         try {
             console.log('inside addProducts');
+            console.log('FINAL Selected products:', JSON.stringify(this.listOfCheckedProucts));
 
             if (!this.validateSelProd()) {
                 return;
@@ -637,10 +799,10 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
                 this.selectedProducts = [];
             }
 
-            let list = JSON.parse(JSON.stringify(this.listOfProducts));
+            let list = JSON.parse(JSON.stringify(this.listOfCheckedProucts)); // here iam getting the log of selected products 
 
             list.forEach(p => {
-                if (!p.checkSelected) return;
+                // if (!p.checkSelected) return; // not required since we have stored the checked products in the list : this.listOfCheckedProucts
 
                 let qty = parseFloat(p.quantity || 1);
                 let price = parseFloat(p.pbe.UnitPrice || 0);
@@ -670,7 +832,8 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
                 if (p.description) {
                     p.pbe.Product2.Description = p.description;
                 }
-
+                p.vatAmount = vat;
+                p.othertaxAmount = othertax;
                 p.totalTaxAmount = vat + othertax;
                 p.totalDiscount = discount;
 
@@ -678,10 +841,25 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
                 p.NetAmount = (price * qty) - discount;
                 p.GrossAmount = p.NetAmount + p.totalTaxAmount;
 
-                this.selectedProducts.push(p);
+                // this.selectedProducts.push(p); commented and added below by Raqeeb to avoid duplicates
+                const existingIndex = this.selectedProducts.findIndex(
+                    x => x.pbe.Product2.Id === p.pbe.Product2.Id
+                );
+
+                if (existingIndex !== -1) {
+                    // Use splice to ensure Reactivity in UI
+                    this.selectedProducts.splice(existingIndex, 1, p);
+                } else {
+                    this.selectedProducts.push(p);
+                }
             });
 
+            // 3. Force array refresh (optional safety measure)
+            this.selectedProducts = [...this.selectedProducts];
+
             this.CalculateOrderValues();
+
+            this.selectedProducts = [...this.selectedProducts];
 
             console.log('FINAL selectedProducts:', JSON.stringify(this.selectedProducts));
 
@@ -732,11 +910,21 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
         try {
             this.errorList = [];
 
-            let list = this.listOfProducts;
+            let list = this.listOfCheckedProucts;
+
+            if (!list || list.length === 0) {
+                this.dispatchEvent(new ShowToastEvent({
+                    title: 'Warning!',
+                    variant: 'warning',
+                    message: 'Please select Items to add'
+                }));
+                return false;
+            }
+
             let count = 0;
 
             for (let i in list) {
-                if (!list[i].checkSelected) continue;
+                // if (!list[i].checkSelected) continue; // not required
                 count++;
 
                 if (!list[i].pbe.Product2.Allow_Back_Orders__c && list[i].stock == 0) {
@@ -755,23 +943,14 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
                 }
 
                 if (parseFloat(list[i].discountPercent) < 0) {
-                    this.errorList.push(`${list[i].pbe.Product2.Name}: Discount can not be negative or empty`);
+                    this.errorList.push(`${list[i].pbe.Product2.Name}: Discount % can not be negative or empty`);
                     return false;
                 }
 
                 if (parseFloat(list[i].discountPercent) > 100) {
-                    this.errorList.push(`${list[i].pbe.Product2.Name}: Discount can not be greater than 100`);
+                    this.errorList.push(`${list[i].pbe.Product2.Name}: Discount % can not be greater than 100`);
                     return false;
                 }
-            }
-
-            if (count == 0) {
-                this.dispatchEvent(new ShowToastEvent({
-                    title: 'Warning!',
-                    variant: 'warning',
-                    message: 'Please select Item to add'
-                }));
-                return false;
             }
 
             return true;
@@ -780,6 +959,7 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
             console.log('validateSelProd error:', e);
         }
     }
+
 
     // ===== Edit Product Modal =====
     editProduct(event) {
@@ -809,6 +989,26 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
         let qty = parseFloat(p.quantity || 0);
         let price = parseFloat(p.pbe.UnitPrice || 0);
 
+        if(p.discountPercent && p.discountPercent < 0){
+            // show a warning toast that disc% cannot be more than 100 
+            this.dispatchEvent(new ShowToastEvent({
+                    title: 'Warning!',
+                    variant: 'warning',
+                    message: 'Discount % cannot be negative'
+                }));
+            return;
+        }
+
+        if(p.discountPercent && p.discountPercent > 100){
+            // show a warning toast that disc% cannot be more than 100 
+            this.dispatchEvent(new ShowToastEvent({
+                    title: 'Warning!',
+                    variant: 'warning',
+                    message: 'Discount % cannot be more than 100'
+                }));
+            return;
+        }
+
         let discount = p.discountPercent ?
             (p.isPercent ? (price * qty * p.discountPercent) / 100 : qty * p.discountPercent)
             : 0;
@@ -817,6 +1017,10 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
         let othertax = p.tax?.Other_Tax_Rate__c ? (p.tax.Other_Tax_Rate__c / 100) * (price * qty - discount) : 0;
 
         p.totalDiscount = discount;
+
+        p.vatAmount = vat;
+        p.othertaxAmount = othertax;
+
         p.totalTaxAmount = vat + othertax;
         p.NetAmount = price * qty - discount;
         p.GrossAmount = p.NetAmount + p.totalTaxAmount;
@@ -945,6 +1149,13 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
             console.log('Error:', JSON.stringify(e));
         }
     }
+handleShipmentHandlingCostChange(event) {
+    const value = event.target.value; // string/number from input
+    this.order = {
+        ...this.order,
+        Shipment_Handling_Cost__c: value ? parseFloat(value) : null
+    };
+}
 
     saveOrder() {
         try {
@@ -999,10 +1210,12 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
             this.order.Active__c = true;
             this.order.Customer_Email__c = this.order.Contact__r.Email;
             this.order.Stage__c = 'Entered';
+            this.order.Shipment_Handling_Cost__c = this.order.Shipment_Handling_Cost__c || 0;
             if (this.order.Employee__r.Employee_User__c) this.order.OwnerId = this.order.Employee__r.Employee_User__c;
             if (this.order.Account.Company__c) this.order.Company__c = this.order.Account.Company__c;
             if (this.order.Order_Profile__r.Price_Book__c) this.order.Pricebook2Id = this.order.Order_Profile__r.Price_Book__c;
             if (this.order.Order_Profile__r.Channel__c) this.order.Channel__c = this.order.Order_Profile__r.Channel__c;
+
 
             console.log('this.order:', JSON.stringify(this.order));
 
@@ -1039,20 +1252,21 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
                 OrderItems[i].Sort_Order__c = parseInt(i, 10);
                 if (selectedProducts[i].tax.Id) OrderItems[i].Tax__c = selectedProducts[i].tax.Id;
                 OrderItems[i].VAT_Amount__c = selectedProducts[i].vatAmount;
-                OrderItems[i].Other_Tax__c = selectedProducts[i].otherTax;
+                OrderItems[i].Other_Tax__c = selectedProducts[i].othertaxAmount;
+                OrderItems[i].Sub_Total__c = parseFloat(selectedProducts[i].pbe.UnitPrice) * parseFloat(selectedProducts[i].quantity);
                 OrderItems[i].Total_Price__c =
                     parseFloat(selectedProducts[i].pbe.UnitPrice) * parseFloat(selectedProducts[i].quantity) -
                     parseFloat(discount) +
                     parseFloat(selectedProducts[i].vatAmount) +
-                    parseFloat(selectedProducts[i].otherTax);
+                    parseFloat(selectedProducts[i].othertaxAmount);
                 OrderItems[i].UnitPrice = selectedProducts[i].pbe.UnitPrice;
                 OrderItems[i].Description = selectedProducts[i].description || selectedProducts[i].pbe.Product2.Description;
                 OrderItems[i].Company__c = this.order.Company__c;
                 OrderItems[i].ServiceDate = this.order.EffectiveDate;
             }
 
-            console.log('OrderItems :', OrderItems);
-
+            console.log('OrderItems :', JSON.stringify(OrderItems));
+            console.log('order ', JSON.stringify(this.order));
             saveOrderAndLine({
                 ord: JSON.stringify(this.order),
                 ordItems: JSON.stringify(OrderItems),
@@ -1094,6 +1308,6 @@ export default class AccountOrderTabs extends NavigationMixin(LightningElement) 
         }
     }
     handleClose() {
-    this.errorList = [];
-}
+        this.errorList = [];
+    }
 }

@@ -306,3 +306,52 @@
     border-color: #d0e4ff;
     background: #f6faff;
 }
+
+/* Scrollbar Styling */
+.addingProductsection::-webkit-scrollbar,
+.tableContent::-webkit-scrollbar {
+    width: 6px;
+}
+
+
+.addingProductsection::-webkit-scrollbar-track,
+.tableContent::-webkit-scrollbar-track {
+    background: #f3f2f2;
+    border-radius: 3px;
+}
+
+
+.addingProductsection::-webkit-scrollbar-thumb,
+.tableContent::-webkit-scrollbar-thumb  {
+    background: #dddbda;
+    border-radius: 3px;
+}
+
+
+.addingProductsection::-webkit-scrollbar-thumb:hover,
+.tableContent::-webkit-scrollbar-thumb:hover {
+    background: #c9c7c5;
+}
+
+.table-scroll-container .slds-table {
+    overflow: visible !important; 
+    border-radius: 0; /* Optional: rounding often conflicts with sticky headers */
+}
+
+.table-scroll-container table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 50; /* High Z-index ensures it stays above row content */
+    background-color: #e0e0e0; /* Required so rows don't show through */
+    box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); /* Nice visual separation */
+}
+
+/* 2. OPTIONAL: If the header background is transparent in some themes, force it */
+.table-scroll-container table {
+    border-collapse: separate; /* Sometimes required for sticky to work in Edge/older browsers */
+}
+
+/* 3. Spinner should be higher than the header */
+.table-scroll-container lightning-spinner {
+    z-index: 60; 
+}

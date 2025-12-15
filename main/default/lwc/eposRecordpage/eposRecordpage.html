@@ -1,37 +1,35 @@
 <template>
     <!-- GLOBAL LOADING SPINNER -->
-<template if:true={spinner}>
-    <div class="spinner-backdrop">
-        <lightning-spinner
-            alternative-text="Loading..."
-            size="large">
-        </lightning-spinner>
-    </div>
-</template>
-<!-- ERROR PANEL -->
-<template if:true={errorList.length}>
-    <div class="custom-center-toast">
-        <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
-            <span class="slds-assistive-text">Error</span>
-
-            <div class="slds-notify__content">
-                <h2 class="slds-text-heading_small slds-p-bottom_xx-small">
-                    Errors occurred
-                </h2>
-
-                <template for:each={errorList} for:item="err">
-                    <div key={err}>• {err}</div>
-                </template>
-            </div>
-
-            <button class="slds-button slds-button_icon slds-button_icon-inverse slds-notify__close"
-                    title="Close" onclick={handleClose}>
-                <lightning-icon icon-name="utility:close" size="small" variant="inverse"></lightning-icon>
-                <span class="slds-assistive-text">Close</span>
-            </button>
+    <template if:true={spinner}>
+        <div class="spinner-backdrop">
+            <lightning-spinner alternative-text="Loading..." size="large">
+            </lightning-spinner>
         </div>
-    </div>
-</template>
+    </template>
+    <!-- ERROR PANEL -->
+    <template if:true={errorList.length}>
+        <div class="custom-center-toast">
+            <div class="slds-notify slds-notify_toast slds-theme_warning" role="status">
+                <span class="slds-assistive-text">Error</span>
+
+                <div class="slds-notify__content">
+                    <h2 class="slds-text-heading_small slds-p-bottom_xx-small">
+                        Errors occurred
+                    </h2>
+
+                    <template for:each={errorList} for:item="err">
+                        <div key={err}>• {err}</div>
+                    </template>
+                </div>
+
+                <button class="slds-button slds-button_icon slds-button_icon-inverse slds-notify__close" title="Close"
+                    onclick={handleClose}>
+                    <lightning-icon icon-name="utility:close" size="small" variant="inverse"></lightning-icon>
+                    <span class="slds-assistive-text">Close</span>
+                </button>
+            </div>
+        </div>
+    </template>
 
 
 
@@ -58,46 +56,33 @@
                             </div>
 
                             <lightning-button-icon icon-name={contactChevronIcon}
-                                                   alternative-text="Toggle Contact Information"
-                                                   variant="border-filled"
-                                                   onclick={toggleContact}>
+                                alternative-text="Toggle Contact Information" variant="border-filled"
+                                onclick={toggleContact}>
                             </lightning-button-icon>
                         </header>
 
                         <template if:true={showContact}>
                             <div class="slds-card__body">
-                               
+
                                 <!-- Contact fields -->
                                 <div class="slds-grid slds-wrap slds-gutters">
                                     <div class="slds-col slds-size_1-of-3">
-                                         <span class="slds-form-element__label">Contact</span>
-                                      <c-input-lookup 
-                                        obj-name="Contact"
-                                        search-placeholder="Search..."
-                                        icon-name="standard:contact"
-                                        onlookupselected={selectContact}
-                                        qry={contactFilter}
-                                        selected-value={order.Contact__r.Id}
-                                        selected-name={order.Contact__r.Name}
-                                        selected-name-url={contactUrl}
-                                        onremove={removeContact}
-                                        is-value-selected={contactSelected}>
-                                    </c-input-lookup>
+                                        <span class="slds-form-element__label">Contact</span>
+                                        <c-input-lookup obj-name="Contact" search-placeholder="Search..."
+                                            icon-name="standard:contact" onlookupselected={selectContact}
+                                            qry={contactFilter} selected-value={order.Contact__r.Id}
+                                            selected-name={order.Contact__r.Name} selected-name-url={contactUrl}
+                                            onremove={removeContact} is-value-selected={contactSelected}>
+                                        </c-input-lookup>
 
 
                                     </div>
                                     <div class="slds-col slds-size_1-of-3">
-                                        <lightning-input 
-                                            label="Contact Email" 
-                                            value={order.Contact__r.Email} 
-                                            disabled>
+                                        <lightning-input label="Contact Email" value={order.Contact__r.Email} disabled>
                                         </lightning-input>
                                     </div>
                                     <div class="slds-col slds-size_1-of-3">
-                                        <lightning-input 
-                                            label="Contact Phone" 
-                                            value={order.Contact__r.Phone} 
-                                            disabled>
+                                        <lightning-input label="Contact Phone" value={order.Contact__r.Phone} disabled>
                                         </lightning-input>
                                     </div>
                                 </div>
@@ -108,24 +93,15 @@
                                         <div class="slds-m-bottom_x-small">
                                             <span class="slds-form-element__label">Bill To</span>
                                         </div>
-                                        <c-input-lookup 
-                                            obj-name="Address__c"
-                                            search-placeholder="Search..."
-                                            icon-name="standard:address"
-                                            onlookupselected={selectBillTo}
-                                            qry={billToFilter}
-                                            selected-value={order.Bill_To_Address__c}
-                                            selected-name={order.Bill_To_Address__r.Name}
-                                            selected-name-url={billToUrl}
-                                             onremove={removeBillTo}
-                                            is-value-selected={billToSelected}>
+                                        <c-input-lookup obj-name="Address__c" search-placeholder="Search..."
+                                            icon-name="standard:address" onlookupselected={selectBillTo}
+                                            qry={billToFilter} selected-value={order.Bill_To_Address__c}
+                                            selected-name={order.Bill_To_Address__r.Name} selected-name-url={billToUrl}
+                                            onremove={removeBillTo} is-value-selected={billToSelected}>
                                         </c-input-lookup>
 
 
-                                        <lightning-textarea
-                                            class="slds-m-top_x-small"
-                                            value={billToAddFull}
-                                            disabled>
+                                        <lightning-textarea class="slds-m-top_x-small" value={billToAddFull} disabled>
                                         </lightning-textarea>
                                     </div>
 
@@ -133,24 +109,15 @@
                                         <div class="slds-m-bottom_x-small">
                                             <span class="slds-form-element__label">Ship To</span>
                                         </div>
-                                        <c-input-lookup 
-                                            obj-name="Address__c"
-                                            search-placeholder="Search..."
-                                            icon-name="standard:address"
-                                            onlookupselected={selectShipTo}
-                                            qry={shipToFilter}
-                                            selected-value={order.Ship_To_Address__c}
-                                            selected-name={order.Ship_To_Address__r.Name}
-                                            selected-name-url={shipToUrl}
-                                            onremove={removeShipTo}
-                                            is-value-selected={shipToSelected}>
+                                        <c-input-lookup obj-name="Address__c" search-placeholder="Search..."
+                                            icon-name="standard:address" onlookupselected={selectShipTo}
+                                            qry={shipToFilter} selected-value={order.Ship_To_Address__c}
+                                            selected-name={order.Ship_To_Address__r.Name} selected-name-url={shipToUrl}
+                                            onremove={removeShipTo} is-value-selected={shipToSelected}>
                                         </c-input-lookup>
 
 
-                                        <lightning-textarea
-                                            class="slds-m-top_x-small"
-                                            value={shipToAddFull}
-                                            disabled>
+                                        <lightning-textarea class="slds-m-top_x-small" value={shipToAddFull} disabled>
                                         </lightning-textarea>
                                     </div>
                                 </div>
@@ -175,9 +142,8 @@
                             </div>
 
                             <lightning-button-icon icon-name={orderDetailsChevronIcon}
-                                                   alternative-text="Toggle Order Details"
-                                                   variant="border-filled"
-                                                   onclick={toggleOrderDetails}>
+                                alternative-text="Toggle Order Details" variant="border-filled"
+                                onclick={toggleOrderDetails}>
                             </lightning-button-icon>
                         </header>
 
@@ -188,16 +154,11 @@
                                     <!-- Row 1 -->
                                     <div class="slds-col slds-size_1-of-3">
                                         <span class="slds-form-element__label">Order Profile</span>
-                                        <c-input-lookup 
-                                            obj-name="Profiling__c"
-                                            search-placeholder="Search..."
-                                            icon-name="standard:user_role"
-                                            onlookupselected={selectOrderProfile}
-                                            qry={orderProfileFilter}
-                                            selected-value={order.Order_Profile__c}
+                                        <c-input-lookup obj-name="Profiling__c" search-placeholder="Search..."
+                                            icon-name="standard:user_role" onlookupselected={selectOrderProfile}
+                                            qry={orderProfileFilter} selected-value={order.Order_Profile__c}
                                             selected-name={order.Order_Profile__r.Name}
-                                            selected-name-url={orderProfileUrl}
-                                            onremove={removeOrderProfile}
+                                            selected-name-url={orderProfileUrl} onremove={removeOrderProfile}
                                             is-value-selected={orderProfileSelected}>
                                         </c-input-lookup>
 
@@ -205,40 +166,29 @@
 
                                     <div class="slds-col slds-size_1-of-3">
                                         <span class="slds-form-element__label">Employee</span>
-                                       <c-input-lookup 
-                                            obj-name="Employees__c"
-                                            search-placeholder="Search..."
-                                            icon-name="standard:user"
-                                            onlookupselected={selectEmployee}
-                                            qry={employeeFilter}
-                                            selected-value={order.Employee__c}
-                                            selected-name={order.Employee__r.Name}
-                                            selected-name-url={employeeUrl}
-                                            onremove={removeEmployee}
-                                            is-value-selected={employeeSelected}>
+                                        <c-input-lookup obj-name="Employees__c" search-placeholder="Search..."
+                                            icon-name="standard:user" onlookupselected={selectEmployee}
+                                            qry={employeeFilter} selected-value={order.Employee__c}
+                                            selected-name={order.Employee__r.Name} selected-name-url={employeeUrl}
+                                            onremove={removeEmployee} is-value-selected={employeeSelected}>
                                         </c-input-lookup>
 
                                     </div>
 
                                     <div class="slds-col slds-size_1-of-3">
-                                        <lightning-combobox
-                                            label="Order Currency"
-                                            value={order.CurrencyIsoCode}
-                                            options={allCurrencies}
-                                            onchange={handleCurrency}>
+                                        <lightning-combobox label="Order Currency" value={order.CurrencyIsoCode}
+                                            options={allCurrencies} onchange={handleCurrency}>
                                         </lightning-combobox>
                                     </div>
 
                                     <!-- Row 2 -->
                                     <div class="slds-col slds-size_1-of-3">
-                                        <lightning-input 
-                                            label="Payment Status"
-                                            value={order.Payments_Status__c}
+                                        <lightning-input label="Payment Status" value={order.Payments_Status__c}
                                             disabled>
                                         </lightning-input>
                                     </div>
 
-                                    <div class="slds-col slds-size_1-of-3">
+                                    <!-- <div class="slds-col slds-size_1-of-3">
                                         <span class="slds-form-element__label">Project</span>
                                         <c-input-lookup 
                                             obj-name="Project__c"
@@ -249,84 +199,67 @@
                                             onremove={removeProject}
                                             selected-name={order.Project__r.Name}>
                                         </c-input-lookup>
-                                    </div>
+                                    </div> -->
 
                                     <div class="slds-col slds-size_1-of-3">
-                                        <lightning-input 
-                                            type="date" 
-                                            label="Order Start Date" 
-                                            value={order.EffectiveDate}
-                                            onchange={handleEffDate}>
+                                        <lightning-input type="date" label="Order Start Date"
+                                            value={order.EffectiveDate} onchange={handleEffDate}>
                                         </lightning-input>
                                     </div>
 
                                     <!-- Row 3 -->
                                     <div class="slds-col slds-size_1-of-3">
-                                        <lightning-input 
-                                            type="date" 
-                                            label="Expected Date" 
-                                            value={order.Expected_Date__c}
-                                            onchange={handleExpDate}>
+                                        <lightning-input type="date" label="Expected Date"
+                                            value={order.Expected_Date__c} onchange={handleExpDate}>
                                         </lightning-input>
                                     </div>
 
                                     <div class="slds-col slds-size_1-of-3">
-                                        <lightning-combobox
-                                            label="Shipment Type"
-                                            value={order.Shipment_Type__c}
-                                            options={shipmentType}
-                                            onchange={handleChangeShipment}>
+                                        <lightning-combobox label="Shipment Type" value={order.Shipment_Type__c}
+                                            options={shipmentType} onchange={handleChangeShipment}>
                                         </lightning-combobox>
                                     </div>
 
                                     <div class="slds-col slds-size_1-of-3">
-                                        <lightning-combobox
-                                            label="Status"
-                                            value={order.Status}
-                                            options={ordStatus}
+                                        <lightning-combobox label="Status" value={order.Status} options={ordStatus}
                                             onchange={handleChangeStatus}>
                                         </lightning-combobox>
+                                    </div>
+                                    <div class="slds-col slds-size_1-of-3">
+                                        <lightning-input
+                                            label="Shipment Handling Cost"
+                                            type="number"
+                                            formatter="currency"
+                                            step="0.01"
+                                            value={order.Shipment_Handling_Cost__c}
+                                            onchange={handleShipmentHandlingCostChange}>
+                                        </lightning-input>
                                     </div>
 
                                     <!-- Row 4 -->
                                     <div class="slds-col slds-size_1-of-1">
-                                        <lightning-input 
-                                            label="Order Reference" 
-                                            value={order.OrderReferenceNumber}
+                                        <lightning-input label="Order Reference" value={order.OrderReferenceNumber}
                                             oncommit={handleOrdRef}>
                                         </lightning-input>
                                     </div>
 
                                     <div class="slds-col slds-size_1-of-1">
-                                        <lightning-textarea 
-                                            label="Special Instructions" 
-                                            value={order.Special_Instructions__c}
-                                            onblur={handleOrdDescription}>
+                                        <lightning-textarea label="Special Instructions"
+                                            value={order.Special_Instructions__c} onblur={handleOrdDescription}>
                                         </lightning-textarea>
                                     </div>
                                 </div>
 
                                 <!-- Checkboxes -->
                                 <div class="slds-grid slds-m-top_small slds-grid_vertical-align-center">
-                                    <lightning-input 
-                                        type="checkbox" 
-                                        label="Is Back Order"
-                                        checked={order.Is_Back_Order__c}
-                                        disabled
-                                        class="slds-m-right_large">
+                                    <lightning-input type="checkbox" label="Is Back Order"
+                                        checked={order.Is_Back_Order__c} disabled class="slds-m-right_large">
                                     </lightning-input>
-                                    <lightning-input 
-                                        type="checkbox" 
-                                        label="Is Pre Order"
-                                        checked={order.Is_Pre_Order__c}
-                                        disabled
-                                        class="slds-m-right_large">
+                                    <lightning-input type="checkbox" label="Is Pre Order"
+                                        checked={order.Is_Pre_Order__c} disabled class="slds-m-right_large">
                                     </lightning-input>
-                                    <lightning-input 
-                                        type="checkbox" 
-                                        label="Issue Invoice"
-                                        checked={order.Issue_Invoice__c}
-                                        onchange={handleIssInv}>
+                                    <lightning-input type="checkbox" label="Issue Invoice"
+                                        checked={order.Issue_Invoice__c} onchange={handleIssInv} disabled>
                                     </lightning-input>
                                 </div>
                             </div>
@@ -334,7 +267,8 @@
                     </section>
 
                     <!-- PRODUCTS CARD (structure kept, no dummy rows) -->
-                    <section class="slds-card modern-card slds-m-top_large slds-m-bottom_large slds-p-around_small" style="padding:10px;">
+                    <section class="slds-card modern-card slds-m-top_large slds-m-bottom_large slds-p-around_small"
+                        style="padding:10px;">
 
                         <header
                             class="slds-card__header slds-grid slds-grid_align-spread slds-grid_vertical-align-center collapsible-header">
@@ -350,28 +284,24 @@
                             </div>
 
                             <div class="slds-grid slds-grid_vertical-align-center slds-grid_align-spread">
-                                <lightning-button label="Add Product" variant="brand"
-                                                  class="slds-m-right_small"
-                                                  onclick={showAddProductsPage}>
+                                <lightning-button label="Add Product" variant="brand" class="slds-m-right_small"
+                                    onclick={showAddProductsPage}>
                                 </lightning-button>
                                 <lightning-button-icon icon-name={productsChevronIcon}
-                                                       alternative-text="Toggle Products"
-                                                       variant="border-filled"
-                                                       onclick={toggleProducts}>
+                                    alternative-text="Toggle Products" variant="border-filled" onclick={toggleProducts}>
                                 </lightning-button-icon>
                             </div>
                         </header>
 
                         <template if:true={showProducts}>
                             <div class="slds-card__body slds-p-around_medium">
-                                 <div class="slds-m-bottom_medium">
-                                   <div class="mini-card-container">
-                                         <div class="mini-card">
+                                <div class="slds-m-bottom_medium">
+                                    <div class="mini-card-container">
+                                        <div class="mini-card">
                                             <span class="label">Sub Total</span>
                                             <span class="value">
                                                 <lightning-formatted-number value={order.Sub_Total__c}
-                                                    format-style="currency"
-                                                    currency-code={order.CurrencyIsoCode}
+                                                    format-style="currency" currency-code={order.CurrencyIsoCode}
                                                     currency-display-as="symbol">
                                                 </lightning-formatted-number>
                                             </span>
@@ -381,8 +311,7 @@
                                             <span class="label">Taxes</span>
                                             <span class="value">
                                                 <lightning-formatted-number value={order.Total_Tax_Amount__c}
-                                                    format-style="currency"
-                                                    currency-code={order.CurrencyIsoCode}
+                                                    format-style="currency" currency-code={order.CurrencyIsoCode}
                                                     currency-display-as="symbol">
                                                 </lightning-formatted-number>
                                             </span>
@@ -392,8 +321,7 @@
                                             <span class="label">Discounts</span>
                                             <span class="value">
                                                 <lightning-formatted-number value={order.TotalDiscount__c}
-                                                    format-style="currency"
-                                                    currency-code={order.CurrencyIsoCode}
+                                                    format-style="currency" currency-code={order.CurrencyIsoCode}
                                                     currency-display-as="symbol">
                                                 </lightning-formatted-number>
                                             </span>
@@ -403,8 +331,7 @@
                                             <span class="label">Total Amount</span>
                                             <span class="value">
                                                 <lightning-formatted-number value={order.Order_Amount__c}
-                                                    format-style="currency"
-                                                    currency-code={order.CurrencyIsoCode}
+                                                    format-style="currency" currency-code={order.CurrencyIsoCode}
                                                     currency-display-as="symbol">
                                                 </lightning-formatted-number>
                                             </span>
@@ -414,8 +341,7 @@
                                             <span class="label">Total Due</span>
                                             <span class="value">
                                                 <lightning-formatted-number value={order.Due_Amount__c}
-                                                    format-style="currency"
-                                                    currency-code={order.CurrencyIsoCode}
+                                                    format-style="currency" currency-code={order.CurrencyIsoCode}
                                                     currency-display-as="symbol">
                                                 </lightning-formatted-number>
                                             </span>
@@ -423,134 +349,145 @@
 
                                     </div>
                                 </div>
-                                <table class="slds-table slds-table_bordered modern-table">
-                                      <thead>
-                                        <tr class="slds-text-title_caps">
-                                           
-                                            <th scope="col">Product</th>
-                                            <th scope="col">Price/Unit</th>
-                                            <th scope="col">Qty</th>
-                                            <th scope="col">Discount</th>
-                                            <th scope="col">Tax</th>
-                                            <th scope="col">Net</th>
-                                            <th scope="col">Gross</th>
-                                            <th scope="col">Description</th>
-                                             <th></th>
-                                           
+                                <table class="slds-table slds-table_bordered slds-table_fixed-layout modern-table">
+                                    <thead>
+                                        <tr> <!--class="slds-text-title_caps"-->
+                                            <th scope="col">
+                                                <div class="slds-truncate">
+                                                    Product
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate">
+                                                    Price/Unit
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate">
+                                                    Qty
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate">
+                                                    Discount
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate">
+                                                    Tax
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate">
+                                                    Net
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate">
+                                                    Gross
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                <div class="slds-truncate">
+                                                    Description
+                                                </div>
+                                            </th>
+                                            <th scope="col">
+                                                &nbsp;
+                                            </th>
                                         </tr>
                                     </thead>
-
                                     <tbody>
-                                         <template if:true={selectedProducts.length} for:each={selectedProducts} for:item="prod" for:index="index">
+                                        <template if:true={selectedProducts.length} for:each={selectedProducts}
+                                            for:item="prod" for:index="index">
                                             <tr key={prod.keyId}>
-
-                                               
-                                                
-                                               
                                                 <!-- PRODUCT -->
                                                 <td>
-                                                    <a onclick={openProductLink} data-index={index} class="blueActive">
-                                                        {prod.pbe.Product2.Name}
-                                                    </a>
+                                                    <div class="slds-truncate" title='{prod.pbe.Product2.Name}'>
+                                                        <a onclick={openProductLink} data-index={index}
+                                                            class="blueActive">
+                                                            {prod.pbe.Product2.Name}
+                                                        </a>
+                                                    </div>
                                                 </td>
-
                                                 <!-- PRICE -->
                                                 <td>
-                                                    <lightning-formatted-number
-                                                        value={prod.pbe.UnitPrice}
-                                                        format-style="currency"
-                                                        currency-code={order.CurrencyIsoCode}>
+                                                    <lightning-formatted-number value={prod.pbe.UnitPrice}
+                                                        format-style="currency" currency-code={order.CurrencyIsoCode}>
                                                     </lightning-formatted-number>
                                                 </td>
-
                                                 <!-- QTY -->
                                                 <td>
-                                                    <lightning-formatted-number
-                                                        value={prod.quantity}
+                                                    <lightning-formatted-number value={prod.quantity}
                                                         maximum-fraction-digits="3">
                                                     </lightning-formatted-number>
                                                 </td>
-
                                                 <!-- DISCOUNT -->
                                                 <td>
-                                                    <lightning-formatted-number
-                                                        value={prod.totalDiscount}
-                                                        format-style="currency"
-                                                        currency-code={order.CurrencyIsoCode}>
+                                                    <lightning-formatted-number value={prod.totalDiscount}
+                                                        format-style="currency" currency-code={order.CurrencyIsoCode}>
                                                     </lightning-formatted-number>
                                                 </td>
-
                                                 <!-- TAX -->
                                                 <td>
-                                                    <lightning-formatted-number
-                                                        value={prod.totalTaxAmount}
-                                                        format-style="currency"
-                                                        currency-code={order.CurrencyIsoCode}>
+                                                    <lightning-formatted-number value={prod.totalTaxAmount}
+                                                        format-style="currency" currency-code={order.CurrencyIsoCode}>
                                                     </lightning-formatted-number>
                                                 </td>
-
                                                 <!-- NET -->
                                                 <td>
-                                                    <lightning-formatted-number
-                                                        value={prod.NetAmount}
-                                                        format-style="currency"
-                                                        currency-code={order.CurrencyIsoCode}>
+                                                    <lightning-formatted-number value={prod.NetAmount}
+                                                        format-style="currency" currency-code={order.CurrencyIsoCode}>
                                                     </lightning-formatted-number>
                                                 </td>
-
                                                 <!-- GROSS -->
                                                 <td>
-                                                    <lightning-formatted-number
-                                                        value={prod.GrossAmount}
-                                                        format-style="currency"
-                                                        currency-code={order.CurrencyIsoCode}>
+                                                    <lightning-formatted-number value={prod.GrossAmount}
+                                                        format-style="currency" currency-code={order.CurrencyIsoCode}>
                                                     </lightning-formatted-number>
                                                 </td>
-
                                                 <!-- DESCRIPTION -->
                                                 <td class="desc-col">
-                                                    <lightning-formatted-text value={prod.pbe.Product2.Description}></lightning-formatted-text>
+                                                    <div class="slds-truncate" title='{prod.pbe.Product2.Description}'>
+                                                        <lightning-formatted-text
+                                                            value={prod.pbe.Product2.Description}></lightning-formatted-text>
+                                                    </div>
                                                 </td>
                                                 <td>
-                                                    <lightning-icon icon-name="action:delete" alternative-text="Remove Item" title="Delete"
-                                                    size="xx-small" onclick={openDeleteModal} class="slds-m-right_small cursor-pointer" 
-                                                    data-index={index}></lightning-icon>  <!--{iconDisableOrNot}-->
-                                                     <lightning-icon icon-name="action:edit"
-                                                        size="xx-small" class="cursor-pointer"
-                                                        onclick={editProduct}
+                                                    <lightning-icon icon-name="action:delete"
+                                                        alternative-text="Remove Item" title="Delete" size="xx-small"
+                                                        onclick={openDeleteModal}
+                                                        class="slds-m-right_small cursor-pointer"
+                                                        data-index={index}></lightning-icon>
+                                                    <!--{iconDisableOrNot}-->
+                                                    <lightning-icon icon-name="action:edit" size="xx-small"
+                                                        class="cursor-pointer" onclick={editProduct}
                                                         data-index={index}></lightning-icon>
                                                 </td>
-
-
                                             </tr>
                                         </template>
-
                                         <template if:false={selectedProducts.length}>
-                                           <tr>
-                                            <td colspan="11">
-                                                <div class="slds-box slds-theme_shade slds-text-align_center slds-text-color_weak slds-p-around_medium">
-                                                    No products added yet.
-                                                </div>
-                                            </td>
-                                        </tr>
-
-
+                                            <tr>
+                                                <td colspan="9">
+                                                    <div
+                                                        class="slds-box slds-theme_shade slds-text-align_center slds-text-color_weak slds-p-around_medium">
+                                                        No products added yet.
+                                                    </div>
+                                                </td>
+                                            </tr>
                                         </template>
                                     </tbody>
-
                                 </table>
-                               
 
-                                <div class="slds-grid slds-m-top_medium slds-grid_align-center slds-grid_vertical-align-center">
+
+                                <div
+                                    class="slds-grid slds-m-top_medium slds-grid_align-center slds-grid_vertical-align-center">
                                     <div>
-                                        <lightning-button label="Reset"
-                                                        class="slds-m-right_small"
-                                                        onclick={handleRefreshComponent}>
+                                        <lightning-button label="Reset" class="slds-m-right_small"
+                                            onclick={handleRefreshComponent}>
                                         </lightning-button>
 
-                                        <lightning-button label="Save"
-                                                        variant="brand"
-                                                        onclick={saveOrder}>
+                                        <lightning-button label="Save" variant="brand" onclick={saveOrder}>
                                         </lightning-button>
                                     </div>
                                 </div>
@@ -559,143 +496,151 @@
                         </template>
                     </section>
                     <!-- ADD PRODUCTS MODAL -->
-                <template if:true={showAddProductsModal}>
-                    <section role="dialog" tabindex="-1" aria-modal="true" class="slds-modal slds-fade-in-open slds-modal_large">
-                        <div class="slds-modal__container">
+                    <template if:true={showAddProductsModal}>
+                        <section role="dialog" tabindex="-1" aria-modal="true"
+                            class="slds-modal slds-fade-in-open slds-modal_large">
+                            <div class="slds-modal__container">
 
-                            <header class="slds-modal__header">
-                                <h2 class="slds-text-heading_medium">Add Products</h2>
-                            </header>
-                           
-                            <template if:true={errorList.length}>
-                                 <div class="custom-center-toast">
-                                <div class="slds-notify slds-notify_toast slds-theme_warning slds-m-bottom_small" role="status">
+                                <header class="slds-modal__header">
+                                    <h2 class="slds-text-heading_medium">Add Products</h2>
+                                </header>
 
-                                    <span class="slds-assistive-text">Warning</span>
+                                <template if:true={errorList.length}>
+                                    <div class="custom-center-toast">
+                                        <div class="slds-notify slds-notify_toast slds-theme_warning slds-m-bottom_small"
+                                            role="status">
 
-                                    <div class="slds-notify__content">
-                                        <h2 class="slds-text-heading_small slds-p-bottom_xx-small">
-                                            Please fix the following:
-                                        </h2>
+                                            <span class="slds-assistive-text">Warning</span>
 
-                                        <template for:each={errorList} for:item="err">
-                                            <div key={err}>• {err}</div>
-                                        </template>
+                                            <div class="slds-notify__content">
+                                                <h2 class="slds-text-heading_small slds-p-bottom_xx-small">
+                                                    Please fix the following:
+                                                </h2>
+
+                                                <template for:each={errorList} for:item="err">
+                                                    <div key={err}>• {err}</div>
+                                                </template>
+                                            </div>
+
+                                            <button
+                                                class="slds-button slds-button_icon slds-button_icon-inverse slds-notify__close"
+                                                title="Close" onclick={handleClose}>
+                                                <lightning-icon icon-name="utility:close" size="small"
+                                                    variant="inverse"></lightning-icon>
+                                                <span class="slds-assistive-text">Dismiss</span>
+                                            </button>
+
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <div class="slds-modal__content slds-p-around_medium addingProductsection"
+                                    style="position: relative;">
+
+                                    <template if:true={modalSpinner}>
+                                        <lightning-spinner alternative-text="Loading..." size="medium" variant="brand">
+                                        </lightning-spinner>
+                                    </template>
+
+                                    <div class="slds-m-bottom_small" style="background-color: white; z-index: 20;">
+                                        <lightning-input type="search" placeholder="Search Products..."
+                                            value={searchItem} onchange={fetchProducts}>
+                                        </lightning-input>
                                     </div>
 
-                                    <button class="slds-button slds-button_icon slds-button_icon-inverse slds-notify__close"
-                                            title="Close" onclick={handleClose}>
-                                        <lightning-icon icon-name="utility:close" size="small" variant="inverse"></lightning-icon>
-                                        <span class="slds-assistive-text">Dismiss</span>
-                                    </button>
+                                    <div class="table-scroll-container tableContent" style="max-height: 60vh; overflow-y: auto;">
 
+                                        <template if:true={listOfProducts}>
+                                            <table class="slds-table slds-table_bordered slds-table_fixed-layout" style="padding-bottom: 10vh;">
+                                                <thead>
+                                                    <tr>
+                                                        <th width="5%"></th>
+                                                        <th>Product</th>
+                                                        <th>Stock</th>
+                                                        <th width="15%">Distribution Channel</th>
+                                                        <th>Price/Unit</th>
+                                                        <th>Qty</th>
+                                                        <th>Discount %</th>
+                                                        <th>Description</th>
+                                                    </tr>
+                                                </thead>
+
+                                                <tbody>
+                                                    <template for:each={listOfProducts} for:item="prod"
+                                                        for:index="index">
+                                                        <tr key={prod.pbe.Product2.Id}>
+                                                            <td>
+                                                                <lightning-input type="checkbox"
+                                                                    checked={prod.checkSelected} data-index={index}
+                                                                    onchange={handleCheckbox}>
+                                                                </lightning-input>
+                                                            </td>
+                                                            <td>
+                                                                <div class="slds-truncate"
+                                                                    title={prod.pbe.Product2.Name}>
+                                                                    {prod.pbe.Product2.Name}
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <span class={prod.stockClass}>
+                                                                    <span class="stock-pill__dot"></span>
+                                                                    {prod.stock}
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                <lightning-combobox name="dcSelect"
+                                                                    variant="label-hidden" value={prod.selectedDC}
+                                                                    placeholder="Select DC" options={dcOptions}
+                                                                    onchange={handleDCChange} data-index={index}>
+                                                                </lightning-combobox>
+                                                            </td>
+                                                            <td>
+                                                                <lightning-input type="number" formatter="currency"
+                                                                    currency-code={order.CurrencyIsoCode}
+                                                                    value={prod.pbe.UnitPrice} step=".0001"
+                                                                    data-index={index} onchange={handleUnitPrice}>
+                                                                </lightning-input>
+                                                            </td>
+                                                            <td>
+                                                                <lightning-input type="number" value={prod.quantity}
+                                                                    data-index={index} onchange={handleQuantity}>
+                                                                </lightning-input>
+                                                            </td>
+                                                            <td>
+                                                                <lightning-input type="number"
+                                                                    value={prod.discountPercent} data-index={index}
+                                                                    onchange={handleDiscount}>
+                                                                </lightning-input>
+                                                            </td>
+                                                            <td>
+                                                                <lightning-textarea value={prod.description}
+                                                                    data-index={index} onchange={handleDescription}>
+                                                                </lightning-textarea>
+                                                            </td>
+                                                        </tr>
+                                                    </template>
+                                                </tbody>
+                                            </table>
+                                        </template>
+
+                                        <template if:false={listOfProducts}>
+                                            <div class="slds-p-around_medium">No products found.</div>
+                                        </template>
+                                    </div>
                                 </div>
-                                </div>
-                            </template>
-                            
 
-
-                            <div class="slds-modal__content slds-p-around_medium modal-scroll">
-
-                                <lightning-input 
-                                    type="search"
-                                    placeholder="Search Products..."
-                                    value={searchItem}
-                                    onchange={fetchProducts}>
-                                </lightning-input>
-
-                                <template if:true={listOfProducts}>
-                                    <table class="slds-table slds-table_bordered slds-m-top_small">
-                                        <thead>
-                                            <tr>
-                                                <th></th>
-                                                <th>Product</th>
-                                                <th>Stock</th>
-                                                <th>Price/Unit</th>
-                                                <th>Qty</th>
-                                                <th>Discount/Unit</th>
-                                                <th>Description</th>
-                                            </tr>
-                                        </thead>
-
-                                        <tbody>
-                                            <template for:each={listOfProducts} for:item="prod" for:index="index">
-                                                <tr key={prod.pbe.Product2.Id}>
-                                                    <td>
-                                                        <lightning-input 
-                                                            type="checkbox"
-                                                            checked={prod.checkSelected}
-                                                            data-index={index}
-                                                            onchange={handleCheckbox}>
-                                                        </lightning-input>
-                                                    </td>
-                                                    <td>{prod.pbe.Product2.Name}</td>
-                                                  <td>
-                                                        <span class={prod.stockClass}>
-                                                            <span class="stock-pill__dot"></span>
-                                                            {prod.stock}
-                                                        </span>
-                                                    </td>
-
-
-
-                                                    <td>
-                                                       <lightning-input 
-                                                            type="number"
-                                                            formatter="currency"
-                                                            currency-code={order.CurrencyIsoCode}
-                                                            value={prod.pbe.UnitPrice}
-                                                            step=".0001"
-                                                            data-index={index}
-                                                            onchange={handleUnitPrice}>
-                                                        </lightning-input>
-
-                                                    </td>
-                                                    <td>
-                                                        <lightning-input 
-                                                            type="number"
-                                                            value={prod.quantity}
-                                                            data-index={index}
-                                                            onchange={handleQuantity}>
-                                                        </lightning-input>
-                                                    </td>
-                                                    <td>
-                                                        <lightning-input 
-                                                            type="number"
-                                                            value={prod.discountPercent}
-                                                            data-index={index}
-                                                            onchange={handleDiscount}>
-                                                        </lightning-input>
-                                                    </td>
-                                                    <td>
-                                                        <lightning-textarea
-                                                            value={prod.description}
-                                                            data-index={index}
-                                                            onchange={handleDescription}>
-                                                        </lightning-textarea>
-                                                    </td>
-                                                </tr>
-                                            </template>
-                                        </tbody>
-                                    </table>
-                                </template>
-
-                                <template if:false={listOfProducts}>
-                                    <div>No products found.</div>
-                                </template>
+                                <footer class="slds-modal__footer slds-text-align_center">
+                                    <lightning-button label="Cancel" class="slds-m-right_small"
+                                        onclick={closeAddProducts}></lightning-button>
+                                    <lightning-button variant="brand" label="Add Products"
+                                        onclick={addProducts}></lightning-button>
+                                </footer>
 
                             </div>
+                        </section>
 
-                            <footer class="slds-modal__footer slds-text-align_center">
-                                <lightning-button label="Cancel" class="slds-m-right_small" onclick={closeAddProducts}></lightning-button>
-                                <lightning-button variant="brand" label="Add Products" onclick={addProducts}></lightning-button>
-                            </footer>
-
-                        </div>
-                    </section>
-
-                    <div class="slds-backdrop slds-backdrop_open"></div>
-                </template>
+                        <div class="slds-backdrop slds-backdrop_open"></div>
+                    </template>
 
 
                 </template>
@@ -703,58 +648,45 @@
         </div>
     </div>
     <!-- EDIT PRODUCT MODAL -->
-<template if:true={isEditOrderItem}>
-<section class="slds-modal slds-fade-in-open">
-    <div class="slds-modal__container">
+    <template if:true={isEditOrderItem}>
+        <section class="slds-modal slds-fade-in-open">
+            <div class="slds-modal__container">
 
-        <header class="slds-modal__header">
-            <h2 class="slds-text-heading_medium">Edit Product</h2>
-        </header>
+                <header class="slds-modal__header">
+                    <h2 class="slds-text-heading_medium">Edit Product</h2>
+                </header>
 
-        <div class="slds-modal__content slds-p-around_medium">
+                <div class="slds-modal__content slds-p-around_medium">
 
-            <lightning-input
-                label="Unit Price"
-                type="number"
-                value={orderItemToEdit.pbe.UnitPrice}
-                onchange={editUnitPrice}>
-            </lightning-input>
+                    <lightning-input label="Unit Price" type="number" value={orderItemToEdit.pbe.UnitPrice}
+                        onchange={editUnitPrice}>
+                    </lightning-input>
 
-            <lightning-input
-                class="slds-m-top_small"
-                label="Quantity"
-                type="number"
-                value={orderItemToEdit.quantity}
-                onchange={editQuantity}>
-            </lightning-input>
+                    <lightning-input class="slds-m-top_small" label="Quantity" type="number"
+                        value={orderItemToEdit.quantity} onchange={editQuantity}>
+                    </lightning-input>
 
-            <lightning-input
-                class="slds-m-top_small"
-                label="Discount"
-                type="number"
-                value={orderItemToEdit.discountPercent}
-                onchange={editDiscount}>
-            </lightning-input>
+                    <lightning-input class="slds-m-top_small" label="Discount %" type="number"
+                        value={orderItemToEdit.discountPercent} onchange={editDiscount}>
+                    </lightning-input>
 
-            <lightning-textarea
-                class="slds-m-top_small"
-                label="Description"
-                value={orderItemToEdit.pbe.Product2.Description}
-                onchange={editDescription}>
-            </lightning-textarea>
+                    <lightning-textarea class="slds-m-top_small" label="Description"
+                        value={orderItemToEdit.pbe.Product2.Description} onchange={editDescription}>
+                    </lightning-textarea>
 
-        </div>
+                </div>
 
-        <footer class="slds-modal__footer slds-text-align_center">
-            <lightning-button label="Cancel" class="slds-m-right_small" onclick={closeEditModal}></lightning-button>
-            <lightning-button variant="brand" label="Update" onclick={updateOrderItem}></lightning-button>
-        </footer>
+                <footer class="slds-modal__footer slds-text-align_center">
+                    <lightning-button label="Cancel" class="slds-m-right_small"
+                        onclick={closeEditModal}></lightning-button>
+                    <lightning-button variant="brand" label="Update" onclick={updateOrderItem}></lightning-button>
+                </footer>
 
-    </div>
-</section>
-<div class="slds-backdrop slds-backdrop_open"></div>
-</template>
- <!--Delete Order Item start-->
+            </div>
+        </section>
+        <div class="slds-backdrop slds-backdrop_open"></div>
+    </template>
+    <!--Delete Order Item start-->
     <template if:true={deleteConfirmation}>
         <section role="dialog" tabindex="-1" class="slds-modal slds-fade-in-open" aria-modal="true"
             aria-describedby="modal-content-id-1">
