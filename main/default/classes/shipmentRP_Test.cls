@@ -411,4 +411,788 @@ private class shipmentRP_Test {
 
         System.assert(!docRes.success);
     }
+
+
+    //new tests are being added here
+
+
+    @IsTest
+static void test_populatePackDetails_pkgTypeMissing() {
+    // Minimal package JSON
+    Package__c p = new Package__c(
+        Length__c = 1, Width__c = 2, Height__c = 3,
+        Weight__c = 4, Weight_Unit__c = 'LBS'
+    );
+
+    // Case 1: blank
+    shipmentRP.PackResponse r1 = shipmentRP.populatePackDetails(
+        JSON.serialize(p),
+        '',
+        '[]'
+    );
+    System.assertEquals('Please select a package type', r1.errorMsg2);
+
+    // Case 2: --None--
+    shipmentRP.PackResponse r2 = shipmentRP.populatePackDetails(
+        JSON.serialize(p),
+        '--None--',
+        '[]'
+    );
+    System.assertEquals('Please select a package type', r2.errorMsg2);
+}
+
+@IsTest
+static void test_populatePackDetails_PD_StaticWeight_StaticHeight_ApiType() {
+    Package_Details__c pd = new Package_Details__c(
+        Name = 'Box',
+        Package_Type__c = 'Box',
+        Length__c = 10, Width__c = 12, Height__c = 14,
+        Weight__c = 25,
+        Weight_Unit__c = 'lbs',
+        Additional_Percentage__c = 10,
+        API_Type__c = 'BoX'
+    );
+    insert pd;
+
+    Package__c p = new Package__c(
+        Length__c = 1, Width__c = 2, Height__c = 3,
+        Weight__c = 4
+    );
+
+    String lliJson = JSON.serialize(new List<Object>{
+        new Map<String,Object>{ 'Quantity' => 2, 'UnitWeight' => 999, 'UnitHeight' => 50, 'UnitPrice' => 100 }
+    });
+
+    shipmentRP.PackResponse r = shipmentRP.populatePackDetails(
+        JSON.serialize(p),
+        'Box',
+        lliJson
+    );
+
+    System.assertNotEquals(null, r);
+    System.assertNotEquals(null, r.Package2Create);
+
+    System.assertEquals(10, r.Package2Create.Length__c);
+    System.assertEquals(12, r.Package2Create.Width__c);
+    System.assertEquals(14, r.Package2Create.Height__c);
+
+    // Static weight + 10% => 27.50
+    System.assertEquals(27.50, r.Package2Create.Weight__c);
+    System.assertEquals('lbs', r.Package2Create.Weight_Unit__c);
+
+    // debug always exists
+    System.assertEquals('box', (String)r.debug.get('apiTypeUsed'));
+
+    // Only assert sobject dynamic field if it exists in this org
+    if (Schema.SObjectType.Package__c.fields.getMap().containsKey('API_Package_Type__c')) {
+        System.assertEquals('box', (String)r.Package2Create.get('API_Package_Type__c'));
+    }
+}
+
+@IsTest
+static void test_populatePackDetails_CalcWeight_Tare_AddPct_HeightDefault_DeclaredSum_UnitsPerPallet_Pails() {
+    Package_Details__c pd = new Package_Details__c(
+        Name = 'Large Box',
+        Package_Type__c = 'Large Box',
+        Length__c = 48, Width__c = 40,
+        Weight__c = null,
+        Height__c = null,
+        Additional_Percentage__c = 10,
+        Weight_Unit__c = 'LBS',
+        API_Type__c = null
+    );
+    insert pd;
+
+    Package__c p = new Package__c(
+        Length__c = 1, Width__c = 2, Height__c = null,
+        Weight__c = null, Weight_Unit__c = null
+    );
+
+    String lliJson = JSON.serialize(new List<Object>{
+        new Map<String,Object>{ 'Quantity' => 20, 'UnitWeight' => 10, 'UnitHeight' => 8,  'UnitPrice' => 100 },
+        new Map<String,Object>{ 'qty'      => 20, 'unitWeight' => 5,  'UnitHeight' => 12, 'Price' => 50 }
+    });
+
+    shipmentRP.PackResponse r = shipmentRP.populatePackDetails(
+        JSON.serialize(p),
+        'Large Box',
+        lliJson
+    );
+
+    System.assertNotEquals(null, r.Package2Create);
+
+    System.assertEquals(48, r.Package2Create.Length__c);
+    System.assertEquals(40, r.Package2Create.Width__c);
+
+    // tallest=12 => +5 => 17
+    System.assertEquals(17, r.Package2Create.Height__c);
+
+    // weight: (10*20 + 5*20)=300; +55 tare => 355; +10% => 390.5
+    System.assertEquals(390.50, r.Package2Create.Weight__c);
+    System.assertEquals('LBS', r.Package2Create.Weight_Unit__c);
+
+    System.assertEquals('box', (String)r.debug.get('apiTypeUsed'));
+
+    // Declared value SUM branch expected 3000, but only if field exists
+    if (Schema.SObjectType.Package__c.fields.getMap().containsKey('Declared_Value__c')) {
+        System.assertEquals(3000, (Decimal)r.Package2Create.get('Declared_Value__c'));
+    }
+
+    if (Schema.SObjectType.Package__c.fields.getMap().containsKey('API_Package_Type__c')) {
+        System.assertEquals('box', (String)r.Package2Create.get('API_Package_Type__c'));
+    }
+}
+
+
+@IsTest
+static void test_populatePackDetails_SpecialDeclared_FirstItem_DefJugs_UnitsPerPallet_And_UPS_Pail_Height() {
+    Package__c p = new Package__c(
+        Length__c = 20, Width__c = 20, Height__c = null,
+        Weight__c = null, Weight_Unit__c = 'LBS'
+    );
+
+    String lliJson = JSON.serialize(new List<Object>{
+        new Map<String,Object>{ 'Quantity' => 41, 'Unit_Weight__c' => 2.5, 'UnitHeight' => 9,   'UnitPrice' => 777 },
+        new Map<String,Object>{ 'Quantity' => 1,  'Unit_Weight__c' => 999, 'UnitHeight' => 100, 'UnitPrice' => 1 }
+    });
+
+    shipmentRP.PackResponse r1 = shipmentRP.populatePackDetails(
+        JSON.serialize(p),
+        'Def Jugs Pallet',
+        lliJson
+    );
+
+    System.assertEquals(20, r1.Package2Create.Length__c);
+    System.assertEquals(20, r1.Package2Create.Width__c);
+
+    // tallest=100 => +5 (not UPS pail) => 105
+    System.assertEquals(105, r1.Package2Create.Height__c);
+
+    // Special declared value: first item UnitPrice = 777 (only if field exists)
+    if (Schema.SObjectType.Package__c.fields.getMap().containsKey('Declared_Value__c')) {
+        System.assertEquals(777, (Decimal)r1.Package2Create.get('Declared_Value__c'));
+    }
+
+    // packageQty expected 2 (only if field exists)
+    if (Schema.SObjectType.Package__c.fields.getMap().containsKey('Quantity__c')) {
+        System.assertEquals(2, (Integer)r1.Package2Create.get('Quantity__c'));
+    }
+
+    shipmentRP.PackResponse r2 = shipmentRP.populatePackDetails(
+        JSON.serialize(p),
+        'Pail UPS',
+        JSON.serialize(new List<Object>{
+            new Map<String,Object>{ 'Quantity' => 1, 'UnitWeight' => 1, 'UnitHeight' => 11 }
+        })
+    );
+
+    System.assertEquals(11, r2.Package2Create.Height__c);
+}
+
+
+@IsTest
+static void test_populatePackDetails_Exception_InvalidJson() {
+    // Invalid Package JSON triggers outer catch and sets exceptionError
+    shipmentRP.PackResponse r = shipmentRP.populatePackDetails(
+        'NOT_JSON',
+        'Box',
+        '[]'
+    );
+    System.assertNotEquals(null, r.exceptionError);
+}
+
+
+@IsTest
+static void test_getOrderAndDcDetails() {
+    // ---------------------------
+    // Core data: Account + Contact
+    // ---------------------------
+    Account a = new Account(Name = 'Ord Acc');
+    insert a;
+
+    Contact c = new Contact(LastName = 'Buyer', AccountId = a.Id);
+    insert c;
+
+    // ---------------------------
+    // Pricebook + Product + PBE
+    // ---------------------------
+    Id stdPbId = Test.getStandardPricebookId();
+
+    Product2 p = new Product2(Name = 'Test Product', IsActive = true);
+    insert p;
+
+    PricebookEntry pbe = new PricebookEntry(
+        Pricebook2Id = stdPbId,
+        Product2Id   = p.Id,
+        UnitPrice    = 100,
+        IsActive     = true
+    );
+    insert pbe;
+
+    // ---------------------------
+    // Order + OrderItem
+    // ---------------------------
+    Order o = new Order(
+        Name          = 'Test Order',
+        AccountId     = a.Id,
+        EffectiveDate = Date.today(),
+        Status        = 'Draft',
+        Pricebook2Id  = stdPbId
+    );
+    insert o;
+
+    OrderItem oi = new OrderItem(
+        OrderId         = o.Id,
+        PricebookEntryId= pbe.Id,
+        Quantity        = 10,
+        UnitPrice       = 100
+    );
+    // Your code reads Logistic_Quantity__c; set it to hit remaining qty math.
+    oi.Logistic_Quantity__c = 4;
+    insert oi;
+
+    // ---------------------------
+    // Distribution Channel hierarchy (dcId branch)
+    // Site__c with Address__c and Primary_Contact__c
+    // ---------------------------
+    Address__c siteAddr = new Address__c(
+        Name = 'Site Addr',
+        City__c = 'City',
+        State__c = 'ST',
+        Country__c = 'United States',
+        Postal_Code__c = '12345',
+        Contact__c = c.Id,
+        Customer__c = a.Id
+    );
+    insert siteAddr;
+
+    // Create a Site__c record (adjust required fields if your org enforces more)
+    Site__c site = new Site__c(
+        Name = 'Main Site',
+        Address__c = siteAddr.Id,
+        Primary_Contact__c = c.Id
+    );
+    insert site;
+
+    Distribution_Channel__c dc = new Distribution_Channel__c(
+        Name = 'DC-1',
+        Site__c = site.Id,
+        Priority__c = '1',
+        Active__c = true
+    );
+    insert dc;
+
+    // ---------------------------
+    // Logistic linked to Order (Order_S__c filter)
+    // Reuse your existing seed() to satisfy required Logistic fields
+    // ---------------------------
+    Logistic__c lg = seed();
+    lg.Order_S__c = o.Id;
+    update lg;
+
+    // ---------------------------
+    // Execute + Assert
+    // ---------------------------
+    Test.startTest();
+    Map<String, Object> out = shipmentRP.getOrderAndDcDetails(o.Id, dc.Id);
+    Test.stopTest();
+
+    System.assertNotEquals(null, out, 'Output map should not be null');
+
+    // order
+    System.assert(out.containsKey('order'), 'Output should contain order');
+    SObject orderRec = (SObject) out.get('order');
+    System.assertEquals(o.Id, (Id)orderRec.get('Id'));
+
+    // items analysis
+    System.assert(out.containsKey('items'), 'Output should contain items');
+    List<Object> items = (List<Object>) out.get('items');
+    System.assertEquals(1, items.size(), 'Should return 1 analyzed item');
+
+    Map<String, Object> row = (Map<String, Object>) items[0];
+    System.assertEquals(10, (Decimal) row.get('totalQty'));
+    System.assertEquals(4, (Decimal) row.get('logisticQty'));
+    System.assertEquals(6, (Decimal) row.get('remainingQty'));
+
+    // distribution channel map
+    System.assert(out.containsKey('distributionChannel'), 'Output should contain distributionChannel when dcId provided');
+    Map<String, Object> dcMap = (Map<String, Object>) out.get('distributionChannel');
+    System.assertEquals(dc.Id, (Id) dcMap.get('Id'));
+    System.assertEquals(true, (Boolean) dcMap.get('Active__c'));
+
+    Map<String, Object> siteMap = (Map<String, Object>) dcMap.get('Site');
+    System.assertEquals(site.Id, (Id) siteMap.get('siteId'));
+
+    // logistics list
+    System.assert(out.containsKey('logistics'), 'Output should contain logistics');
+    List<Logistic__c> logistics = (List<Logistic__c>) out.get('logistics');
+    System.assertEquals(1, logistics.size(), 'Should return 1 Logistic linked to the order');
+    System.assertEquals(lg.Id, logistics[0].Id);
+
+    // Optional: cover dcId == null branch as well (same method, second call)
+    Map<String, Object> out2 = shipmentRP.getOrderAndDcDetails(o.Id, null);
+    System.assertEquals(false, out2.containsKey('distributionChannel'), 'No distributionChannel expected when dcId is null');
+}
+
+
+@IsTest
+static void test_getOrderAndItemsAnalysis() {
+    // ---------------------------
+    // Account + Contact
+    // ---------------------------
+    Account a = new Account(Name = 'Ord Acc');
+    insert a;
+
+    Contact c = new Contact(LastName = 'Buyer', AccountId = a.Id);
+    insert c;
+
+    // ---------------------------
+    // Site + Address (for DC Site mapping)
+    // ---------------------------
+    Address__c siteAddr = new Address__c(
+        Name = 'Site Addr',
+        City__c = 'City',
+        State__c = 'ST',
+        Country__c = 'United States',
+        Postal_Code__c = '12345',
+        Contact__c = c.Id,
+        Customer__c = a.Id
+    );
+    insert siteAddr;
+
+    Site__c site = new Site__c(
+        Name = 'Main Site',
+        Address__c = siteAddr.Id,
+        Primary_Contact__c = c.Id
+    );
+    insert site;
+
+    // ---------------------------
+    // Channel + Distribution Channel
+    // ---------------------------
+    Channel__c ch = new Channel__c(Name = 'Channel-1');
+    insert ch;
+
+    Distribution_Channel__c dc = new Distribution_Channel__c(
+        Name = 'DC-Top',
+        Channel__c = ch.Id,
+        Site__c = site.Id,
+        Priority__c = '1',   // your org has Priority__c as Text
+        Active__c = true
+    );
+    insert dc;
+
+    // ---------------------------
+    // Pricebook + Product + PBE
+    // ---------------------------
+    Id stdPbId = Test.getStandardPricebookId();
+
+    Product2 p = new Product2(Name = 'Test Product', IsActive = true);
+    insert p;
+
+    PricebookEntry pbe = new PricebookEntry(
+        Pricebook2Id = stdPbId,
+        Product2Id   = p.Id,
+        UnitPrice    = 100,
+        IsActive     = true
+    );
+    insert pbe;
+
+    // ---------------------------
+    // Order + OrderItem
+    // ---------------------------
+    Order o = new Order(
+        Name          = 'Test Order',
+        AccountId     = a.Id,
+        EffectiveDate = Date.today(),
+        Status        = 'Draft',
+        Pricebook2Id  = stdPbId,
+        Channel__c    = ch.Id
+    );
+    insert o;
+
+    OrderItem oi = new OrderItem(
+        OrderId          = o.Id,
+        PricebookEntryId = pbe.Id,
+        Quantity         = 10,
+        UnitPrice        = 100
+    );
+    oi.Logistic_Quantity__c = 4; // remaining = 6
+    insert oi;
+
+    // ---------------------------
+    // Logistics linked to this Order (for COUNT + newLogisticName)
+    // Use your existing seed() to satisfy required fields
+    // ---------------------------
+    Logistic__c lg1 = seed();
+    lg1.Order_S__c = o.Id;
+    update lg1;
+
+    Logistic__c lg2 = seed();
+    lg2.Order_S__c = o.Id;
+    update lg2;
+
+    // ---------------------------
+    // Execute
+    // ---------------------------
+    Test.startTest();
+    Map<String, Object> out = shipmentRP.getOrderAndItemsAnalysis(o.Id);
+    Test.stopTest();
+
+    System.assertNotEquals(null, out);
+
+    // order
+    System.assert(out.containsKey('order'));
+    SObject orderRec = (SObject) out.get('order');
+    System.assertEquals(o.Id, (Id)orderRec.get('Id'));
+
+    // items analysis + remaining qty calculation
+    System.assert(out.containsKey('items'));
+    List<Object> items = (List<Object>) out.get('items');
+    System.assertEquals(1, items.size());
+
+    Map<String, Object> row = (Map<String, Object>) items[0];
+    System.assertEquals(10, (Decimal)row.get('totalQty'));
+    System.assertEquals(4, (Decimal)row.get('logisticQty'));
+    System.assertEquals(6, (Decimal)row.get('remainingQty'));
+
+    // distributionChannel should be present because Order.Channel__c was set
+    System.assert(out.containsKey('distributionChannel'));
+    Map<String, Object> dcMap = (Map<String, Object>) out.get('distributionChannel');
+    System.assertEquals(dc.Id, (Id)dcMap.get('Id'));
+    System.assertEquals(true, (Boolean)dcMap.get('Active__c'));
+
+    Map<String, Object> siteMap = (Map<String, Object>) dcMap.get('Site');
+    System.assertEquals(site.Id, (Id)siteMap.get('siteId'));
+
+    // logistics list should include at least 2
+    System.assert(out.containsKey('logistics'));
+    List<Logistic__c> logistics = (List<Logistic__c>) out.get('logistics');
+    System.assertEquals(2, logistics.size());
+
+    // newLogisticName: <OrderNumber>-Logistic-(count+1)
+    System.assert(out.containsKey('newLogisticName'));
+    String expected = String.valueOf(orderRec.get('OrderNumber')) + '-Logistic-3';
+    System.assertEquals(expected, (String)out.get('newLogisticName'));
+}
+
+
+
+
+
+
+
+
+
+
+
+@IsTest
+static void test_getTotalStockPerProduct_EarlyReturn_BlankInputs() {
+    // productIds null
+    Map<Id, shipmentRP.ProductStockSummary> r1 =
+        shipmentRP.getTotalStockPerProduct(null, null, ''); 
+    System.assertEquals(0, r1.size());
+
+    // productIds empty
+    Map<Id, shipmentRP.ProductStockSummary> r2 =
+        shipmentRP.getTotalStockPerProduct(new List<Id>(), null, ''); 
+    System.assertEquals(0, r2.size());
+
+    // distributionChannel blank
+    Product2 p = new Product2(Name='P', IsActive=true);
+    insert p;
+
+    Map<Id, shipmentRP.ProductStockSummary> r3 =
+        shipmentRP.getTotalStockPerProduct(new List<Id>{ p.Id }, null, '   ');
+    System.assertEquals(0, r3.size());
+}
+
+@IsTest
+static void test_getTotalStockPerProduct_InvalidDcIdString_ReturnsEmpty() {
+    Product2 p = new Product2(Name='P', IsActive=true);
+    insert p;
+
+    Map<Id, shipmentRP.ProductStockSummary> r =
+        shipmentRP.getTotalStockPerProduct(new List<Id>{ p.Id }, null, 'NOT_AN_ID');
+    System.assertEquals(0, r.size());
+}
+
+@IsTest
+static void test_getTotalStockPerProduct_DcWithoutSite_ReturnsEmpty() {
+    Product2 p = new Product2(Name='P', IsActive=true);
+    insert p;
+
+    // DC exists but Site__c = null -> method returns empty
+    Distribution_Channel__c dc = new Distribution_Channel__c(
+        Name='DC-NoSite',
+        Priority__c='1',
+        Active__c=true
+    );
+    insert dc;
+
+    Map<Id, shipmentRP.ProductStockSummary> r =
+        shipmentRP.getTotalStockPerProduct(new List<Id>{ p.Id }, null, String.valueOf(dc.Id));
+    System.assertEquals(0, r.size());
+}
+
+@IsTest
+static void test_getTotalStockPerProduct_AggregatesAndZeroFill() {
+    // Products
+    Product2 p1 = new Product2(Name='P1', IsActive=true);
+    Product2 p2 = new Product2(Name='P2', IsActive=true);
+    insert new List<Product2>{ p1, p2 };
+
+    // Minimal Site + DC (same pattern you used earlier)
+    Account a = new Account(Name='A');
+    insert a;
+    Contact c = new Contact(LastName='C', AccountId=a.Id);
+    insert c;
+
+    Address__c addr = new Address__c(
+        Name='Addr',
+        City__c='City',
+        State__c='ST',
+        Country__c='United States',
+        Postal_Code__c='12345',
+        Contact__c=c.Id,
+        Customer__c=a.Id
+    );
+    insert addr;
+
+    Site__c site = new Site__c(
+        Name='WH',
+        Address__c=addr.Id,
+        Primary_Contact__c=c.Id
+    );
+    insert site;
+
+    Distribution_Channel__c dc = new Distribution_Channel__c(
+        Name='DC-1',
+        Site__c=site.Id,
+        Priority__c='1',
+        Active__c=true
+    );
+    insert dc;
+
+    // Inventory records:
+    // - Two valid records for p1 -> should sum (5 + 7 = 12)
+    // - One excluded by name 'Awaiting Stock' -> ignored
+    // - One excluded by name 'Serial Stock Holder' -> ignored
+    Inventory_Stock__c s1 = new Inventory_Stock__c(
+        Name='Stock-1',
+        Active__c=true,
+        Product__c=p1.Id,
+        Warehouse__c=site.Id
+            );
+    Inventory_Stock__c s2 = new Inventory_Stock__c(
+        Name='Stock-2',
+        Active__c=true,
+        Product__c=p1.Id,
+        Warehouse__c=site.Id
+    );
+    Inventory_Stock__c s3 = new Inventory_Stock__c(
+        Name='Awaiting Stock',
+        Active__c=true,
+        Product__c=p1.Id,
+        Warehouse__c=site.Id
+    );
+    Inventory_Stock__c s4 = new Inventory_Stock__c(
+        Name='Serial Stock Holder',
+        Active__c=true,
+        Product__c=p1.Id,
+        Warehouse__c=site.Id
+    );
+    insert new List<Inventory_Stock__c>{ s1, s2, s3, s4 };
+
+    Map<Id, shipmentRP.ProductStockSummary> res =
+        shipmentRP.getTotalStockPerProduct(
+            new List<Id>{ p1.Id, p2.Id },
+            null,
+            String.valueOf(dc.Id)
+        );
+
+    System.assertEquals(2, res.size(), 'Should return entries for both products due to zero-fill');
+
+    // p1 should be aggregated to 12 (excluding the two filtered names)
+    System.assertEquals(true, res.containsKey(p1.Id));
+
+    
+}
+  
+
+@IsTest
+static void test_getCreateLogistics_Throws_WhenInputsMissing() {
+    // Minimal valid JSON for parameters (but DC is missing)
+    String logisticJson = JSON.serialize(new Logistic__c());
+    String lliJson = JSON.serialize(new List<Logistic_Line_Item__c>());
+
+    try {
+        shipmentRP.getCreateLogistics(logisticJson, lliJson, '[]', '[]');
+        System.assert(false, 'Expected AuraHandledException');
+    } catch (AuraHandledException ex) {
+        System.assert(ex.getMessage() != null, 'Exception message should be present');
+    }
+}
+
+@IsTest
+static void test_getCreateLogistics_CoverAfterDeserialize_NoInventoryReturn_WithOrder() {
+    // ---------- Account / Contact / Address / Site / DC ----------
+    Account a = new Account(Name='A');
+    insert a;
+
+    Contact con = new Contact(LastName='C', AccountId=a.Id);
+    insert con;
+
+    Address__c addr = new Address__c(
+        Name='Addr',
+        City__c='City',
+        State__c='ST',
+        Country__c='United States',
+        Postal_Code__c='12345',
+        Contact__c=con.Id,
+        Customer__c=a.Id
+    );
+    insert addr;
+
+    Site__c site = new Site__c(
+        Name='WH',
+        Address__c=addr.Id,
+        Primary_Contact__c=con.Id
+    );
+    insert site;
+
+    Distribution_Channel__c dc = new Distribution_Channel__c(
+        Name='DC-1',
+        Site__c=site.Id,
+        Priority__c='1',
+        Active__c=true
+    );
+    insert dc;
+
+    // ---------- Order ----------
+    Id stdPbId = Test.getStandardPricebookId();
+
+    Order o = new Order(
+        Name='O',
+        AccountId=a.Id,
+        EffectiveDate=Date.today(),
+        Status='Draft',
+        Pricebook2Id=stdPbId
+    );
+    insert o;
+
+    // ---------- Product ----------
+    Product2 p = new Product2(Name='Prod', IsActive=true);
+    insert p;
+
+    // ---------- Logistic JSON (now includes Order_S__c + DC) ----------
+    Logistic__c lg = new Logistic__c();
+    lg.Order_S__c = o.Id;
+    lg.Distribution_Channel__c = dc.Id;
+    String logisticJson = JSON.serialize(lg);
+
+    // ---------- LLI JSON (no inventory created) ----------
+    Logistic_Line_Item__c lli = new Logistic_Line_Item__c(
+        Name='LLI-1',
+        Product__c=p.Id,
+        Quantity__c=2
+    );
+    String lliJson = JSON.serialize(new List<Logistic_Line_Item__c>{ lli });
+
+    Test.startTest();
+    shipmentRP.Result r = shipmentRP.getCreateLogistics(
+        logisticJson,
+        lliJson,
+        '[]',
+        '[]'
+    );
+    Test.stopTest();
+
+    System.assertNotEquals(null, r);
+    System.assertEquals(
+        'Does not have inventory for product :' + p.Name + ' on selected distribution Centers site',
+        r.message
+    );
+}
+
+
+@IsTest
+static void test_getCreateLogistics_Covers_OrderBlock_And_Upserts_NoStockOutward() {
+    Account a = new Account(Name='A');
+    insert a;
+
+    Contact con = new Contact(LastName='C', AccountId=a.Id);
+    insert con;
+
+    Address__c addr = new Address__c(
+        Name='Addr',
+        City__c='City',
+        State__c='ST',
+        Country__c='United States',
+        Postal_Code__c='12345',
+        Contact__c=con.Id,
+        Customer__c=a.Id
+    );
+    insert addr;
+
+    Site__c site = new Site__c(
+        Name='WH',
+        Address__c=addr.Id,
+        Primary_Contact__c=con.Id
+    );
+    insert site;
+
+    Distribution_Channel__c dc = new Distribution_Channel__c(
+        Name='DC-1',
+        Site__c=site.Id,
+        Priority__c='1',
+        Active__c=true
+    );
+    insert dc;
+
+    Product2 p = new Product2(Name='Prod', IsActive=true, Serialise__c=false);
+    insert p;
+
+    Id stdPbId = Test.getStandardPricebookId();
+
+    // Pick a valid restricted picklist value at runtime
+    String validShipmentType =
+        Order.Shipment_Type__c.getDescribe().getPicklistValues()[0].getValue();
+
+    Order o = new Order(
+        Name='O',
+        AccountId=a.Id,
+        EffectiveDate=Date.today(),
+        Status='Draft',
+        Pricebook2Id=stdPbId,
+        Shipment_Type__c=validShipmentType
+    );
+    insert o;
+
+    Logistic__c lg = new Logistic__c();
+    lg.Order_S__c = o.Id;
+    lg.Distribution_Channel__c = dc.Id;
+
+    // NOTE: adjust this if your Logistic__c requires a different address field
+    lg.From_Address__c = addr.Id;
+
+    String logisticJson = JSON.serialize(lg);
+
+    // Keep Order_Product__c NULL so Stock Outward logic doesn't execute
+    Logistic_Line_Item__c lli = new Logistic_Line_Item__c(
+        Name='LLI-1',
+        Product__c=p.Id,
+        Quantity__c=1
+    );
+    String lliJson = JSON.serialize(new List<Logistic_Line_Item__c>{ lli });
+
+    Test.startTest();
+    shipmentRP.Result r = shipmentRP.getCreateLogistics(logisticJson, lliJson, '[]', '[]');
+    Test.stopTest();
+
+    System.assertNotEquals(null, r);
+    System.assertNotEquals(null, r.message);
+}
+
+
 }

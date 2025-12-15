@@ -1,5 +1,1725 @@
+// public with sharing class shipmentRP {
 public with sharing class testtemp {
-    public class ProductStockSummary {
+    private static final Set<String> FV_DOC_TYPES = new Set<String>{ 'bol', 'label', 'label-pdf' };
+  @AuraEnabled(cacheable=true)
+public static List<Logistic_Line_Item__c> getLogisticLineItems(Id logisticId) {
+
+    String lineItemFields = UtilClass.selectStarFromSObject('Logistic_Line_Item__c');
+
+    // Ensure no trailing comma
+    if (lineItemFields.endsWith(',')) {
+        lineItemFields = lineItemFields.substring(0, lineItemFields.length() - 1);
+    }
+
+    String soql =
+        'SELECT ' + lineItemFields + ', ' +
+        'Product__r.Id, ' +
+        'Product__r.Name, ' +
+        'Product__r.Weight__c, ' +
+        'Product__r.Height__c, ' +
+        'Product__r.Width__c, ' +
+        'Product__r.Length__c, ' +
+        'Logistic__r.Type__c, ' +
+        'Logistic__r.Order_S__c, ' +
+        'Logistic__r.Order_S__r.Name, ' +
+        'Logistic__r.Distribution_Channel__r.Name, ' +
+        'Logistic__r.Name ' +
+        'FROM Logistic_Line_Item__c ' +
+        'WHERE Logistic__c = :logisticId';
+
+    System.debug('🔥 Final LLI Query: ' + soql);
+
+    return Database.query(soql);
+}
+
+
+     @AuraEnabled(cacheable=true)
+    public static Package_Details__c getPackageDetails(String packageType) {
+        return [
+            SELECT Id,
+                   Name,
+                   Package_Type__c,
+                   Width__c,
+                   Height__c,
+                   
+                   Weight__c,
+                   Weight_Unit__c,
+                   Length__c
+            FROM Package_Details__c
+            WHERE Package_Type__c = :packageType
+            LIMIT 1
+        ];
+
+       }
+
+    // @AuraEnabled(cacheable=true)
+    // public static Order getOrderAddressInfo(Id orderId) {
+    //     return [
+    //         SELECT Id, Name, Bill_To_Address__c,
+    //                Bill_To_Address__r.Id,
+    //                Bill_To_Address__r.Name,
+    //                Ship_To_Address__c,
+    //                Ship_To_Address__r.Id,
+    //                Ship_To_Address__r.Name
+    //         FROM Order
+    //         WHERE Id = :orderId
+    //         LIMIT 1
+    //     ];
+    // }
+
+      // Wrapper returned to LWC
+    public class LogisticDetailsWrapper {
+        @AuraEnabled public Logistic__c logistic      { get; set; }
+        @AuraEnabled public Address__c fromAddress   { get; set; }
+        @AuraEnabled public Address__c toAddress     { get; set; }
+        @AuraEnabled public Account    account       { get; set; }
+        @AuraEnabled public Contact    contact       { get; set; }     // TO contact (priority)
+        @AuraEnabled public Contact    fromContact   { get; set; }     // FROM contact (priority)
+    }
+    @AuraEnabled(cacheable=true)
+public static LogisticDetailsWrapper getLogisticDetails(Id logisticId) {
+    LogisticDetailsWrapper wrap = new LogisticDetailsWrapper();
+    if (logisticId == null) return wrap;
+
+    // Fetch Logistic minimal
+    String logiFields = UtilClass.selectStarFromSObject('Logistic__c');
+        Logistic__c logi = (Logistic__c) Database.query(
+        'SELECT ' + logiFields + ', Account__r.Name ' +
+        'FROM Logistic__c WHERE Id = :logisticId LIMIT 1'
+    );
+
+    // Logistic__c logi = (Logistic__c) Database.query(
+    //     'SELECT Id, Name, From_Address__c, To_Address__c, Contact__c, From_Contact__c, Account__c, Account__r.Name, Order_S__c FROM Logistic__c WHERE Id=\'' + logisticId + '\' LIMIT 1'
+    // );
+
+    wrap.logistic = logi;
+    wrap.account  = logi.Account__r;
+
+    String addressFields = UtilClass.selectStarFromSObject('Address__c');
+
+    // 2️⃣ Fetch FROM Address if present
+    if (logi.From_Address__c != null) {
+        wrap.fromAddress = (Address__c) Database.query(
+            'SELECT ' + addressFields + ', Contact__r.Name, Contact__r.Email, Contact__r.Phone, Contact__r.Company__c, Customer__r.Company_txt__c FROM Address__c WHERE Id=\'' + logi.From_Address__c + '\' LIMIT 1'
+        );
+        wrap.fromContact = wrap.fromAddress?.Contact__r; // priority link
+    }
+
+    // 3️⃣ Fetch TO Address if present
+    if (logi.To_Address__c != null) {
+        wrap.toAddress = (Address__c) Database.query(
+            'SELECT ' + addressFields + ', Contact__r.Name, Contact__r.Email, Contact__r.Phone, Contact__r.Company__c, Customer__r.Company_txt__c FROM Address__c WHERE Id=\'' + logi.To_Address__c + '\' LIMIT 1'
+        );
+        wrap.Contact = wrap.toAddress?.Contact__r;
+    }
+
+    // 4️⃣ Fetch FROM Contact if explicitly present on Logistic
+    if (logi.From_Contact__c != null) {
+        wrap.fromContact = (Contact) Database.query(
+            'SELECT Id, Name, AccountId, Account.Name, Account.Phone, Account.Email__c, Email, Phone, Company__c,Company__r.Name FROM Contact WHERE Id=\'' + logi.From_Contact__c + '\' LIMIT 1'
+        );
+    }
+
+    // 5️⃣ Fetch TO Contact if explicitly present on Logistic
+    if (logi.Contact__c != null) {
+        wrap.Contact = (Contact) Database.query(
+            'SELECT Id, Name, AccountId, Account.Name, Account.Phone, Account.Email__c, Email, Phone, Company__c,Company__r.Name FROM Contact WHERE Id=\'' + logi.Contact__c + '\' LIMIT 1'
+        );
+    }
+
+    return wrap;
+}
+
+    
+@AuraEnabled(cacheable=true)
+public static FetchInitWrapper fetchInitialData() {
+    FetchInitWrapper data = new FetchInitWrapper();
+
+    // ----- Picklists from Package__c -----
+    data.dimensionOptions = getPicklistOptions(Package__c.Dimension__c);
+    data.weightUnitOptions = getPicklistOptions(Package__c.Weight_Unit__c);
+    data.freightClassOptions = getPicklistOptions(Package__c.freight_class__c);
+    data.hazardClassOptions = getPicklistOptions(Package__c.Primary_Hazard_Class__c);
+    data.packagingGroupOptions = getPicklistOptions(Package__c.Packaging_Group__c);
+    data.nmfcOptions = getPicklistOptions(Package__c.NMFC__c);
+
+    // ----- Dynamic Credential Query -----
+    Set<String> credNames = new Set<String>{
+       System.Label.FedexRestAPI,
+        System.Label.UPSRESTAPI,
+        System.Label.AxoltFreightView
+ 
+    };
+
+    String fields = UtilClass.selectStarFromSObject('Credentials__c');
+
+    String soql = 'SELECT ' + fields + ' FROM Credentials__c WHERE Name IN :credNames';
+    List<Credentials__c> creds = (List<Credentials__c>) Database.query(soql);
+
+    for (Credentials__c c : creds) {
+        data.credentialsMap.put(c.Name, c);
+    }
+
+    return data;
+}
+
+// ✅ Generic picklist fetch helper (no extra SOQL)
+public static List<SelectOptionWrapper> getPicklistOptions(Schema.SObjectField fieldRef){
+    List<SelectOptionWrapper> options = new List<SelectOptionWrapper>();
+    for (Schema.PicklistEntry p : fieldRef.getDescribe().getPicklistValues()) {
+        options.add(new SelectOptionWrapper(p.getValue(), p.getLabel()));
+    }
+    return options;
+}
+
+ @AuraEnabled
+    public static String getProvinceCode(String provinceName) {
+        List<Province_Codes__c> provinceList = new List<Province_Codes__c>();
+        if(String.isNotEmpty(provinceName)) {
+            provinceList = [Select Id, Name, Code__c, Province__c From Province_Codes__c Where Province__c =: provinceName Limit 1];
+        }
+        if(provinceList.size() > 0) return provinceList[0].Code__c; else return '';
+ 
+    }
+
+     @AuraEnabled
+    public static String getCountryCode(String countryName) {
+        List<Country_Codes__c> countryList = new  List<Country_Codes__c>();
+        if(String.isNotEmpty(countryName)) {
+            countryList = [Select Id, Name, Code__c, Country__c From Country_Codes__c Where Country__c =: countryName  Limit 1];
+        }
+        if(countryList.size() > 0) return countryList[0].Code__c; else return '';
+    }
+private static Map<String,Object> buildLocationMap(Address__c addr, Contact con,Boolean isParcel,Boolean isOrigin) {
+    Map<String,Object> m = new Map<String,Object>();
+    if (addr == null) addr = new Address__c();
+
+    // company fallback
+    String company =
+        (con != null && con.Company__r != null && !String.isBlank(con.Company__r.Name)) ? con.Company__r.Name :
+        (addr.Customer__r != null && !String.isBlank(addr.Customer__r.Company_txt__c)) ? addr.Customer__r.Company_txt__c :
+        (con != null && con.Account != null) ? con.Account.Name : null;
+    System.debug('isOrigin '+isOrigin);
+    System.debug('company: ' + company);
+    System.debug('addr: ' + addr);
+    System.debug('con: ' + con);
+    m.put('company', company);
+    m.put('address', addr.Name);
+    m.put('city', addr.City__c);
+
+    String st = getProvinceCode(addr.State__c);
+    m.put('state', st);
+    String cn = getCountryCode(addr.Country__c);
+    m.put('country', String.isBlank(cn) ? 'us' : cn.toLowerCase());
+
+    m.put('postalCode', addr.Postal_Code__c);
+    m.put('contactName',  con != null ? con.Name  : null);
+    m.put('contactPhone', con != null ? con.Phone : null);
+    m.put('contactEmail', con != null ? con.Email : null);
+    if (!(isParcel && !isOrigin)) {
+    m.put('opensAt',  addr.opens_at__c != null ? ((addr.opens_at__c.hour()<10?'0':'')+addr.opens_at__c.hour()) + ':' + ((addr.opens_at__c.minute()<10?'0':'')+addr.opens_at__c.minute()) : null);
+    m.put('closesAt', addr.closes_at__c != null ? ((addr.closes_at__c.hour()<10?'0':'')+addr.closes_at__c.hour()) + ':' + ((addr.closes_at__c.minute()<10?'0':'')+addr.closes_at__c.minute()) : null);
+    //new extra things 
+     if (!isOrigin && !isParcel) { // destination side
+        String acc = addr.Accessorials__c;
+       if (!String.isBlank(acc) && acc != '--None--') {
+            Map<String, Boolean> accMap = new Map<String, Boolean>();
+
+            // Only map supported Freightview accessorial fields
+            if (acc == 'inside') {
+                accMap.put('inside', true);
+            } else if (acc == 'liftgate') {
+                accMap.put('liftgate', true);
+            } else if (acc == 'schedule') {
+                accMap.put('schedule', true);
+            } else if (acc == 'sortAndSegregate') {
+                accMap.put('sortAndSegregate', true);
+            } else if (acc == 'notify') {
+                accMap.put('notify', true);
+            }
+            // add accessorial object only if valid key was mapped
+            if (!accMap.isEmpty()) {
+                m.put('accessorials', accMap);
+            }
+        }
+
+        // Notes/Instructions only if available
+        if (!String.isBlank(addr.Notes__c)) {
+            m.put('instructions', addr.Notes__c);
+        }
+        if (!String.isBlank(addr.Delivery_Location_Type__c)  && addr.Delivery_Location_Type__c != '--None--') {
+            m.put('shipType', addr.Delivery_Location_Type__c);
+        }
+
+    }
+    }
+    return m;
+}
+    public static List<quoteWrapper> getRatesFV(
+    List<PackageInputWrapper> pkgList,
+    Address__c fromA,
+    Address__c toA,
+    Boolean schedulePickup,
+    String pickupDT,
+    Credentials__c cred,
+    String fromContactJson,
+    String toContactJson
+){
+    List<quoteWrapper> out = new List<quoteWrapper>();
+    if (cred == null) return out;
+
+    // Token call stays same
+    String token = freightView.getAccessToken(cred.Username_Login__c, cred.Password_Transkey__c, cred.URL__c);
+
+    // Payload building
+          Contact shipFromContact = (Contact) JSON.deserialize(fromContactJson, Contact.class);
+        Contact shipToContact   = (Contact) JSON.deserialize(toContactJson,   Contact.class);
+   
+    Map<String,Object> payload = new Map<String,Object>();
+    payload.put('pickupDate', pickupDT);
+    // payload.put('returnQuotes', true);
+
+    List<Map<String,Object>> items = new List<Map<String,Object>>();
+    Boolean hasHazmat = false;
+    System.debug('pkgList --> '+pkgList);
+    for(PackageInputWrapper p : pkgList){
+        System.debug('package -->'+p);
+        System.debug('package type -->'+p.FVPackageType);
+        System.debug('package weight -->'+p.Weight);
+
+        String apiType = p.FVPackageType != null ? p.FVPackageType.toLowerCase() : '';
+
+        if (apiType.contains('pallet')) {
+            apiType = 'pallet';
+        }
+        else if (apiType.contains('pail')) {
+            apiType = 'pail';
+        }
+        else {
+            apiType = apiType != '' ? apiType : 'pallet';
+        }
+        System.debug('api type --> '+apiType);
+
+
+        Map<String,Object> item = new Map<String,Object>{
+            'description' => p.FVPackageType,
+            'quantity'    => p.Quantity == null ? 1 : p.Quantity,
+            //'type'        => p.FVPackageType != null ? p.FVPackageType.toLowerCase() : '',
+            'type'        => apiType,
+            'weight'      => p.Weight,
+            'weightUOM'   => p.WeightUnit != null ? p.WeightUnit.toLowerCase() : 'lbs',
+            'length'      => p.Length,
+            'width'       => p.Width,
+            'height'      => p.Height,
+            'dimensionsUOM' => 'in',
+            'freightClass'=> p.FreightClass != null ? Decimal.valueOf(p.FreightClass) : 50
+
+        };  
+          if (p.NMFC != null && p.NMFC != '') {
+             String nmfc = p.NMFC;
+            String[] parts = nmfc.split('-');
+
+            if (parts.size() == 2) {
+                // before hyphen
+                Integer nmfcNumber = Integer.valueOf(parts[0]);
+                // after hyphen
+                Integer nmfcSub = Integer.valueOf(parts[1]);
+
+                item.put('nmfcNumber', nmfcNumber);
+                item.put('nmfcSubNumber', nmfcSub);
+            }
+            else {
+                // fallback if no hyphen
+                item.put('nmfcNumber', Integer.valueOf(nmfc));
+            }
+        }
+        if(p.isHazmat == true){
+            hasHazmat = true;
+        }
+
+        items.add(item);
+    }
+
+    payload.put('items', items);
+       payload.put('origin', buildLocationMap(fromA, shipFromContact,false,true));
+        payload.put('destination', buildLocationMap(toA, shipToContact,false,false));
+         payload.put('pickupDate', pickupDT);
+    // Send request
+    HttpRequest req = new HttpRequest();
+    req.setEndpoint(cred.URL__c + '/v2.0/shipments/ltl?returnQuotes=true');
+    req.setMethod('POST');
+    req.setHeader('Content-Type', 'application/json');
+    req.setHeader('Authorization', 'Bearer ' + token);
+    req.setTimeout(30000);
+    req.setBody(JSON.serialize(payload));
+
+    HttpResponse res = new Http().send(req);
+    System.debug('FV API Response => ' + res.getBody());
+    if (res.getStatusCode() == 200 || res.getStatusCode() == 201) {
+    Map<String, Object> resMap = (Map<String, Object>) JSON.deserializeUntyped(res.getBody());
+        String shipmentId = (String) resMap.get('shipmentId');
+        if (resMap.containsKey('quotes')) {
+            List<Object> quotes = (List<Object>) resMap.get('quotes');
+
+            for (Object qObj : quotes) {
+                Map<String, Object> q = (Map<String, Object>) qObj;
+                String status = (String) q.get('status');
+                String mode = (String) q.get('mode');
+
+                if (status == 'active' && mode == 'ltl') {  // focusing only on LTL active quotes
+                    quoteWrapper qw = new quoteWrapper();
+
+                    qw.provider = 'Freight View';
+                    qw.carrier = (String) q.get('assetCarrierName');
+                    qw.service = (String) q.get('serviceDescription');
+                    qw.amount = (Decimal) q.get('amount');
+                    qw.currencyQ = (String) q.get('currency');
+                    qw.quoteId = (String) q.get('quoteId');
+
+                    if (q.containsKey('shipmentId')) { qw.shipmentId = (String) q.get('shipmentId'); }
+                     qw.shipmentId = shipmentId;
+                    out.add(qw);
+                }
+            }
+        }
+    }
+    return out;
+}
+@AuraEnabled
+public static RateResponseLTL getQuoteRatesLTL(
+    List<String> providerList,
+    String fromAddressJson,
+    String toAddressJson,
+    String logisticJson,
+    String pkgListJson,
+    Boolean schedulePickup,
+    String pickupDT,
+    String fromContact,
+    String toContact
+){
+
+    RateResponseLTL resp = new RateResponseLTL();
+    resp.quotesFedex = new List<quoteWrapper>();
+    resp.quotesUPS = new List<quoteWrapper>();
+    resp.quotesFreightView = new List<quoteWrapper>();
+    resp.missingCredentials = new List<String>();
+
+    // FetchInitWrapper init = shipmentRP.fetchInitialData();
+    FetchInitWrapper init = testtemp.fetchInitialData();
+
+    Map<String,Credentials__c> cm = init.credentialsMap;
+    System.debug('deserialiing');
+    List<PackageInputWrapper> pkgList = new List<PackageInputWrapper>();
+
+        if (String.isNotBlank(pkgListJson)) {
+            pkgList = (List<PackageInputWrapper>) JSON.deserialize(
+                pkgListJson,
+                List<PackageInputWrapper>.class
+            );
+        }
+
+    System.debug('📦 Parsed Package List => ' + pkgList);
+
+    System.debug('bfA');
+    Address__c fromA2;
+    Address__c toA2;
+    try {
+        fromA2 = (Address__c) JSON.deserialize(fromAddressJson, Address__c.class);
+    } catch (Exception e) {
+        resp.missingCredentials.add('From Address invalid JSON: ' + e.getMessage());
+    }
+
+    try {
+        toA2 = (Address__c) JSON.deserialize(toAddressJson, Address__c.class);
+    } catch (Exception e) {
+        resp.missingCredentials.add('To Address invalid JSON: ' + e.getMessage());
+    }
+    System.debug('package list '+pkgList);
+    if(fromA2 == null) fromA2 = new Address__c();
+    if(toA2 == null) toA2 = new Address__c();
+    System.debug('AF A');
+    Contact shipFromContact = (Contact) JSON.deserialize(fromContact, Contact.class);
+    Contact shipToContact   = (Contact) JSON.deserialize(toContact,   Contact.class);
+    System.debug('AFR C');
+    Boolean hasFD = cm.containsKey('FedEx');
+    // Boolean hasUPS = cm.containsKey('UPS');
+    
+     String fvKey = System.Label.AxoltFreightViewERP;
+     String upsKey = System.Label.UPSRESTAPIName;
+     Boolean hasFV  = cm.containsKey(fvKey); System.debug('hasFV '+hasFV);
+     Boolean hasUPS  = cm.containsKey(upsKey); System.debug('hasups'+hasUPS);
+    if(providerList.contains('fedex') && !hasFD)  resp.missingCredentials.add('FedEx');
+    if(providerList.contains('ups') && !hasUPS) resp.missingCredentials.add('UPS');
+    if(providerList.contains('freightview') && !hasFV) resp.missingCredentials.add('FreightView');
+
+    if(providerList.contains('fedex') && hasFD){
+       // resp.quotesFedex =getRatesFEDEX(pkgList, null, fromA, toA, schedulePickup, pickupDT,  cm.get(System.Label.FedexRestAPIName));
+    }
+        
+
+    // if(providerList.contains('ups') && hasUPS){
+    if(hasUPS){
+        System.debug('calling ups ');
+        Credentials__c upsCred = cm.get(upsKey);
+       // resp.quotesUPS = getRatesUPS(pkgList, fromA2, toA2, schedulePickup, pickupDT, upsCred, fromContact, toContact);
+        //resp.quotesUPS = getRatesUPS(pkgList, null, fromA, toA, schedulePickup, pickupDT,  cm.get(System.Label.UPSRESTAPIName));
+    }
+        
+
+    if(providerList.contains('freightview') && hasFV){
+         Credentials__c fvCred = cm.get(fvKey);
+         System.debug('fvcred --> '+fvCred);
+        resp.quotesFreightView =  resp.quotesFreightView = getRatesFV(pkgList,fromA2,toA2,true,pickupDT,fvCred,fromContact,toContact);
+        }
+    return resp;
+}
+@AuraEnabled
+public static BookingResult bookSelectedQuote(
+    String provider,
+    String quoteId,
+    String fvShipmentId,
+    Boolean schedulePickup,
+    String mode,
+    String fromAddressJson,
+    String toAddressJson,
+    String logisticJson,
+    String fromContactJson,
+    String toContactJson
+) {
+    BookingResult br = new BookingResult();
+
+    System.debug('in booking method');
+    if (String.isBlank(provider) || String.isBlank(quoteId)) {
+        br.success = false;
+        br.message = 'Missing provider or quoteId.';
+        return br;
+    }
+
+    // Use same init as rating to avoid passing credentials from JS
+    FetchInitWrapper init = fetchInitialData();
+    Map<String, Credentials__c> cm = init.credentialsMap;
+
+    String p = provider.toLowerCase();
+
+    try {
+        // 🔹 FreightView
+        if (p.contains('freight')) {
+            String fvKey = System.Label.AxoltFreightViewERP;
+            Credentials__c fvCred = cm.get(fvKey);
+            if (fvCred == null) {
+                br.success = false;
+                br.message = 'FreightView credentials are not configured.';
+                return br;
+            }
+
+            br = bookFreightviewLtl(
+                fvShipmentId,
+                quoteId,
+                schedulePickup,
+                fvCred,
+                mode,
+                logisticJson,
+                fromContactJson,
+                toContactJson,
+                fromAddressJson,
+                toAddressJson
+            );
+            return br;
+        }
+
+        // 🔹 FedEx (stub for now)
+        if (p.contains('fedex')) {
+            br.success = false;
+            br.message = 'FedEx booking not implemented yet.';
+            return br;
+        }
+
+        // 🔹 UPS (stub for now)
+        if (p.contains('ups')) {
+            br.success = false;
+            br.message = 'UPS booking not implemented yet.';
+            return br;
+        }
+
+        br.success = false;
+        br.message = 'Unsupported provider: ' + provider;
+        return br;
+
+    } catch (Exception e) {
+        br.success = false;
+        br.message = 'Error in bookSelectedQuote: ' + e.getMessage();
+        return br;
+    }
+}
+// private static BookingResult bookFreightviewLtl(
+//     String fvShipmentId,
+//     String quoteId,
+//     Boolean schedulePickup,
+//     Credentials__c cred,
+//     String mode
+// ) {
+//     System.debug('in booking FV');
+//     BookingResult br = new BookingResult();
+//     br.success = false;
+
+//     if (String.isBlank(fvShipmentId)) {
+//         br.message = 'Missing FreightView shipmentId from quote.';
+//         return br;
+//     }
+//     if (String.isBlank(quoteId)) {
+//         br.message = 'Missing FreightView quoteId.';
+//         return br;
+//     }
+//     if (cred == null) {
+//         br.message = 'FreightView credentials not provided.';
+//         return br;
+//     }
+
+//     try {
+//         // ---------- Auth ----------
+//         String token = freightView.getAccessToken(
+//             cred.Username_Login__c,
+//             cred.Password_Transkey__c,
+//             cred.URL__c
+//         );
+
+//         // ---------- Mode ----------
+//         String m = (mode == null ? '' : mode.trim().toLowerCase());
+//         if (m != 'truckload' && m != 'parcel' && m != 'ltl') m = 'ltl';
+//         Boolean isParcel    = (m == 'parcel');
+//         Boolean isTruckload = (m == 'truckload');
+//         Boolean isLTL       = (m == 'ltl');
+
+//         String encId = EncodingUtil.urlEncode(fvShipmentId, 'UTF-8');
+
+//         // ---------- Build endpoint ----------
+//         String endpoint;
+//         if (isTruckload) {
+//             endpoint = cred.URL__c + '/v2.0/shipments/truckload/' + encId + '/award';
+//         } else if (isParcel) {
+//             endpoint = cred.URL__c + '/v2.0/shipments/parcel/' + encId + '/book';
+//         } else {
+//             // default LTL
+//             endpoint = cred.URL__c + '/v2.0/shipments/ltl/' + encId + '/book';
+//         }
+
+//         Map<String,Object> body = new Map<String,Object>();
+//         body.put('quoteId', quoteId);
+
+//         if (isLTL) {
+//             body.put('schedulePickup', (schedulePickup == null ? true : schedulePickup));
+//         }
+
+//         HttpRequest req = new HttpRequest();
+//         req.setEndpoint(endpoint);
+//         req.setMethod('POST');
+//         req.setHeader('Content-Type', 'application/json');
+//         req.setHeader('Authorization', 'Bearer ' + token);
+//         req.setTimeout(30000);
+//         req.setBody(JSON.serialize(body));
+
+//         Http http = new Http();
+//         HttpResponse res = http.send(req);
+//         Integer sc = res.getStatusCode();
+//         String resBody = res.getBody();
+//         br.responseRaw = resBody;
+
+//         System.debug('FreightView booking SC=' + sc + ' BODY=' + resBody);
+
+//         // ---------- Error handling ----------
+//         if (sc != 200 && sc != 201 && sc != 204) {
+//             Map<String, Object> err = null;
+//             try {
+//                 err = (Map<String, Object>) JSON.deserializeUntyped(resBody);
+//             } catch (Exception ignore) {}
+
+//             String msg = 'Booking failed: ' + sc;
+//             if (err != null && err.containsKey('message')) {
+//                 msg = (String) err.get('message');
+//             }
+//             if (err != null && err.containsKey('errors')) {
+//                 List<Object> errs = (List<Object>) err.get('errors');
+//                 if (errs != null && !errs.isEmpty()) {
+//                     List<String> parts = new List<String>();
+//                     for (Object eObj : errs) {
+//                         Map<String,Object> e = (Map<String,Object>) eObj;
+//                         if (e != null && e.containsKey('message')) {
+//                             parts.add((String)e.get('message'));
+//                         }
+//                     }
+//                     if (!parts.isEmpty()) {
+//                         msg += ': ' + String.join(parts, ' | ');
+//                     }
+//                 }
+//             }
+//             br.success = false;
+//             br.message = msg;
+//             return br;
+//         }
+
+//         // 204 (no content) – e.g. some award endpoints
+//         if (sc == 204 || String.isBlank(resBody)) {
+//             br.success    = true;
+//             br.message    = 'Shipment booked successfully (no body returned).';
+//             br.shipmentId = fvShipmentId;
+//             br.status     = 'confirmed';
+//             return br;
+//         }
+
+//         // ---------- Parse success body ----------
+//         Map<String, Object> resp = (Map<String, Object>) JSON.deserializeUntyped(resBody);
+
+//         br.shipmentId = (String) resp.get('shipmentId');
+//         br.status     = (String) resp.get('status');
+
+//         if (resp.containsKey('tracking')) {
+//             Map<String, Object> tr = (Map<String, Object>) resp.get('tracking');
+//             br.trackingNumber = (String) tr.get('trackingNumber');
+//         }
+
+//         Map<String, Object> sel = (Map<String, Object>) resp.get('selectedQuote');
+//         if (sel != null) {
+//             br.carrier = (String) sel.get('assetCarrierName');
+//             br.service = (String) sel.get('serviceDescription');
+
+//             if (sel.containsKey('amount')) {
+//                 br.amount = Decimal.valueOf(String.valueOf(sel.get('amount')));
+//             }
+//             br.currencyCode = (String) sel.get('currency');
+//         }
+
+//         br.success = true;
+//         br.message = 'Shipment booked successfully.';
+//         return br;
+
+//     } catch (Exception e) {
+//         br.success = false;
+//         br.message = 'Error in bookFreightviewLtl: ' + e.getMessage();
+//         return br;
+//     }
+// }
+// version 2 
+// private static BookingResult bookFreightviewLtl(
+//     String fvShipmentId,
+//     String quoteId,
+//     Boolean schedulePickup,
+//     Credentials__c cred,
+//     String mode,
+//     String logisticJson,
+//     String fromContactJson,
+//     String toContactJson,
+//     String fromAddressJson,
+//     String toAddressJson
+// ) {
+//     System.debug('in booking FV');
+//     BookingResult br = new BookingResult();
+//     br.success = false;
+
+//     if (String.isBlank(fvShipmentId)) {
+//         br.message = 'Missing FreightView shipmentId from quote.';
+//         return br;
+//     }
+//     if (String.isBlank(quoteId)) {
+//         br.message = 'Missing FreightView quoteId.';
+//         return br;
+//     }
+//     if (cred == null) {
+//         br.message = 'FreightView credentials not provided.';
+//         return br;
+//     }
+
+//     try {
+//         // ---------- Auth ----------
+//         String token = freightView.getAccessToken(
+//             cred.Username_Login__c,
+//             cred.Password_Transkey__c,
+//             cred.URL__c
+//         );
+
+//         // ---------- Mode ----------
+//         String m = (mode == null ? '' : mode.trim().toLowerCase());
+//         if (m != 'truckload' && m != 'parcel' && m != 'ltl') m = 'ltl';
+//         Boolean isParcel    = (m == 'parcel');
+//         Boolean isTruckload = (m == 'truckload');
+//         Boolean isLTL       = (m == 'ltl');
+
+//         String encId = EncodingUtil.urlEncode(fvShipmentId, 'UTF-8');
+
+//         // ---------- Build endpoint ----------
+//         String endpoint;
+//         if (isTruckload) {
+//             endpoint = cred.URL__c + '/v2.0/shipments/truckload/' + encId + '/award';
+//         } else if (isParcel) {
+//             endpoint = cred.URL__c + '/v2.0/shipments/parcel/' + encId + '/book';
+//         } else {
+//             // default LTL
+//             endpoint = cred.URL__c + '/v2.0/shipments/ltl/' + encId + '/book';
+//         }
+
+//         Map<String,Object> body = new Map<String,Object>();
+//         body.put('quoteId', quoteId);
+
+//         if (isLTL) {
+//             body.put('schedulePickup', (schedulePickup == null ? true : schedulePickup));
+//         }
+
+//         HttpRequest req = new HttpRequest();
+//         req.setEndpoint(endpoint);
+//         req.setMethod('POST');
+//         req.setHeader('Content-Type', 'application/json');
+//         req.setHeader('Authorization', 'Bearer ' + token);
+//         req.setTimeout(30000);
+//         req.setBody(JSON.serialize(body));
+
+//         Http http = new Http();
+//         HttpResponse res = http.send(req);
+//         Integer sc = res.getStatusCode();
+//         String resBody = res.getBody();
+//         br.responseRaw = resBody;
+
+//         System.debug('FreightView booking SC=' + sc + ' BODY=' + resBody);
+
+//         // ---------- Error handling ----------
+//         if (sc != 200 && sc != 201 && sc != 204) {
+//             Map<String, Object> err = null;
+//             try {
+//                 err = (Map<String, Object>) JSON.deserializeUntyped(resBody);
+//             } catch (Exception ignore) {}
+
+//             String msg = 'Booking failed: ' + sc;
+//             if (err != null && err.containsKey('message')) {
+//                 msg = String.valueOf(err.get('message'));
+//             }
+//             if (err != null && err.containsKey('errors')) {
+//                 List<Object> errs = (List<Object>) err.get('errors');
+//                 if (errs != null && !errs.isEmpty()) {
+//                     List<String> parts = new List<String>();
+//                     for (Object eObj : errs) {
+//                         Map<String,Object> e = (Map<String,Object>) eObj;
+//                         if (e != null && e.containsKey('message')) {
+//                             parts.add(String.valueOf(e.get('message')));
+//                         }
+//                     }
+//                     if (!parts.isEmpty()) {
+//                         msg += ': ' + String.join(parts, ' | ');
+//                     }
+//                 }
+//             }
+//             br.success = false;
+//             br.message = msg;
+//             return br;
+//         }
+
+//         // ---------- Success (200 / 201 / 204) ----------
+//         if (sc == 200 || sc == 201 || sc == 204) {
+//             Map<String,Object> resp = String.isBlank(resBody)
+//                 ? new Map<String,Object>()
+//                 : (Map<String,Object>) JSON.deserializeUntyped(resBody);
+
+//             String shipmentId = (String) resp.get('shipmentId');
+//             if (String.isBlank(shipmentId)) {
+//                 // Fallback if not returned, at least store fvShipmentId
+//                 shipmentId = fvShipmentId;
+//             }
+
+//             // --- Prepare Shipment Record ---
+//             Shipment__c ship = new Shipment__c();
+//             ship.RecordTypeId = Schema.SObjectType.Shipment__c.getRecordTypeInfosByDeveloperName()
+//                                     .get('freightview').getRecordTypeId();
+//             ship.Active__c = true;
+//             ship.Name = 'Shipment';
+//             ship.shipmentID__c = shipmentId;
+//             ship.Carrier_Code__c = 'FV';
+
+//             // --- Parse logistics & address/contact JSON once ---
+//             Logistic__c lg = (Logistic__c) JSON.deserialize(logisticJson, Logistic__c.class);
+
+//             Map<String,Object> fromAddrMap = (Map<String,Object>) JSON.deserializeUntyped(fromAddressJson);
+//             Map<String,Object> toAddrMap   = (Map<String,Object>) JSON.deserializeUntyped(toAddressJson);
+//             Map<String,Object> fromConMap  = (Map<String,Object>) JSON.deserializeUntyped(fromContactJson);
+//             Map<String,Object> toConMap    = (Map<String,Object>) JSON.deserializeUntyped(toContactJson);
+
+//             Id fAId = (Id) fromAddrMap.get('Id');
+//             Id tAId = (Id) toAddrMap.get('Id');
+//             Id fCId = (Id) fromConMap.get('Id');
+//             Id tCId = (Id) toConMap.get('Id');
+//             Id custId = (Id) toAddrMap.get('Customer__c');
+//             // --- Assign Logistics & Order & Customer ---
+//             if (lg.Id != null)        ship.Logistic__c = lg.Id;
+//             if (lg.Order_S__c != null) ship.Order__c   = lg.Order_S__c;
+
+//             // Customer
+//            // Id cust = (Id) JSON.deserializeUntyped(toContactJson).get('Id');
+//             ship.Customer__c         = custId;
+//             ship.Customer_Contact__c = tCId;
+//             ship.Shipping_Address__c = tAId;
+
+//             // --- Billing Options Logic (from Logistics) ---
+//             String billingOpt = (lg.Billing_Options__c == null)
+//                 ? 'SENDER'
+//                 : lg.Billing_Options__c.toUpperCase();
+
+//             if (billingOpt == 'SENDER' && fAId != null) {
+//                 ship.Billing_Address__c = fAId;
+//                 ship.Billing_Contact__c = fCId;
+//             } else if (billingOpt == 'RECEIVER' && tAId != null) {
+//                 ship.Billing_Address__c = tAId;
+//                 ship.Billing_Contact__c = tCId;
+//             }
+//             // If you later want THIRD_PARTY, uncomment and adjust:
+//             /*
+//             else if (billingOpt == 'THIRD_PARTY') {
+//                 ship.Billing_Address__c   = null;
+//                 ship.Billing_Contact__c   = null;
+//                 ship.Third_Party_Account__c = lg.Third_Party_Account__c;
+//                 ship.Direction__c         = 'THIRD_PARTY';
+//             }
+//             */
+
+//             // --- Read important metadata from API ---
+//             if (resp.containsKey('pickupDate') && resp.get('pickupDate') != null) {
+//                 // Example: "2027-07-02"
+//                 ship.Shipment_Date__c = Date.valueOf(String.valueOf(resp.get('pickupDate')));
+//             }
+//             // if (resp.containsKey('bookedDate') && resp.get('bookedDate') != null) {
+//             //     // Example: "2025-12-01T09:21:30.570Z" → use JSON engine to parse ISO
+//             //     String bookedStr = String.valueOf(resp.get('bookedDate'));
+//             //     ship.Booked_Date__c = (Datetime) JSON.deserialize(
+//             //         '"' + bookedStr + '"',
+//             //         Datetime.class
+//             //     );
+//             // }
+//             if (resp.containsKey('status') && resp.get('status') != null) {
+//                 ship.Status__c = String.valueOf(resp.get('status'));
+//             }
+
+//             // --- Read LTL weight and cost ---
+//             // if (resp.containsKey('equipment') && resp.get('equipment') != null) {
+//             //     Map<String,Object> eq = (Map<String,Object>) resp.get('equipment');
+//             //     if (eq.containsKey('weight') && eq.get('weight') != null) {
+//             //         ship.Shipment_Weight__c = Decimal.valueOf(String.valueOf(eq.get('weight')));
+//             //     }
+//             // }
+//             Decimal amount = null;
+//             String currencyFV;
+//             String carrier;
+//             String service;
+//             if (resp.containsKey('selectedQuote') && resp.get('selectedQuote') != null) {
+//                 Map<String,Object> q = (Map<String,Object>) resp.get('selectedQuote');
+
+//                 if (q.containsKey('amount') && q.get('amount') != null){
+//                     amount = Decimal.valueOf(String.valueOf(q.get('amount')));
+//                 }
+//                 ship.Shipping_Amount__c = amount;  
+//                 currencyFV = q != null ? (String) q.get('currency') : null;
+//                 carrier = q != null ? (String) q.get('assetCarrierName')   : null;
+//                 service = q != null ? (String) q.get('serviceDescription') : null;
+//                 ship.Carrier__c = carrier;
+//                 ship.service_Description__c = service;
+//                 // if (q.containsKey('assetCarrierName') && q.get('assetCarrierName') != null)
+//                 //     ship.Carrier__c = String.valueOf(q.get('assetCarrierName'));
+//                 // if (q.containsKey('serviceDescription') && q.get('serviceDescription') != null)
+//                 //     ship.service_Description__c = String.valueOf(q.get('serviceDescription'));
+//             }
+
+//             // --- Tracking ---
+//             // if (resp.containsKey('tracking') && resp.get('tracking') != null) {
+//             //     Map<String,Object> t = (Map<String,Object>) resp.get('tracking');
+//             //     if (t.containsKey('status') && t.get('status') != null) {
+//             //         ship.Tracking_Status__c = String.valueOf(t.get('status'));
+//             //     }
+//             // }
+//             String trackingNumber;
+//                 if (resp.containsKey('tracking')) {
+//                     Map<String, Object> tr = (Map<String, Object>) resp.get('tracking');
+//                     trackingNumber = (String) tr.get('trackingNumber');
+//                 }
+//             br.trackingNumber = trackingNumber;
+//             // --- BOL number (if/when you want it) ---
+//             /*
+//             if (resp.containsKey('bol') && resp.get('bol') != null) {
+//                 Map<String,Object> b = (Map<String,Object>) resp.get('bol');
+//                 if (b.containsKey('bolNumber') && b.get('bolNumber') != null) {
+//                     ship.BOL_Number__c = String.valueOf(b.get('bolNumber'));
+//                 }
+//             }
+//             */
+
+//             // --- Finally upsert Shipment ---
+//             upsert ship;
+//              // Save docs (if any)
+//                 List<String> titles = new List<String>();
+//                 List<Id> docIds = new List<Id>();
+//                 try {
+//                     docIds = saveFreightviewDocs(resp,ship.Id, token, titles);
+//                 } catch (Exception exDocs) {
+//                     System.debug('Doc save error: ' + exDocs.getMessage());
+//                 }
+//                 // Doc type map for UI
+//         Map<String, Id> byType = new Map<String, Id>();
+//         for (Integer i = 0; i < titles.size(); i++) {
+//             String t = (titles[i] == null ? '' : titles[i]).toLowerCase();
+//             Id did = (docIds.size() > i ? docIds[i] : null);
+//             if (t.endsWith('-bol') || t.endsWith('-bol.pdf') || t.contains('-bol'))             byType.put('bol', did);
+//             else if (t.endsWith('-label') || t.endsWith('-label.pdf') || t.contains('-label')) byType.put('label', did);
+//             else if (t.endsWith('-customer-quote') || t.contains('-customer-quote'))           byType.put('customer-quote', did);
+//             else if (t.endsWith('-rate-detail')   || t.contains('-rate-detail'))               byType.put('rate-detail', did);
+//         }
+//             br.success   = true;
+//             br.message   = 'Shipment booked successfully.';
+//             br.shipmentId = shipmentId;
+//             br.status    = 'confirmed';
+//             br.amount = amount;
+//             br.currencyCode          = currencyFV;
+//             br.carrier               = carrier;
+//             br.service               = service;
+//             br.contentDocumentIds    = docIds;
+//             br.contentTitles         = titles;
+//             br.docByType             = byType;
+//             return br;
+//         }
+
+//         // Fallback (should not reach here)
+//         // br.success = false;
+//         // br.message = 'Shipment booked successfully.';
+//         // br.shipmentId = fvShipmentId;
+//         // br.status = 'confirmed';
+//         return br;
+
+//     } catch (Exception e) {
+//         br.success = false;
+//         br.message = 'Error in bookFreightviewLtl: ' + e.getMessage();
+//         return br;
+//     }
+// }
+// version 3 
+private static BookingResult bookFreightviewLtl(
+    String fvShipmentId,
+    String quoteId,
+    Boolean schedulePickup,
+    Credentials__c cred,
+    String mode,
+    String logisticJson,
+    String fromContactJson,
+    String toContactJson,
+    String fromAddressJson,
+    String toAddressJson
+) {
+    System.debug('in booking FV');
+    BookingResult br = new BookingResult();
+    br.success = false;
+
+    if (String.isBlank(fvShipmentId)) {
+        br.message = 'Missing FreightView shipmentId from quote.';
+        return br;
+    }
+    if (String.isBlank(quoteId)) {
+        br.message = 'Missing FreightView quoteId.';
+        return br;
+    }
+    if (cred == null) {
+        br.message = 'FreightView credentials not provided.';
+        return br;
+    }
+
+    try {
+        // ---------- Auth ----------
+        String token = freightView.getAccessToken(
+            cred.Username_Login__c,
+            cred.Password_Transkey__c,
+            cred.URL__c
+        );
+
+        // ---------- Mode ----------
+        String m = (mode == null ? '' : mode.trim().toLowerCase());
+        if (m != 'truckload' && m != 'parcel' && m != 'ltl') m = 'ltl';
+        Boolean isParcel    = (m == 'parcel');
+        Boolean isTruckload = (m == 'truckload');
+        Boolean isLTL       = (m == 'ltl');
+
+        String encId = EncodingUtil.urlEncode(fvShipmentId, 'UTF-8');
+
+        // ---------- Build endpoint ----------
+        String endpoint;
+        if (isTruckload) {
+            endpoint = cred.URL__c + '/v2.0/shipments/truckload/' + encId + '/award';
+        } else if (isParcel) {
+            endpoint = cred.URL__c + '/v2.0/shipments/parcel/' + encId + '/book';
+        } else {
+            // default LTL
+            endpoint = cred.URL__c + '/v2.0/shipments/ltl/' + encId + '/book';
+        }
+
+        Map<String,Object> body = new Map<String,Object>();
+        body.put('quoteId', quoteId);
+
+        if (isLTL) {
+            body.put('schedulePickup', (schedulePickup == null ? true : schedulePickup));
+        }
+
+        HttpRequest req = new HttpRequest();
+        req.setEndpoint(endpoint);
+        req.setMethod('POST');
+        req.setHeader('Content-Type', 'application/json');
+        req.setHeader('Authorization', 'Bearer ' + token);
+        req.setTimeout(30000);
+        req.setBody(JSON.serialize(body));
+
+        Http http = new Http();
+        HttpResponse res = http.send(req);
+        Integer sc = res.getStatusCode();
+        String resBody = res.getBody();
+        br.responseRaw = resBody;
+
+        System.debug('FreightView booking SC=' + sc + ' BODY=' + resBody);
+
+        // ---------- Error handling ----------
+        if (sc != 200 && sc != 201 && sc != 204) {
+            Map<String, Object> err = null;
+            try {
+                err = (Map<String, Object>) JSON.deserializeUntyped(resBody);
+            } catch (Exception ignore) {}
+
+            String msg = 'Booking failed: ' + sc;
+            if (err != null && err.containsKey('message')) {
+                msg = String.valueOf(err.get('message'));
+            }
+            if (err != null && err.containsKey('errors')) {
+                List<Object> errs = (List<Object>) err.get('errors');
+                if (errs != null && !errs.isEmpty()) {
+                    List<String> parts = new List<String>();
+                    for (Object eObj : errs) {
+                        Map<String,Object> e = (Map<String,Object>) eObj;
+                        if (e != null && e.containsKey('message')) {
+                            parts.add(String.valueOf(e.get('message')));
+                        }
+                    }
+                    if (!parts.isEmpty()) {
+                        msg += ': ' + String.join(parts, ' | ');
+                    }
+                }
+            }
+            br.success = false;
+            br.message = msg;
+            return br;
+        }
+
+        // ---------- Success (200 / 201 / 204) ----------
+        if (sc == 200 || sc == 201 || sc == 204) {
+            Map<String,Object> resp = String.isBlank(resBody)
+                ? new Map<String,Object>()
+                : (Map<String,Object>) JSON.deserializeUntyped(resBody);
+
+            String shipmentId = (String) resp.get('shipmentId');
+            if (String.isBlank(shipmentId)) {
+                // Fallback if not returned, at least store fvShipmentId
+                shipmentId = fvShipmentId;
+            }
+
+            // --- Prepare Shipment Record ---
+            Shipment__c ship = new Shipment__c();
+            ship.RecordTypeId = Schema.SObjectType.Shipment__c.getRecordTypeInfosByDeveloperName()
+                                    .get('freightview').getRecordTypeId();
+            ship.Active__c = true;
+            ship.Name = 'Shipment';
+            ship.shipmentID__c = shipmentId;
+            ship.Carrier_Code__c = 'FV';
+
+            // --- Parse logistics & address/contact JSON once ---
+            Logistic__c lg = (Logistic__c) JSON.deserialize(logisticJson, Logistic__c.class);
+
+            Map<String,Object> fromAddrMap = (Map<String,Object>) JSON.deserializeUntyped(fromAddressJson);
+            Map<String,Object> toAddrMap   = (Map<String,Object>) JSON.deserializeUntyped(toAddressJson);
+            Map<String,Object> fromConMap  = (Map<String,Object>) JSON.deserializeUntyped(fromContactJson);
+            Map<String,Object> toConMap    = (Map<String,Object>) JSON.deserializeUntyped(toContactJson);
+
+            Id fAId = (Id) fromAddrMap.get('Id');
+            Id tAId = (Id) toAddrMap.get('Id');
+            Id fCId = (Id) fromConMap.get('Id');
+            Id tCId = (Id) toConMap.get('Id');
+            Id custId = (Id) toAddrMap.get('Customer__c');
+            // --- Assign Logistics & Order & Customer ---
+            if (lg.Id != null)        ship.Logistic__c = lg.Id;
+            if (lg.Order_S__c != null) ship.Order__c   = lg.Order_S__c;
+
+            // Customer
+            ship.Customer__c         = custId;
+            ship.Customer_Contact__c = tCId;
+            ship.Shipping_Address__c = tAId;
+
+            // --- Billing Options Logic (from Logistics) ---
+            String billingOpt = (lg.Billing_Options__c == null)
+                ? 'SENDER'
+                : lg.Billing_Options__c.toUpperCase();
+
+            if (billingOpt == 'SENDER' && fAId != null) {
+                ship.Billing_Address__c = fAId;
+                ship.Billing_Contact__c = fCId;
+            } else if (billingOpt == 'RECEIVER' && tAId != null) {
+                ship.Billing_Address__c = tAId;
+                ship.Billing_Contact__c = tCId;
+            }
+
+            // --- Read important metadata from API ---
+            if (resp.containsKey('pickupDate') && resp.get('pickupDate') != null) {
+                // Example: "2027-07-02"
+                ship.Shipment_Date__c = Date.valueOf(String.valueOf(resp.get('pickupDate')));
+            }
+            // if (resp.containsKey('bookedDate') && resp.get('bookedDate') != null) {
+            //     // Example: "2025-12-01T09:21:30.570Z" → use JSON engine to parse ISO
+            //     String bookedStr = String.valueOf(resp.get('bookedDate'));
+            //     ship.Booked_Date__c = (Datetime) JSON.deserialize(
+            //         '"' + bookedStr + '"',
+            //         Datetime.class
+            //     );
+            // }
+            if (resp.containsKey('status') && resp.get('status') != null) {
+                ship.Status__c = String.valueOf(resp.get('status'));
+            }
+            Decimal amount = null;
+            String currencyFV;
+            String carrier;
+            String service;
+            if (resp.containsKey('selectedQuote') && resp.get('selectedQuote') != null) {
+                Map<String,Object> q = (Map<String,Object>) resp.get('selectedQuote');
+
+                if (q.containsKey('amount') && q.get('amount') != null){
+                    amount = Decimal.valueOf(String.valueOf(q.get('amount')));
+                }
+                ship.Shipping_Amount__c = amount;  
+                currencyFV = q != null ? (String) q.get('currency') : null;
+                carrier = q != null ? (String) q.get('assetCarrierName')   : null;
+                service = q != null ? (String) q.get('serviceDescription') : null;
+                ship.Carrier__c = carrier;
+                ship.service_Description__c = service;
+            }
+            ship.is_prebooked__c=true;
+            ship.Shipment_Provider__c='FreightView';
+            String trackingNumber;
+                if (resp.containsKey('tracking')) {
+                    Map<String, Object> tr = (Map<String, Object>) resp.get('tracking');
+                    trackingNumber = (String) tr.get('trackingNumber');
+                }
+            br.trackingNumber = trackingNumber;
+            // --- Finally upsert Shipment ---
+            upsert ship;
+
+            br.success   = true; br.message   = 'Shipment booked successfully.'; br.shipmentId = shipmentId; br.shipmentSalesforceId  = ship.Id; br.status    = 'confirmed'; br.provider = 'freightView'; br.amount = amount; br.currencyCode          = currencyFV; br.carrier               = carrier; br.service               = service; return br; } return br;
+
+    } catch (Exception e) {
+        br.success = false;
+        br.message = 'Error in bookFreightviewLtl: ' + e.getMessage();
+        return br;
+    }
+}
+
+private class FvDocDownload {
+    String title;
+    String ext;
+    Blob data;
+    FvDocDownload(String t, String e, Blob b) { title = t; ext = e; data = b; }
+}
+private static Blob fvGetBlob(String downloadUrl, String bearerToken) { if (!String.isBlank(downloadUrl) && downloadUrl.endsWith('?')) { downloadUrl = downloadUrl.substring(0, downloadUrl.length()-1); } HttpRequest r = new HttpRequest(); r.setMethod('GET'); r.setEndpoint(downloadUrl); r.setHeader('Authorization', 'Bearer ' + bearerToken); r.setHeader('Accept', 'application/pdf'); r.setTimeout(30000); Http h = new Http(); HttpResponse resp = h.send(r); Integer sc = resp.getStatusCode(); if (sc == 200 || sc == 201) return resp.getBodyAsBlob(); if (sc == 429) { resp = h.send(r); if (resp.getStatusCode() == 200 || resp.getStatusCode() == 201) return resp.getBodyAsBlob(); } System.debug('Freightview doc GET failed: ' + sc + ' - ' + resp.getBody()); return null;
+}
+
+@AuraEnabled
+public static BookingResult saveFreightviewDocs(
+    String respRawJson,
+    Id shipmentId,
+    String username,
+    String password,
+    String url
+) {
+    BookingResult br = new BookingResult();
+    br.success = false;
+
+    System.debug('🚀 [FV DOC SAVE START] shipmentId=' + shipmentId);
+    System.debug('📦 Incoming FV Response Raw=' + respRawJson);
+    System.debug('🔑 FV Creds username=' + username + ' url=' + url);
+
+    if (String.isBlank(respRawJson) || shipmentId == null || 
+        String.isBlank(username) || String.isBlank(password) || String.isBlank(url)) {
+        System.debug('❌ [FV DOC SAVE] Missing input – exiting early');
+        br.message = 'Missing input for FreightView doc save.';
+        return br;
+    }
+
+    try {
+        // Get token using ONLY FV creds
+        System.debug('🔐 Requesting FreightView Access Token...');
+        String token = freightView.getAccessToken(username, password, url);
+        System.debug('✅ Token received (length=' + (token != null ? token.length() : 0) + ')');
+
+        // Parse booking API response
+        Map<String,Object> resp = (Map<String,Object>) JSON.deserializeUntyped(respRawJson);
+        System.debug('📄 Parsed Response Map Keys=' + (resp != null ? resp.keySet() : null));
+      
+
+        if (resp == null || !resp.containsKey('documents')) {
+            System.debug('⚠️ [FV DOC SAVE] No "documents" key found in API response');
+            br.message = 'No documents found in FreightView response.';
+            return br;
+        }
+
+        List<Object> docs = (List<Object>) resp.get('documents');
+        System.debug('📎 [FV DOC SAVE] Documents array size=' + (docs != null ? docs.size() : 0));
+
+        List<String> titles = new List<String>();
+        List<ContentVersion> cvs = new List<ContentVersion>();
+
+        // Download docs in memory (CALL-OUT PHASE only)
+        for (Integer i = 0; i < docs.size(); i++) {
+            Map<String,Object> d = (Map<String,Object>) docs[i];
+            String dlUrl = (String) d.get('downloadUrl');
+            String type = (String) d.get('type');
+            String fileName = (String) d.get('fileName');
+
+            System.debug('➡️ [DOC ' + i + '] fileName=' + fileName + ' type=' + type + ' downloadUrl=' + dlUrl);
+
+            if (String.isBlank(dlUrl)) {
+                System.debug('⏭️ skipping – blank URL');
+                continue;
+            }
+
+            if (!FV_DOC_TYPES.contains(fileName?.toLowerCase())) {
+                System.debug('⏭️ skipping – not a wanted doc type');
+                continue;
+            }
+
+            System.debug('⬇️ Downloading doc blob from FreightView...');
+            Blob blobData = fvGetBlob(dlUrl, token);
+            System.debug('🔎 blob received? ' + (blobData != null));
+
+            if (blobData == null) {
+                System.debug('⏭️ skipping – blob is null');
+                continue;
+            }
+
+          //  String title = 'FV-' + fileName;
+          // ✅ Get FreightView shipment Id from the booking API response
+            String fvShip = String.valueOf(resp.get('shipmentId')); 
+
+            // ✅ Decide type (bol or label) safely
+            String docKey = '';
+            if (fileName != null && fileName.toLowerCase().contains('bol'))      docKey = 'bol';
+            else if (fileName != null && fileName.toLowerCase().contains('label')) docKey = 'label';
+            else if (type != null && type.toLowerCase().contains('bol'))         docKey = 'bol';
+            else if (type != null && type.toLowerCase().contains('label'))       docKey = 'label';
+            else docKey = 'document';
+
+            // ✅ Build exactly the format you want
+            String title = 'FV-' + fvShip + '-' + docKey; 
+
+            cvs.add(new ContentVersion(
+                Title = title,
+                PathOnClient = title + '.pdf',
+                VersionData = blobData,
+                IsMajorVersion = true,
+                FirstPublishLocationId = shipmentId
+            ));
+            titles.add(title);
+            System.debug('✅ [FV DOC SAVE] Queued for insert: ' + title);
+        }
+
+        System.debug('🧾 Total docs ready to insert=' + cvs.size()); if (!cvs.isEmpty()) { System.debug('💾 Inserting ContentVersion records...'); insert cvs; System.debug('🎉 [FV DOC SAVE SUCCESS] Insert completed'); Set<Id> cdIds = new Set<Id>(); for (ContentVersion cv : cvs) { if (cv.ContentDocumentId != null) { cdIds.add(cv.ContentDocumentId); } } System.debug('📁 Collected ContentDocumentIds=' + cdIds); br.contentDocumentIds = new List<Id>(cdIds); br.contentTitles = titles; br.message = 'Documents saved successfully to Shipment.'; br.success = true; } else { System.debug('⚠️ [FV DOC SAVE] No docs were downloaded – nothing to save'); br.message = 'No docs downloaded from FreightView.'; return br; } System.debug('🏁 [FV DOC SAVE END] Final docIds returned=' + br.contentDocumentIds);
+        return br;
+
+    } catch (Exception e) {
+        System.debug('🔥 [FV DOC SAVE ERROR]=' + e.getMessage());
+        br.message = 'Doc save error: ' + e.getMessage();
+        br.success = false;
+        return br;
+    }
+}
+
+public class PackResponse {
+        @AuraEnabled public Package__c Package2Create;
+        @AuraEnabled public String exceptionError;
+        @AuraEnabled public String errorMsg2;
+        @AuraEnabled public Map<String, Object> debug;
+    }
+
+@AuraEnabled
+public static PackResponse populatePackDetails(
+    String Package2Create1,
+    String pkgTypeValue,
+    String logisticLineItemsJson
+) {
+    System.debug('=== populatePackDetails() START ===');
+    System.debug('INPUT Package JSON: ' + Package2Create1);
+    System.debug('INPUT pkgTypeValue: ' + pkgTypeValue);
+    System.debug('INPUT logisticLineItems JSON: ' + logisticLineItemsJson);
+
+    PackResponse res = new PackResponse();
+    res.debug = new Map<String,Object>();
+
+    try {
+        Package__c pkg = (Package__c) JSON.deserialize(Package2Create1, Package__c.class);
+        res.Package2Create = pkg;
+
+        System.debug('PARSED Package__c: ' + JSON.serializePretty(pkg));
+
+        if (String.isBlank(pkgTypeValue) || pkgTypeValue == '--None--') {
+            System.debug('Package type missing → returning error');
+            res.errorMsg2 = 'Please select a package type';
+            return res;
+        }
+
+        // ------------------------
+        // 1️⃣ Fetch Package_Details__c
+        // ------------------------
+        Package_Details__c pd;
+        try {
+            List<Package_Details__c> rows = [
+                SELECT Id, Package_Type__c, Length__c, Width__c, Height__c,
+                       Weight__c, Weight_Unit__c, Additional_Percentage__c,
+                       Type__c, Shipment_Description__c, API_Type__c
+                FROM Package_Details__c
+                WHERE (Package_Type__c = :pkgTypeValue OR Name = :pkgTypeValue)
+                LIMIT 1
+            ];
+            if (!rows.isEmpty()) pd = rows[0];
+        } catch (Exception e) {}
+
+        System.debug('Custom Setting Found = ' + (pd != null));
+        if (pd != null) {
+            System.debug('Package_Details__c Record: ' + JSON.serializePretty(pd));
+        }
+
+        // ------------------------
+        // 2️⃣ Parse LogisticLineItems
+        // ------------------------
+        List<Object> lliRaw = (List<Object>) JSON.deserializeUntyped(
+            logisticLineItemsJson == null ? '[]' : logisticLineItemsJson
+        );
+
+        List<Map<String,Object>> lli = new List<Map<String,Object>>();
+        Decimal totalUnits = 0;
+        Integer idx = 0;
+
+        for (Object o : lliRaw) {
+            if (o instanceof Map<String,Object>) {
+                Map<String,Object> m = (Map<String,Object>) o;
+                lli.add(m);
+
+                Decimal q = 0;
+                try {
+                    q = m.containsKey('Quantity') ?
+                            safeDecimal(m.get('Quantity')) :
+                            (m.containsKey('qty') ? safeDecimal(m.get('qty')) : 0);
+                } catch (Exception e) {}
+
+                totalUnits += q;
+
+                System.debug('LLI['+idx+']: ' + JSON.serializePretty(m));
+                System.debug('LLI['+idx+'] qty parsed = ' + q);
+
+                idx++;
+            }
+        }
+
+        System.debug('Total LLI Count = ' + lli.size());
+        System.debug('Total Units Summed = ' + totalUnits);
+
+        // ------------------------
+        // 3️⃣ Determine Units Per Pallet
+        // ------------------------
+        String lowerName = pkgTypeValue.toLowerCase();
+        Integer unitsPerPallet = null;
+
+        if (lowerName.contains('pails')) unitsPerPallet = 36;
+        else if (lowerName.contains('def jugs') ||
+                 lowerName.contains('defjugs') ||
+                 lowerName.contains('def-jug') ||
+                 lowerName.contains('def jug')) unitsPerPallet = 40;
+
+        System.debug('UnitsPerPallet inferred = ' + unitsPerPallet);
+
+        // ------------------------
+        // 4️⃣ Dimensions
+        // ------------------------
+        Decimal length = (pd != null && pd.Length__c != null) ? pd.Length__c : pkg.Length__c;
+        Decimal width  = (pd != null && pd.Width__c  != null) ? pd.Width__c  : pkg.Width__c;
+        Decimal height = (pd != null && pd.Height__c != null) ? pd.Height__c : pkg.Height__c;
+
+        System.debug('FINAL LENGTH=' + length + ', WIDTH=' + width);
+
+        // ------------------------
+        // 5️⃣ Weight Calculation
+        // ------------------------
+        Decimal weight = 0;
+        Boolean weightIsStatic = (pd != null && pd.Weight__c != null);
+
+        if (weightIsStatic) {
+            weight = pd.Weight__c;
+            System.debug('WEIGHT using static PD value = ' + weight);
+        } else {
+            System.debug('WEIGHT is calculated from LLI');
+            Integer wIndex = 0;
+
+            for (Map<String,Object> m : lli) {
+
+                System.debug('LLI['+wIndex+'] RAW KEYS = ' + m.keySet());
+                System.debug('LLI['+wIndex+'] RAW MAP = ' + JSON.serializePretty(m));
+
+                Decimal q = safeDecimal(m.get('Quantity') != null ? m.get('Quantity') : m.get('qty'));
+                Decimal unitWeight = 0;
+
+                if (m.containsKey('UnitWeight')) unitWeight = safeDecimal(m.get('UnitWeight'));
+                else if (m.containsKey('unitWeight')) unitWeight = safeDecimal(m.get('unitWeight'));
+                else if (m.containsKey('Weight')) unitWeight = safeDecimal(m.get('Weight'));
+                else if (m.containsKey('Unit_Weight__c')) unitWeight = safeDecimal(m.get('Unit_Weight__c'));
+
+                System.debug('LLI['+wIndex+'] q=' + q + ', resolved unitWeight=' + unitWeight);
+
+                weight += (unitWeight * q);
+                wIndex++;
+            }
+        }
+
+
+        System.debug('Weight before tare/additional% = ' + weight);
+
+        // ------------------------
+        // 6️⃣ Height Calculation
+        Decimal tallest = 0;
+
+        for (Map<String,Object> m : lli) {
+            Decimal uh = safeDecimal(m.get('UnitHeight') != null 
+                                    ? m.get('UnitHeight') 
+                                    : m.get('Unit_Height__c'));
+            if (uh > tallest) tallest = uh;
+        }
+
+        if (pd != null && pd.Height__c != null) {
+            // Static height from table → use it
+            height = pd.Height__c;
+        }
+        else if (lowerName.contains('pail') && lowerName.contains('ups')) {
+            // UPS/FedEx pail → from product height only
+            height = tallest;
+        }
+        else {
+            // All other cases with blank height → calculate tallest + 5
+            height = tallest + 5;
+        }
+
+
+        System.debug('Final Height = ' + height);
+
+        // ------------------------
+        // 7️⃣ Add Tare Weight if Required
+        // ------------------------
+        Boolean sheetAddsTare = (lowerName.contains('large') || lowerName.contains('small'));
+        if (!weightIsStatic && sheetAddsTare) {
+            System.debug('Adding tare weight 55 lbs');
+            weight = weight + 55;
+        }
+
+        // Additional %
+        if (pd != null && pd.Additional_Percentage__c != null) {
+            System.debug('Applying additional %: ' + pd.Additional_Percentage__c);
+            weight = weight * (1 + (pd.Additional_Percentage__c / 100));
+        }
+
+        System.debug('Final Weight = ' + weight);
+
+        // ------------------------
+        // 8️⃣ Calculate packageQty
+        // ------------------------
+        Integer packageQty = 1;
+
+        if (unitsPerPallet != null && unitsPerPallet > 0 && totalUnits > 0) {
+            Double dv = Double.valueOf(String.valueOf(totalUnits)) /
+                        Double.valueOf(String.valueOf(unitsPerPallet));
+
+            packageQty = Integer.valueOf(Math.ceil(dv));
+
+            System.debug('packageQty = Ceil(' + dv + ') = ' + packageQty);
+        }
+
+        // ------------------------
+        // 9️⃣ Declared Value
+        // ------------------------
+        Decimal declaredValue = 0;
+
+        if (lowerName.contains('pails') ||
+            lowerName.contains('def jugs') ||
+            lowerName.contains('tote') || 
+            lowerName.contains('defjugs') ||
+            lowerName.contains('def-jug')) {
+
+            System.debug('Declared value uses special FIRST ITEM rule');
+
+            if (!lli.isEmpty()) {
+                declaredValue = safeDecimal(lli[0].get('UnitPrice'));
+                if (declaredValue == 0)
+                    declaredValue = safeDecimal(lli[0].get('Price'));
+            }
+
+        } else {
+            System.debug('Declared value = sum(unitPrice * qty)');
+            Integer dIndex = 0;
+            for (Map<String,Object> m : lli) {
+                Decimal q = safeDecimal(m.get('Quantity') != null ? m.get('Quantity') : m.get('qty'));
+                Decimal up = safeDecimal(m.get('UnitPrice') != null ? m.get('UnitPrice') : m.get('Price'));
+
+                Decimal lineValue = up * q;
+                declaredValue += lineValue;
+
+                System.debug('Declared['+dIndex+'] lineValue=' + lineValue);
+                dIndex++;
+            }
+        }
+
+        System.debug('Declared Value FINAL = ' + declaredValue);
+
+        // ------------------------
+        //  🔟 Populate response
+        // ------------------------
+        res.Package2Create.Length__c = length;
+        res.Package2Create.Width__c  = width;
+        res.Package2Create.Height__c = height;
+        res.Package2Create.Weight__c = (weight == null ? 0 : weight.setScale(2));
+        String weightUnit;
+
+        if (pd != null && pd.Weight_Unit__c != null) {
+            weightUnit = pd.Weight_Unit__c;
+        } else if (pkg.Weight_Unit__c != null) {
+            weightUnit = pkg.Weight_Unit__c;
+        } else {
+            weightUnit = 'LBS';
+        }
+
+        res.Package2Create.Weight_Unit__c = weightUnit;
+        System.debug('WEIGHT UNIT USED = ' + weightUnit);
+
+        try { res.Package2Create.put('Quantity__c', packageQty); } catch (Exception e) {}
+        try { res.Package2Create.put('Declared_Value__c', declaredValue); } catch (Exception e) {}
+
+        System.debug('FINAL Package2Create sent to LWC: ' + JSON.serializePretty(res.Package2Create));
+        String apiType = null;
+
+            if (pd != null && pd.API_Type__c != null) {
+                apiType = pd.API_Type__c.trim().toLowerCase();
+            } else {
+                // fallback rule → all pallet-based types become “pallet”
+                if (lowerName.contains('pallet')) apiType = 'pallet';
+                else if (lowerName.contains('box')) apiType = 'box';
+                else if (lowerName.contains('tote')) apiType = 'tote';
+                else apiType = 'pallet'; // safe fallback
+            }
+
+            res.debug.put('apiTypeUsed', apiType);
+
+            // send to LWC
+            try { 
+                res.Package2Create.put('API_Package_Type__c', apiType);
+            } catch (Exception e) {}
+
+        return res;
+
+    } catch (Exception ex) {
+        System.debug('ERROR: ' + ex.getMessage() + 
+                     ' @ Line:' + ex.getLineNumber());
+
+        res.exceptionError = ex.getMessage() + ' Line:' + ex.getLineNumber();
+        return res;
+    }
+}
+
+    private static Decimal safeDecimal(Object o) {
+        if (o == null) return 0;
+        try {
+            if (o instanceof Decimal) return (Decimal) o;
+            if (o instanceof Integer) return Decimal.valueOf(String.valueOf(o));
+            if (o instanceof Double) return Decimal.valueOf((Double)o);
+            String s = String.valueOf(o);
+            if (String.isBlank(s)) return 0;
+            s = s.replaceAll('[^0-9\\.-]', '');
+            return s == '' ? 0 : Decimal.valueOf(s);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+  
+    public class SelectOptionWrapper {
+        @AuraEnabled public String value;
+        @AuraEnabled public String label;
+        public SelectOptionWrapper(String v, String l){
+            value = v;
+            label = l;
+        }
+    }
+
+    public class FetchInitWrapper {
+        @AuraEnabled public List<SelectOptionWrapper> dimensionOptions = new List<SelectOptionWrapper>();
+        @AuraEnabled public List<SelectOptionWrapper> weightUnitOptions = new List<SelectOptionWrapper>();
+        @AuraEnabled public List<SelectOptionWrapper> freightClassOptions = new List<SelectOptionWrapper>();
+        @AuraEnabled public List<SelectOptionWrapper> hazardClassOptions = new List<SelectOptionWrapper>();
+        @AuraEnabled public List<SelectOptionWrapper> packagingGroupOptions = new List<SelectOptionWrapper>();
+        @AuraEnabled public List<SelectOptionWrapper> nmfcOptions  = new List<SelectOptionWrapper>();
+
+        @AuraEnabled public Map<String, Credentials__c> credentialsMap = new Map<String, Credentials__c>();
+    }
+    public class quoteWrapper {
+    @AuraEnabled public String provider;
+    @AuraEnabled public String carrier;
+    @AuraEnabled public String service;
+    @AuraEnabled public Decimal amount;
+    @AuraEnabled public String currencyQ;
+    @AuraEnabled public String quoteId;
+    @AuraEnabled public Boolean shipmentCreated;
+    @AuraEnabled public String shipmentId;
+
+}
+
+public class RateResponseLTL {
+    @AuraEnabled public List<quoteWrapper> quotesFedex;
+    @AuraEnabled public List<quoteWrapper> quotesUPS;
+    @AuraEnabled public List<quoteWrapper> quotesFreightView;
+    @AuraEnabled public List<String> missingCredentials;
+}
+public class PackageInputWrapper {
+    @AuraEnabled public Integer id;
+    @AuraEnabled public Integer Quantity;
+    @AuraEnabled public String FVPackageType;
+    @AuraEnabled public Decimal Weight;
+    @AuraEnabled public Decimal Length;
+    @AuraEnabled public Decimal Width;
+    @AuraEnabled public Decimal Height;
+    @AuraEnabled public String WeightUnit;
+    @AuraEnabled public String DimensionUnit;
+    @AuraEnabled public String FreightClass;
+    @AuraEnabled public Boolean isHazmat;
+    @AuraEnabled public String HazmatID;
+    @AuraEnabled public String HazardClass;
+    @AuraEnabled public String PackagingGroup;
+    @AuraEnabled public String DeclaredValue;
+    @AuraEnabled public String NMFCCode;
+    @AuraEnabled public String NMFC;
+}
+
+public class BookingResult {
+    @AuraEnabled public Boolean success;
+    @AuraEnabled public String  message;
+    @AuraEnabled public String  shipmentId;
+    @AuraEnabled public String  shipmentSalesforceId ;
+    @AuraEnabled public String  status;
+    @AuraEnabled public String  trackingNumber;
+    @AuraEnabled public Decimal amount;
+    @AuraEnabled public String  currencyCode;
+    @AuraEnabled public String  carrier;
+    @AuraEnabled public String  provider;
+    @AuraEnabled public String  service;
+    @AuraEnabled public String  responseRaw;
+      @AuraEnabled public List<Id> contentDocumentIds;
+    @AuraEnabled public List<String> contentTitles;
+      @AuraEnabled public Map<String, Id> docByType;
+       
+}
+
+public class ProductStockSummary {
         @AuraEnabled public Id      productId;
         @AuraEnabled public Decimal totalQty;
 
@@ -8,274 +1728,515 @@ public with sharing class testtemp {
             this.totalQty  = totalQty;
         }
     }
+// for order to logistic here 
+// @AuraEnabled(cacheable=true)
+// public static Map<String, Object> getOrderAndDcDetails(Id orderId,  Id dcId) {
 
-    public static Map<Id, ProductStockSummary> getTotalStockPerProduct(
-    List<Id> productIds,
-    String channel,                 // kept for compatibility (not used in filter here)
-    String distributionChannel      // Id of Distribution_Channel__c record
-) {
-    Map<Id, ProductStockSummary> result = new Map<Id, ProductStockSummary>();
+//     Map<String, Object> out = new Map<String, Object>(); String orderQuery = 'SELECT ' + UtilClass.selectStarFromSObject('Order') + ' , Channel__r.Id, Channel__r.Name,Contact__r.Id,Contact__r.Name,Ship_To_Address__r.Id,Ship_To_Address__r.Name,Account.Name FROM Order WHERE Id = :orderId'; SObject orderRec = Database.query(orderQuery); out.put('order', orderRec); String itemQuery = 'SELECT ' + UtilClass.selectStarFromSObject('OrderItem') + ', Product2.Id, Product2.Name FROM OrderItem WHERE OrderId = :orderId'; List<SObject> itemRecs = Database.query(itemQuery); List<Map<String, Object>> analysis = new List<Map<String, Object>>(); Set<Id> productIds = new Set<Id>(); for (SObject s : itemRecs) { Decimal qty  = (Decimal)s.get('Quantity'); Decimal logQ = s.get('Logistic_Quantity__c') == null ? 0 : (Decimal)s.get('Logistic_Quantity__c'); Decimal rem  = qty - logQ; Map<String, Object> row = new Map<String, Object>(); row.put('record', s); row.put('remainingQty', rem); row.put('totalQty', qty); row.put('logisticQty', logQ); analysis.add(row); productIds.add((Id)s.get('Product2Id')); } out.put('items', analysis); if (dcId != null) { Distribution_Channel__c topDC = [ SELECT Id, Name, Priority__c, Site__c, Site__r.Name,Active__c, Site__r.Address__c, Site__r.Address__r.Name, Site__r.Primary_Contact__c, Site__r.Primary_Contact__r.Name, Site__r.Address__r.City__c, Site__r.Address__r.State__c, Site__r.Address__r.Country__c FROM Distribution_Channel__c WHERE Id = :dcId ORDER BY Priority__c ASC LIMIT 1 ]; if (topDC != null) { Map<String, Object> dcMap = new Map<String, Object>{ 'Id' => topDC.Id, 'Name' => topDC.Name, 'Priority__c' => topDC.Priority__c, 'Active__c' => topDC.Active__c }; dcMap.put('Site', new Map<String, Object>{ 'siteId' => topDC.Site__c, 'siteName' => topDC.Site__r?.Name, 'siteAddressId' => topDC.Site__r?.Address__c, 'siteAddressName' => topDC.Site__r?.Address__r?.Name, 'sitePrimaryContactId' => topDC.Site__r?.Primary_Contact__c, 'sitePrimaryContactName' => topDC.Site__r?.Primary_Contact__r?.Name }); out.put('distributionChannel', dcMap); } } List<Logistic__c> logisticRecs = [ SELECT Id, Name, Account__c, Account__r.Name, Contact__c, Contact__r.Name, From_Contact__c, From_Contact__r.Name, To_Address__c, To_Address__r.Name, From_Address__c, From_Address__r.Name FROM Logistic__c WHERE Order_S__c = :orderId ]; out.put('logistics', logisticRecs); return out;
+// }
 
-    if (productIds == null || productIds.isEmpty() || String.isBlank(distributionChannel)) {
-        return result;
+@AuraEnabled(cacheable = true)
+public static Map < String, Object > getOrderAndDcDetails(Id orderId, Id dcId) {
+
+  Map < String, Object > out = new Map < String, Object > ();
+  String orderQuery = 'SELECT ' + UtilClass.selectStarFromSObject('Order') + ' , Channel__r.Id, Channel__r.Name,Contact__r.Id,Contact__r.Name,Ship_To_Address__r.Id,Ship_To_Address__r.Name,Account.Name FROM Order WHERE Id = :orderId';
+  SObject orderRec = Database.query(orderQuery);
+  out.put('order', orderRec);
+  String itemQuery = 'SELECT ' + UtilClass.selectStarFromSObject('OrderItem') + ', Product2.Id, Product2.Name FROM OrderItem WHERE OrderId = :orderId';
+  List < SObject > itemRecs = Database.query(itemQuery);
+  List < Map < String, Object >> analysis = new List < Map < String, Object >> ();
+  Set < Id > productIds = new Set < Id > ();
+  for (SObject s: itemRecs) {
+    Decimal qty = (Decimal) s.get('Quantity');
+    Decimal logQ = s.get('Logistic_Quantity__c') == null ? 0 : (Decimal) s.get('Logistic_Quantity__c');
+    Decimal rem = qty - logQ;
+    Map < String, Object > row = new Map < String, Object > ();
+    row.put('record', s);
+    row.put('remainingQty', rem);
+    row.put('totalQty', qty);
+    row.put('logisticQty', logQ);
+    analysis.add(row);
+    productIds.add((Id) s.get('Product2Id'));
+  }
+  out.put('items', analysis);
+  if (dcId != null) {
+    Distribution_Channel__c topDC = [SELECT Id, Name, Priority__c, Site__c, Site__r.Name, Active__c, Site__r.Address__c, Site__r.Address__r.Name, Site__r.Primary_Contact__c, Site__r.Primary_Contact__r.Name, Site__r.Address__r.City__c, Site__r.Address__r.State__c, Site__r.Address__r.Country__c FROM Distribution_Channel__c WHERE Id =: dcId ORDER BY Priority__c ASC LIMIT 1];
+    if (topDC != null) {
+      Map < String, Object > dcMap = new Map < String, Object > {
+        'Id' => topDC.Id,
+        'Name' => topDC.Name,
+        'Priority__c' => topDC.Priority__c,
+        'Active__c' => topDC.Active__c
+      };
+      dcMap.put('Site', new Map < String, Object > {
+        'siteId' => topDC.Site__c,
+        'siteName' => topDC.Site__r?.Name,
+        'siteAddressId' => topDC.Site__r?.Address__c,
+        'siteAddressName' => topDC.Site__r?.Address__r?.Name,
+        'sitePrimaryContactId' => topDC.Site__r?.Primary_Contact__c,
+        'sitePrimaryContactName' => topDC.Site__r?.Primary_Contact__r?.Name
+      });
+      out.put('distributionChannel', dcMap);
     }
-
-    // 1) Get the DC record to derive Site (Warehouse)
-    Id dcId;
-    try {
-        dcId = (Id)distributionChannel;         // assuming caller passes DC Id as String
-    } catch (Exception e) {
-        // If it's not a valid Id, nothing to do
-        return result;
-    }
-
-    // ⚠️ Adjust object/field API names if different in your org
-    Distribution_Channel__c dc = [
-        SELECT Id, Site__c
-        FROM Distribution_Channel__c
-        WHERE Id = :dcId
-        LIMIT 1
-    ];
-
-    if (dc.Site__c == null) {
-        // No site/warehouse on DC → no inventory to fetch
-        return result;
-    }
-
-    Id siteId = dc.Site__c;   // this is what Inventory_Stock__c.Warehouse__c points to
-
-    // 2) Query Inventory_Stock__c filtered by Warehouse__c (site)
-    String soql =
-        'SELECT Product__c productId,' +
-        '       SUM(Number_of_Item_In_Stock__c) totalQty' +
-        '  FROM Inventory_Stock__c' +
-        ' WHERE Product__c IN :productIds' +
-        '   AND Active__c = true' +
-        '   AND Number_of_Item_In_Stock__c > 0' +
-        '   AND Name NOT IN (\'Awaiting Stock\', \'Serial Stock Holder\')' +
-        '   AND Warehouse__c = :siteId' +
-        ' GROUP BY Product__c';
-
-    List<AggregateResult> ars = Database.query(soql);
-
-    for (AggregateResult ar : ars) {
-        Id      productId = (Id)ar.get('productId');
-        Decimal totalQty  = (Decimal)ar.get('totalQty');
-
-        result.put(productId, new ProductStockSummary(productId, totalQty));
-    }
-
-    return result;
+  }
+  List < Logistic__c > logisticRecs = [SELECT Id, Name, Account__c, Account__r.Name, Contact__c, Contact__r.Name, From_Contact__c, From_Contact__r.Name, To_Address__c, To_Address__r.Name, From_Address__c, From_Address__r.Name FROM Logistic__c WHERE Order_S__c =: orderId];
+  out.put('logistics', logisticRecs);
+  return out;
 }
 
+// @AuraEnabled(cacheable=true)
+// public static Map<String, Object> getOrderAndItemsAnalysis(Id orderId) {
 
+//     Map<String, Object> out = new Map<String, Object>(); String orderQuery = 'SELECT ' + UtilClass.selectStarFromSObject('Order') + ' , Channel__r.Id, Channel__r.Name,Contact__r.Id,Contact__r.Name,Ship_To_Address__r.Id,Ship_To_Address__r.Name,Account.Name FROM Order WHERE Id = :orderId'; SObject orderRec = Database.query(orderQuery); out.put('order', orderRec); String itemQuery = 'SELECT ' + UtilClass.selectStarFromSObject('OrderItem') + ', Product2.Id, Product2.Name FROM OrderItem WHERE OrderId = :orderId'; List<SObject> itemRecs = Database.query(itemQuery); List<Map<String, Object>> analysis = new List<Map<String, Object>>(); Set<Id> productIds = new Set<Id>(); for (SObject s : itemRecs) { Decimal qty  = (Decimal)s.get('Quantity'); Decimal logQ = s.get('Logistic_Quantity__c') == null ? 0 : (Decimal)s.get('Logistic_Quantity__c'); Decimal rem  = qty - logQ; Map<String, Object> row = new Map<String, Object>(); row.put('record', s); row.put('remainingQty', rem); row.put('totalQty', qty); row.put('logisticQty', logQ); analysis.add(row); productIds.add((Id)s.get('Product2Id')); } out.put('items', analysis); Id chId = (Id)orderRec.get('Channel__c'); if (chId != null) { Distribution_Channel__c topDC = [ SELECT Id, Name, Priority__c, Site__c, Site__r.Name,Active__c, Site__r.Address__c, Site__r.Address__r.Name, Site__r.Primary_Contact__c, Site__r.Primary_Contact__r.Name, Site__r.Address__r.City__c, Site__r.Address__r.State__c, Site__r.Address__r.Country__c FROM Distribution_Channel__c WHERE Channel__c = :chId ORDER BY Priority__c ASC LIMIT 1 ]; if (topDC != null) { Map<String, Object> dcMap = new Map<String, Object>{ 'Id' => topDC.Id, 'Name' => topDC.Name, 'Priority__c' => topDC.Priority__c, 'Active__c' => topDC.Active__c }; dcMap.put('Site', new Map<String, Object>{ 'siteId' => topDC.Site__c, 'siteName' => topDC.Site__r?.Name, 'siteAddressId' => topDC.Site__r?.Address__c, 'siteAddressName' => topDC.Site__r?.Address__r?.Name, 'sitePrimaryContactId' => topDC.Site__r?.Primary_Contact__c, 'sitePrimaryContactName' => topDC.Site__r?.Primary_Contact__r?.Name }); out.put('distributionChannel', dcMap); } } List<Logistic__c> logisticRecs = [ SELECT Id, Name, Account__c, Account__r.Name, Contact__c, Contact__r.Name, From_Contact__c, From_Contact__r.Name, To_Address__c, To_Address__r.Name, From_Address__c, From_Address__r.Name FROM Logistic__c WHERE Order_S__c = :orderId ]; out.put('logistics', logisticRecs); Integer logisticCount = [SELECT COUNT() FROM Logistic__c WHERE Order_S__c = :orderId]; String orderNum = (String)orderRec.get('OrderNumber'); String newLogisticName = orderNum + '-Logistic-' + String.valueOf(logisticCount + 1); out.put('newLogisticName', newLogisticName); return out;
+// }
+    
+
+@AuraEnabled(cacheable = true)
+public static Map < String, Object > getOrderAndItemsAnalysis(Id orderId) {
+
+  Map < String, Object > out = new Map < String, Object > ();
+  String orderQuery = 'SELECT ' + UtilClass.selectStarFromSObject('Order') + ' , Channel__r.Id, Channel__r.Name,Contact__r.Id,Contact__r.Name,Ship_To_Address__r.Id,Ship_To_Address__r.Name,Account.Name FROM Order WHERE Id = :orderId';
+  SObject orderRec = Database.query(orderQuery);
+  out.put('order', orderRec);
+  String itemQuery = 'SELECT ' + UtilClass.selectStarFromSObject('OrderItem') + ', Product2.Id, Product2.Name FROM OrderItem WHERE OrderId = :orderId';
+  List < SObject > itemRecs = Database.query(itemQuery);
+  List < Map < String, Object >> analysis = new List < Map < String, Object >> ();
+  Set < Id > productIds = new Set < Id > ();
+  for (SObject s: itemRecs) {
+    Decimal qty = (Decimal) s.get('Quantity');
+    Decimal logQ = s.get('Logistic_Quantity__c') == null ? 0 : (Decimal) s.get('Logistic_Quantity__c');
+    Decimal rem = qty - logQ;
+    Map < String, Object > row = new Map < String, Object > ();
+    row.put('record', s);
+    row.put('remainingQty', rem);
+    row.put('totalQty', qty);
+    row.put('logisticQty', logQ);
+    analysis.add(row);
+    productIds.add((Id) s.get('Product2Id'));
+  }
+  out.put('items', analysis);
+  Id chId = (Id) orderRec.get('Channel__c');
+  if (chId != null) {
+    Distribution_Channel__c topDC = [SELECT Id, Name, Priority__c, Site__c, Site__r.Name, Active__c, Site__r.Address__c, Site__r.Address__r.Name, Site__r.Primary_Contact__c, Site__r.Primary_Contact__r.Name, Site__r.Address__r.City__c, Site__r.Address__r.State__c, Site__r.Address__r.Country__c FROM Distribution_Channel__c WHERE Channel__c =: chId ORDER BY Priority__c ASC LIMIT 1];
+    if (topDC != null) {
+      Map < String, Object > dcMap = new Map < String, Object > {
+        'Id' => topDC.Id,
+        'Name' => topDC.Name,
+        'Priority__c' => topDC.Priority__c,
+        'Active__c' => topDC.Active__c
+      };
+      dcMap.put('Site', new Map < String, Object > {
+        'siteId' => topDC.Site__c,
+        'siteName' => topDC.Site__r?.Name,
+        'siteAddressId' => topDC.Site__r?.Address__c,
+        'siteAddressName' => topDC.Site__r?.Address__r?.Name,
+        'sitePrimaryContactId' => topDC.Site__r?.Primary_Contact__c,
+        'sitePrimaryContactName' => topDC.Site__r?.Primary_Contact__r?.Name
+      });
+      out.put('distributionChannel', dcMap);
+    }
+  }
+  List < Logistic__c > logisticRecs = [SELECT Id, Name, Account__c, Account__r.Name, Contact__c, Contact__r.Name, From_Contact__c, From_Contact__r.Name, To_Address__c, To_Address__r.Name, From_Address__c, From_Address__r.Name FROM Logistic__c WHERE Order_S__c =: orderId];
+  out.put('logistics', logisticRecs);
+  Integer logisticCount = [SELECT COUNT() FROM Logistic__c WHERE Order_S__c =: orderId];
+  String orderNum = (String) orderRec.get('OrderNumber');
+  String newLogisticName = orderNum + '-Logistic-' + String.valueOf(logisticCount + 1);
+  out.put('newLogisticName', newLogisticName);
+  return out;
+}
+// abuzar
+// @AuraEnabled(cacheable=true)
+//  public static Map<Id, ProductStockSummary> getTotalStockPerProduct( List<Id> productIds, String channel, String distributionChannel ) { System.debug('productIds --> '+productIds); System.debug('channel --> '+channel); System.debug('distributionChannel --> '+distributionChannel); Map<Id, ProductStockSummary> result = new Map<Id, ProductStockSummary>(); if (productIds == null || productIds.isEmpty() || String.isBlank(distributionChannel)) { return result; } Id dcId; try { dcId = (Id)distributionChannel; } catch (Exception e) { return result; } Distribution_Channel__c dc = [ SELECT Id, Site__c FROM Distribution_Channel__c WHERE Id = :dcId LIMIT 1 ]; if (dc.Site__c == null) { return result; } Id siteId = dc.Site__c; System.debug('SiteId: ' + siteId); String soql = 'SELECT Product__c productId,' + '       SUM(Number_of_Item_In_Stock__c) totalQty' + '  FROM Inventory_Stock__c' + ' WHERE Product__c IN :productIds' + '   AND Active__c = true' + '   AND Number_of_Item_In_Stock__c >= 0' + '   AND Name NOT IN (\'Awaiting Stock\', \'Serial Stock Holder\')' + '   AND Warehouse__c = :siteId' + ' GROUP BY Product__c'; List<AggregateResult> ars = Database.query(soql); for (AggregateResult ar : ars) { Id      productId = (Id)ar.get('productId'); Decimal totalQty  = (Decimal)ar.get('totalQty'); result.put(productId, new ProductStockSummary(productId, totalQty)); } for (Id pId : productIds) { if (!result.containsKey(pId)) { result.put(pId, new ProductStockSummary(pId, 0)); } } return result; } public class Result { @AuraEnabled public Logistic__c logistic { get; set; } @AuraEnabled public String message   { get; set; } } @AuraEnabled public static Result getCreateLogistics(String LogisticJSON, String LLIListJSON,String OrderLIneItems,String BomItems){ Result res = new Result(); res.logistic = new Logistic__c(); res.message = ''; try{ system.debug('getCreateLogistic called'); list<OrderItem> Orditem = (OrderLIneItems != null && OrderLIneItems != '') ? (list<OrderItem>) JSON.deserialize(OrderLIneItems, list<OrderItem> .class) : new list<OrderItem>(); list<BOM_Line_Item__c> bomitem = (BomItems != null && BomItems != '') ? (list<BOM_Line_Item__c>) JSON.deserialize(BomItems, list<BOM_Line_Item__c> .class) : new list<BOM_Line_Item__c>(); Id rTpe_MRPKIT; rTpe_MRPKIT = Schema.SObjectType.MRP__c.getRecordTypeInfosByDeveloperName().get('MRP_Kit').getRecordTypeId(); list<MRP__c> MRPS2Insert = new list<MRP__c>(); map<string,MRP__c> MRPmap = new map<string,MRP__c>(); PreventRecursiveLedgerEntry.testCasesTransactions = true; for(OrderItem orditm:Orditem){ if(orditm.Product2.Is_Kit__c){ for(BOM_Line_Item__c bom:bomitem){ MRP__c MRP = new MRP__c(); } } } upsert MRPS2Insert; system.debug('inside MRP Creation1-->:'); for(MRP__c Mrp :MRPS2Insert){ MRPmap.put(Mrp.MRP_Product__c,Mrp); } system.debug('MRPmap:-->'+MRPmap); Logistic__c Logistic = (Logistic__c) JSON.deserialize(LogisticJSON, Logistic__c .class); system.debug('Logistic : '+Logistic.Shipping_Preferences__c); System.debug('Logistic Order : '+Logistic.Order_S__c); Id orderId = Logistic.Order_S__c; String SORecTypeId=''; if(String.isNotEmpty(Logistic.Order_S__c)) SORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c','Order'); if(String.isNotEmpty(Logistic.Purchase_Order__c)) SORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c','Purchase_Order'); Logistic.RecordTypeId = SORecTypeId; system.debug('RecordTypeId : '+Logistic.RecordTypeId); list<Logistic_Line_Item__c> LogisticLI = (list<Logistic_Line_Item__c>) JSON.deserialize(LLIListJSON, list<Logistic_Line_Item__c> .class); List<Logistic_Line_Item__c> typeLogisticLI = new List<Logistic_Line_Item__c>(); set<String> proList=new set<String>(); set<Id> OrderProdIds=new set<Id>(); Map<String,Decimal> prodRequestedQtyMap = new Map<String,Decimal>(); Map<String,Decimal> OrderRequestedQtyMap = new Map<String,Decimal>(); for(Logistic_Line_Item__c log :LogisticLI){ if(log.Product__c != null && !proList.contains(log.Product__c)){ proList.add(log.Product__c); prodRequestedQtyMap.put(log.Product__c,log.Quantity__c); } if(log.Order_Product__c != null) { OrderProdIds.add(log.Order_Product__c); OrderRequestedQtyMap.put(log.Order_Product__c,log.Quantity__c); } } if (OrderProdIds.size() > 0) { List<OrderItem> ordItemsList = [SELECT Id, OrderItemNumber, Quantity, Is_Kit__c, Logistic_Quantity__c FROM OrderItem WHERE Id IN :OrderProdIds]; for (OrderItem ord : ordItemsList) { if (!ord.Is_Kit__c && OrderRequestedQtyMap.containsKey(ord.Id)) { Decimal logQty = OrderRequestedQtyMap.get(ord.Id); system.debug('logQty : '+logQty); if ((logQty + ord.Logistic_Quantity__c) > ord.Quantity) { res.message = 'Logistic cannot be created for more than order quantity'; return res; } } } } List<Product2> proList1 = [Select Id,Name,Serialise__c,Lot_Tracked__c,Track_Inventory__c from Product2 where Id In:proList]; Map<String,String> proName=new Map<String,String>(); Map<String,Boolean> proSerial=new Map<String,Boolean>(); for(Product2 pr:proList1){ proName.put(pr.Id,pr.Name); proSerial.put(pr.Id,pr.Serialise__c); } Distribution_Channel__c dc = [Select Id,Name,Site__c from Distribution_Channel__c where Id=:Logistic.Distribution_Channel__c Limit 1]; List<Manufacturing_Order__c> SOMOs = new List<Manufacturing_Order__c>(); List<PO__c> SOPOs = new List<PO__c>(); List<Inventory_Stock__c> invtoryList = new List<Inventory_Stock__c>(); List<Inventory_Stock__c> MOPOinvtoryList = new List<Inventory_Stock__c>(); system.debug('orderId~>'+orderId); if(orderId != null && OrderProdIds.size() > 0 && proList.size() > 0){ SOMOs = [Select Id,Name from Manufacturing_Order__c where (Order_Product__c IN:OrderProdIds and Order__c =:orderId) and Product__c IN:proList]; System.debug('SOMOs : '+SOMOs.size()); SOPOs = [Select Id,Name from PO__c where Order__c =:orderId and Ready_To_Receive__c =:true]; System.debug('SOPOs : '+SOPOs.size()); } Map<String,List<Inventory_Stock__c>> proInvMap = new Map<String,List<Inventory_Stock__c>>(); Map<String,Decimal> prodStockQtyMap = new Map<String,Decimal>(); if(SOMOs.size() > 0 || SOPOs.size() > 0){ set<Id> MoIds = new set<Id>();set<Id> PoIds = new set<Id>(); set<Id> InvIds = new set<Id>(); for(Manufacturing_Order__c MO : SOMOs) MoIds.add(MO.Id); for(PO__c PO : SOPOs) PoIds.add(PO.Id); system.debug('MoIds ~>'+MoIds); List<Stock_Inward_Line_Item__c> stinlist = [Select Id,Name,Product__c,Site_ProductService_InventoryStock__c from Stock_Inward_Line_Item__c  where Active__c = true and Product__c IN :proList and Scrap__c = false AND (Purchase_Orders__c IN:PoIds or Manufacturing_Order__c IN: MoIds) AND Quantity__c > 0 AND Status__c != 'Awaiting Stock']; for(Stock_Inward_Line_Item__c sin : stinlist) InvIds.add(sin.Site_ProductService_InventoryStock__c); system.debug('MoIds InvIds ~>'+InvIds); MOPOinvtoryList = [Select Id, Name, Active__c, Company__c,  Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Product__c,  Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c From Inventory_Stock__c Where product__c != null and Product__c In:proList And Active__c = true And Warehouse__c =:dc.Site__c AND Id IN:InvIds AND Name != 'Awaiting Stock' And Number_of_Item_In_Stock__c > 0 Order By Checked_In_Date__c ASC]; system.debug('MOPOinvtoryList~>'+MOPOinvtoryList.size()); for(Inventory_Stock__c invt:MOPOinvtoryList){ List<Inventory_Stock__c> invlistformap = new List<Inventory_Stock__c>(); if(proInvMap.containsKey(invt.Product__c)) invlistformap = proInvMap.get(invt.Product__c);  invlistformap.add(invt); proInvMap.put(invt.Product__c,invlistformap); } for(String key: proInvMap.keyset()){ Decimal Qty = 0;  for(Inventory_Stock__c inv : proInvMap.get(key)){ Qty = Qty + inv.Number_of_Item_In_Stock__c;  } prodStockQtyMap.put(key,Qty); } } Boolean checkInventoryList = false; for(String key : prodRequestedQtyMap.keyset()){ if(prodStockQtyMap.containsKey(key)){ system.debug('prodStockQtyMap.get(key) first check~>'+prodStockQtyMap.get(key));  if(prodStockQtyMap.get(key) < prodRequestedQtyMap.get(key)){checkInventoryList = true; break; } }else{ checkInventoryList = true; break; } } system.debug('checkInventoryList~>'+checkInventoryList); if(checkInventoryList){ system.debug('MOPOinvtoryList size~>'+MOPOinvtoryList.size()); if(MOPOinvtoryList.size() > 0){ invtoryList = [Select Id,Name,Product__c,Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c  from Inventory_Stock__c where product__c != null AND product__c In:proList And Active__c = true AND Warehouse__c =:dc.Site__c  AND Name != 'Awaiting Stock' And Number_of_Item_In_Stock__c > 0 AND Id NOT IN:MOPOinvtoryList ORDER BY Checked_In_Date__c ASC]; }else{ invtoryList = [Select Id,Name,Product__c,Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c  from Inventory_Stock__c where product__c != null AND product__c In:proList And Active__c = true AND Warehouse__c =:dc.Site__c AND Name != 'Awaiting Stock' And Number_of_Item_In_Stock__c > 0 ORDER BY Checked_In_Date__c ASC]; } for(Inventory_Stock__c invt:invtoryList){ List<Inventory_Stock__c> invlistformap = new List<Inventory_Stock__c>(); if(proInvMap.containsKey(invt.Product__c)) invlistformap = proInvMap.get(invt.Product__c); invlistformap.add(invt); proInvMap.put(invt.Product__c,invlistformap); } for(String key: proInvMap.keyset()){ Decimal Qty = 0; for(Inventory_Stock__c inv : proInvMap.get(key)){ Qty = Qty + inv.Number_of_Item_In_Stock__c; } Decimal totalQty = 0; if(prodStockQtyMap.containsKey(key)) totalQty = prodStockQtyMap.get(key); totalQty = totalQty + Qty; prodStockQtyMap.put(key,totalQty); } } if(!String.isNotEmpty(Logistic.Purchase_Order__c)){ for(String key : prodRequestedQtyMap.keyset()){ if(prodStockQtyMap.containsKey(key)){ if(prodStockQtyMap.get(key) < prodRequestedQtyMap.get(key)){ res.message = 'Does not have inventory for product :'+proName.get(key)+' on selected distribution Centers site'; return res; } }else{ res.message = 'Does not have inventory for product :'+proName.get(key)+' on selected distribution Centers site'; return res; } } } if(String.isNotEmpty(Logistic.Order_S__c)){ Order SalOrder=new Order(); SalOrder=[SELECT Id, Name, Channel__c, Channel__r.Ship_From_Address__c,Shipment_Type__c, Shipment_Preference_Speed__c, BillToContactId, Bill_To_Address__c, Bill_To_Return__c, Billing_Account_Number_Return__c, Billing_Address_Return__c, Billing_Contact_Return__c FROM Order WHERE Id=:Logistic.Order_S__c]; if(SalOrder.Channel__c != null){ if(Logistic.From_Address__c == null && SalOrder.Channel__r.Ship_From_Address__c != null){Logistic.From_Address__c = SalOrder.Channel__r.Ship_From_Address__c; } } if(Logistic.Shipment_Type__c == null || Logistic.Shipment_Type__c == '') Logistic.Shipment_Type__c = SalOrder.Shipment_Type__c; system.debug('Logistic.Shipment_Type__c : '+Logistic.Shipment_Type__c); } else if(String.isNotEmpty(Logistic.Purchase_Order__c)){String PORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c','Purchase_Order'); Logistic.RecordTypeId = PORecTypeId; } if(Schema.sObjectType.Logistic__c.fields.From_Address__c.isCreateable() && Schema.sObjectType.Logistic__c.fields.From_Address__c.isUpdateable()){ if (Schema.sObjectType.Logistic__c.isCreateable() && Schema.sObjectType.Logistic__c.isUpdateable()){ upsert Logistic; } } else{ res.message = 'Don\'t have access to upsert logistic'; return res;  } list<String> SOLIIds=new list<String>(); list<String> ordItemIds=new list<String>(); list<String> POItemIds=new list<String>(); for(Logistic_Line_Item__c log:LogisticLI){ String Name = log.Name; if(Name.length() > 80) log.Name = Name.subString(0,79); log.Status__c = 'Reserved'; log.Logistic__c = Logistic.Id; if(log.Order_Product__c !=null) ordItemIds.add(log.Order_Product__c); if(log.Purchase_Line_Items__c !=null) POItemIds.add(log.Purchase_Line_Items__c); } if(LogisticLI.size() > 0){ if(Schema.sObjectType.Logistic_Line_Item__c.fields.Logistic__c.isCreateable() && Schema.sObjectType.Logistic_Line_Item__c.fields.Logistic__c.isUpdateable()){ List<SObject> safeLogisticLI = FLSHelper.getSafeRecords( LogisticLI, 'Logistic_Line_Item__c', AccessType.UPDATABLE ); for (SObject s : safeLogisticLI) { typeLogisticLI.add((Logistic_Line_Item__c)s); } if (!typeLogisticLI.isEmpty()) { upsert typeLogisticLI; } } else{ res.message = 'Don\'t have access to upsert logistic line items'; return res;} } List<Stock_Outward_Line_Item__c> SWLIToUpsert = new List<Stock_Outward_Line_Item__c>(); Map<Id, Inventory_Stock__c> pliStock = new Map<Id, Inventory_Stock__c>(); Map<Id, Stock_Outward_Line_Item__c> pliStockInward = new Map<Id, Stock_Outward_Line_Item__c>(); List<Inventory_Stock__c> Inventory2Upsert = new List<Inventory_Stock__c>(); for(Logistic_Line_Item__c log:typeLogisticLI){if(log.Product__c != null && log.Quantity__c > 0 && ((Logistic.Order_S__c != null && log.Order_Product__c != null))){if(Logistic.Purchase_Order__c == null && proInvMap.containsKey(log.Product__c) && proSerial.containsKey(log.Product__c)){ Decimal remainintQty = log.Quantity__c; for(Inventory_Stock__c inv : proInvMap.get(log.Product__c)){ if(remainintQty > 0){ Decimal qtytoprocess = 0; if(proSerial.get(log.Product__c)){ Inventory_Stock__c inv2Create = new Inventory_Stock__c(Active__c = true, Product__c = log.Product__c, Name = 'Serial Stock Holder', Warehouse__c = dc.Site__c);Inventory2Upsert.add(inv2Create); system.debug('inhere serial'); qtytoprocess = 0; Stock_Outward_Line_Item__c sto = new Stock_Outward_Line_Item__c(); sto.Name = 'Serial Stock Holder';  sto.Product__c = log.Product__c;   sto.Active__c = true;  sto.Status__c = 'Reserved'; if(log.Order_Product__c != null) sto.Order_Product__c = log.Order_Product__c; if(Logistic.Order_S__c != null) sto.Order__c = Logistic.Order_S__c; sto.Logistic_Line_Item__c = log.Id; sto.Quantity__c = remainintQty; SWLIToUpsert.add(sto); pliStock.put(log.Id,inv2Create);pliStockInward.put(log.Id,sto); remainintQty = 0; system.debug('qtytoprocess~>'+qtytoprocess); system.debug('remainintQty~>'+remainintQty); } else{ system.debug('inhere non serial inv.Number_of_Item_In_Stock__c~>'+inv.Number_of_Item_In_Stock__c); if(inv.Number_of_Item_In_Stock__c < remainintQty){ system.debug('inhere inv.Number_of_Item_In_Stock__c < remainintQty'); qtytoprocess = inv.Number_of_Item_In_Stock__c; remainintQty = remainintQty - inv.Number_of_Item_In_Stock__c; }else{ system.debug('inhere else inv.Number_of_Item_In_Stock__c >= remainintQty'); qtytoprocess = remainintQty; remainintQty = remainintQty - qtytoprocess; } system.debug('qtytoprocess~>'+qtytoprocess); system.debug('remainintQty~>'+remainintQty); } if(qtytoprocess > 0){ Stock_Outward_Line_Item__c sto = new Stock_Outward_Line_Item__c(); sto.Name = log.Name; if(log.Order_Product__c != null) sto.Order_Product__c = log.Order_Product__c;  if(Logistic.Order_S__c != null) sto.Order__c = Logistic.Order_S__c; sto.Product__c = log.Product__c;  sto.Active__c = true;  sto.Status__c = 'Reserved'; if(proSerial.get(log.Product__c)) sto.Quantity__c = 1; else sto.Quantity__c = qtytoprocess; system.debug('inv.Id for stock outward~>'+inv.Id); sto.Site_Product_Service_Inventory_Stock__c = inv.Id; system.debug('log.Id for stock outward~>'+log.Id); sto.Logistic_Line_Item__c = log.Id; if(MRPmap.containsKey(log.Product__c)) sto.MRP_Material_Requirements_Planning__c = MRPmap.get(log.Product__c).Id; system.debug('inv.Serial__c~>'+inv.Serial__c); if(inv.Serial__c != null) sto.Serial__c = inv.Serial__c; if(inv.Batch_Lot__c != null) sto.Material_Batch_Lot__c = inv.Batch_Lot__c; SWLIToUpsert.add(sto); } } } } } } system.debug('SWLIToUpsert size~>'+SWLIToUpsert.size()); if(Inventory2Upsert.size() > 0) insert Inventory2Upsert; for(Id pliId : pliStockInward.KeySet()){ pliStockInward.get(pliId).Site_Product_Service_Inventory_Stock__c= pliStock.get(pliId).Id; } if(SWLIToUpsert.size() > 0){ if(Schema.sObjectType.Stock_Outward_Line_Item__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.isUpdateable()) { system.debug('SWLIToUpsert size~>'+SWLIToUpsert.size()); upsert SWLIToUpsert;   for(Stock_Outward_Line_Item__c soli : SWLIToUpsert) { System.debug('Upserted SOLI ID: ' + soli.Id); }}  else{ res.message = 'Don\'t have access to upsert Stock Outward'; return res; } } if(POItemIds.size() > 0){ list<Logistic_Line_Item__c> LogLIList=new list<Logistic_Line_Item__c>(); LogLIList=[SELECT Id, Name, Quantity__c, Purchase_Line_Items__c FROM Logistic_Line_Item__c WHERE Purchase_Line_Items__c IN:POItemIds]; list<Purchase_Line_Items__c> poliItems2Update = new List<Purchase_Line_Items__c>(); for(Purchase_Line_Items__c poli:[SELECT Id, Logistic_Quantity__c FROM Purchase_Line_Items__c WHERE Id IN:POItemIds]){ Decimal LogQuantity=0; for(Logistic_Line_Item__c logLi:LogLIList) { if(logLi.Purchase_Line_Items__c==poli.Id) LogQuantity+=logLi.Quantity__c; } if(Schema.sObjectType.Purchase_Line_Items__c.fields.Logistic_Quantity__c.isUpdateable()) poli.Logistic_Quantity__c=LogQuantity; poliItems2Update.add(poli); } try{  if(poliItems2Update.size() > 0 && Schema.sObjectType.Purchase_Line_Items__c.isUpdateable())  { update poliItems2Update; } else{ res.message = 'User is not allowed to update POLI'; return res; } }catch(DMLException e){ res.message = 'DML Exception on PO Line Items update: '+ e.getMessage() +','+e.getStackTraceString(); return res;} } res.message = 'Logistic created successfully'; res.logistic = Logistic; return res; }catch(Exception e){ System.debug('Exception ~> '+ e.getMessage()+'; at line ~> '+e.getStackTraceString()); throw new AuraHandledException(e.getMessage()+'; at line ~> '+e.getStackTraceString()); } }
+
+
+@AuraEnabled(cacheable = true)
+public static Map < Id, ProductStockSummary > getTotalStockPerProduct(List < Id > productIds, String channel, String distributionChannel) {
+  System.debug('productIds --> ' + productIds);
+  System.debug('channel --> ' + channel);
+  System.debug('distributionChannel --> ' + distributionChannel);
+  Map < Id, ProductStockSummary > result = new Map < Id, ProductStockSummary > ();
+  if (productIds == null || productIds.isEmpty() || String.isBlank(distributionChannel)) {
+    return result;
+  }
+  Id dcId;
+  try {
+    dcId = (Id) distributionChannel;
+  } catch (Exception e) {
+    return result;
+  }
+  Distribution_Channel__c dc = [SELECT Id, Site__c FROM Distribution_Channel__c WHERE Id =: dcId LIMIT 1];
+  if (dc.Site__c == null) {
+    return result;
+  }
+  Id siteId = dc.Site__c;
+  System.debug('SiteId: ' + siteId);
+  String soql = 'SELECT Product__c productId,' + '       SUM(Number_of_Item_In_Stock__c) totalQty' + '  FROM Inventory_Stock__c' + ' WHERE Product__c IN :productIds' + '   AND Active__c = true' + '   AND Number_of_Item_In_Stock__c >= 0' + '   AND Name NOT IN (\'Awaiting Stock\', \'Serial Stock Holder\')' + '   AND Warehouse__c = :siteId' + ' GROUP BY Product__c';
+  List < AggregateResult > ars = Database.query(soql);
+  for (AggregateResult ar: ars) {
+    Id productId = (Id) ar.get('productId');
+    Decimal totalQty = (Decimal) ar.get('totalQty');
+    result.put(productId, new ProductStockSummary(productId, totalQty));
+  }
+  for (Id pId: productIds) {
+    if (!result.containsKey(pId)) {
+      result.put(pId, new ProductStockSummary(pId, 0));
+    }
+  }
+  return result;
+}
+public class Result {
+  @AuraEnabled
+   public Logistic__c logistic {
+    get;
+    set;
+  }
+  @AuraEnabled
+   public String message {
+    get;
+    set;
+  }
+}
 @AuraEnabled
-public static String createLogisticsMinimal(String LogisticJSON, String LLIListJSON) {
-    try {
-        System.debug('createLogisticsMinimal called');
-
-        // Deserialize inputs
-        Logistic__c logistic = (Logistic__c) JSON.deserialize(LogisticJSON, Logistic__c.class);
-        List<Logistic_Line_Item__c> logisticLIs = (LLIListJSON != null && LLIListJSON != '')
-            ? (List<Logistic_Line_Item__c>) JSON.deserialize(LLIListJSON, List<Logistic_Line_Item__c>.class)
-            : new List<Logistic_Line_Item__c>();
-
-        // Distribution channel required for warehouse/site
-        if (logistic.Distribution_Channel__c == null) {
-            return 'Distribution Channel is required on Logistic';
+ public static Result getCreateLogistics(String LogisticJSON, String LLIListJSON, String OrderLIneItems, String BomItems) {
+  Result res = new Result();
+  res.logistic = new Logistic__c();
+  res.message = '';
+  try {
+    system.debug('getCreateLogistic called');
+    list < OrderItem > Orditem = (OrderLIneItems != null && OrderLIneItems != '') ? (list < OrderItem > ) JSON.deserialize(OrderLIneItems, list < OrderItem > .class) : new list < OrderItem > ();
+    list < BOM_Line_Item__c > bomitem = (BomItems != null && BomItems != '') ? (list < BOM_Line_Item__c > ) JSON.deserialize(BomItems, list < BOM_Line_Item__c > .class) : new list < BOM_Line_Item__c > ();
+    Id rTpe_MRPKIT;
+    rTpe_MRPKIT = Schema.SObjectType.MRP__c.getRecordTypeInfosByDeveloperName().get('MRP_Kit').getRecordTypeId();
+    list < MRP__c > MRPS2Insert = new list < MRP__c > ();
+    map < string, MRP__c > MRPmap = new map < string, MRP__c > ();
+    PreventRecursiveLedgerEntry.testCasesTransactions = true;
+    for (OrderItem orditm: Orditem) {
+      if (orditm.Product2.Is_Kit__c) {
+        for (BOM_Line_Item__c bom: bomitem) {
+          MRP__c MRP = new MRP__c();
         }
-        List<Distribution_Channel__c> dcs = [
-            SELECT Id, Name, Site__c FROM Distribution_Channel__c WHERE Id = :logistic.Distribution_Channel__c LIMIT 1
+      }
+    }
+    upsert MRPS2Insert;
+    system.debug('inside MRP Creation1-->:');
+    for (MRP__c Mrp: MRPS2Insert) {
+      MRPmap.put(Mrp.MRP_Product__c, Mrp);
+    }
+    system.debug('MRPmap:-->' + MRPmap);
+    Logistic__c Logistic = (Logistic__c) JSON.deserialize(LogisticJSON, Logistic__c.class);
+    system.debug('Logistic : ' + Logistic.Shipping_Preferences__c);
+    System.debug('Logistic Order : ' + Logistic.Order_S__c);
+    Id orderId = Logistic.Order_S__c;
+    String SORecTypeId = '';
+    if (String.isNotEmpty(Logistic.Order_S__c)) SORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c', 'Order');
+    if (String.isNotEmpty(Logistic.Purchase_Order__c)) SORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c', 'Purchase_Order');
+    Logistic.RecordTypeId = SORecTypeId;
+    system.debug('RecordTypeId : ' + Logistic.RecordTypeId);
+    list < Logistic_Line_Item__c > LogisticLI = (list < Logistic_Line_Item__c > ) JSON.deserialize(LLIListJSON, list < Logistic_Line_Item__c > .class);
+    List < Logistic_Line_Item__c > typeLogisticLI = new List < Logistic_Line_Item__c > ();
+    set < String > proList = new set < String > ();
+    set < Id > OrderProdIds = new set < Id > ();
+    Map < String, Decimal > prodRequestedQtyMap = new Map < String, Decimal > ();
+    Map < String, Decimal > OrderRequestedQtyMap = new Map < String, Decimal > ();
+    for (Logistic_Line_Item__c log: LogisticLI) {
+      if (log.Product__c != null && !proList.contains(log.Product__c)) {
+        proList.add(log.Product__c);
+        prodRequestedQtyMap.put(log.Product__c, log.Quantity__c);
+      }
+      if (log.Order_Product__c != null) {
+        OrderProdIds.add(log.Order_Product__c);
+        OrderRequestedQtyMap.put(log.Order_Product__c, log.Quantity__c);
+      }
+    }
+    if (OrderProdIds.size() > 0) {
+      List < OrderItem > ordItemsList = [SELECT Id, OrderItemNumber, Quantity, Is_Kit__c, Logistic_Quantity__c FROM OrderItem WHERE Id IN: OrderProdIds];
+      for (OrderItem ord: ordItemsList) {
+        if (!ord.Is_Kit__c && OrderRequestedQtyMap.containsKey(ord.Id)) {
+          Decimal logQty = OrderRequestedQtyMap.get(ord.Id);
+          system.debug('logQty : ' + logQty);
+          if ((logQty + ord.Logistic_Quantity__c) > ord.Quantity) {
+            res.message = 'Logistic cannot be created for more than order quantity';
+            return res;
+          }
+        }
+      }
+    }
+    List < Product2 > proList1 = [Select Id, Name, Serialise__c, Lot_Tracked__c, Track_Inventory__c from Product2 where Id In: proList];
+    Map < String, String > proName = new Map < String, String > ();
+    Map < String, Boolean > proSerial = new Map < String, Boolean > ();
+    for (Product2 pr: proList1) {
+      proName.put(pr.Id, pr.Name);
+      proSerial.put(pr.Id, pr.Serialise__c);
+    }
+    Distribution_Channel__c dc = [Select Id, Name, Site__c from Distribution_Channel__c where Id =: Logistic.Distribution_Channel__c Limit 1];
+    List < Manufacturing_Order__c > SOMOs = new List < Manufacturing_Order__c > ();
+    List < PO__c > SOPOs = new List < PO__c > ();
+    List < Inventory_Stock__c > invtoryList = new List < Inventory_Stock__c > ();
+    List < Inventory_Stock__c > MOPOinvtoryList = new List < Inventory_Stock__c > ();
+    system.debug('orderId~>' + orderId);
+    if (orderId != null && OrderProdIds.size() > 0 && proList.size() > 0) {
+      SOMOs = [Select Id, Name from Manufacturing_Order__c where(Order_Product__c IN: OrderProdIds and Order__c =: orderId) and Product__c IN: proList];
+      System.debug('SOMOs : ' + SOMOs.size());
+      SOPOs = [Select Id, Name from PO__c where Order__c =: orderId and Ready_To_Receive__c =: true];
+      System.debug('SOPOs : ' + SOPOs.size());
+    }
+    Map < String, List < Inventory_Stock__c >> proInvMap = new Map < String, List < Inventory_Stock__c >> ();
+    Map < String, Decimal > prodStockQtyMap = new Map < String, Decimal > ();
+    if (SOMOs.size() > 0 || SOPOs.size() > 0) {
+      set < Id > MoIds = new set < Id > ();
+      set < Id > PoIds = new set < Id > ();
+      set < Id > InvIds = new set < Id > ();
+      for (Manufacturing_Order__c MO: SOMOs) MoIds.add(MO.Id);
+      for (PO__c PO: SOPOs) PoIds.add(PO.Id);
+      system.debug('MoIds ~>' + MoIds);
+      List < Stock_Inward_Line_Item__c > stinlist = [Select Id, Name, Product__c, Site_ProductService_InventoryStock__c from Stock_Inward_Line_Item__c where Active__c = true and Product__c IN: proList and Scrap__c = false AND(Purchase_Orders__c IN: PoIds or Manufacturing_Order__c IN: MoIds) AND Quantity__c > 0 AND Status__c != 'Awaiting Stock'];
+      for (Stock_Inward_Line_Item__c sin: stinlist) InvIds.add(sin.Site_ProductService_InventoryStock__c);
+      system.debug('MoIds InvIds ~>' + InvIds);
+      MOPOinvtoryList = [Select Id, Name, Active__c, Company__c, Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Product__c, Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c From Inventory_Stock__c Where product__c != null and Product__c In: proList And Active__c = true And Warehouse__c =: dc.Site__c AND Id IN: InvIds AND Name != 'Awaiting Stock'
+        And Number_of_Item_In_Stock__c > 0 Order By Checked_In_Date__c ASC
+      ];
+      system.debug('MOPOinvtoryList~>' + MOPOinvtoryList.size());
+      for (Inventory_Stock__c invt: MOPOinvtoryList) {
+        List < Inventory_Stock__c > invlistformap = new List < Inventory_Stock__c > ();
+        if (proInvMap.containsKey(invt.Product__c)) invlistformap = proInvMap.get(invt.Product__c);
+        invlistformap.add(invt);
+        proInvMap.put(invt.Product__c, invlistformap);
+      }
+      for (String key: proInvMap.keyset()) {
+        Decimal Qty = 0;
+        for (Inventory_Stock__c inv: proInvMap.get(key)) {
+          Qty = Qty + inv.Number_of_Item_In_Stock__c;
+        }
+        prodStockQtyMap.put(key, Qty);
+      }
+    }
+    Boolean checkInventoryList = false;
+    for (String key: prodRequestedQtyMap.keyset()) {
+      if (prodStockQtyMap.containsKey(key)) {
+        system.debug('prodStockQtyMap.get(key) first check~>' + prodStockQtyMap.get(key));
+        if (prodStockQtyMap.get(key) < prodRequestedQtyMap.get(key)) {
+          checkInventoryList = true;
+          break;
+        }
+      } else {
+        checkInventoryList = true;
+        break;
+      }
+    }
+    system.debug('checkInventoryList~>' + checkInventoryList);
+    if (checkInventoryList) {
+      system.debug('MOPOinvtoryList size~>' + MOPOinvtoryList.size());
+      if (MOPOinvtoryList.size() > 0) {
+        invtoryList = [Select Id, Name, Product__c, Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c from Inventory_Stock__c where product__c != null AND product__c In: proList And Active__c = true AND Warehouse__c =: dc.Site__c AND Name != 'Awaiting Stock'
+          And Number_of_Item_In_Stock__c > 0 AND Id NOT IN: MOPOinvtoryList ORDER BY Checked_In_Date__c ASC
         ];
-        if (dcs.isEmpty()) return 'Selected Distribution Channel not found';
-        Distribution_Channel__c dc = dcs[0];
-
-        // Collect product ids used in logistic line items
-        Set<Id> productIds = new Set<Id>();
-        for (Logistic_Line_Item__c lli : logisticLIs) {
-            if (lli.Product__c != null) productIds.add(lli.Product__c);
+      } else {
+        invtoryList = [Select Id, Name, Product__c, Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c from Inventory_Stock__c where product__c != null AND product__c In: proList And Active__c = true AND Warehouse__c =: dc.Site__c AND Name != 'Awaiting Stock'
+          And Number_of_Item_In_Stock__c > 0 ORDER BY Checked_In_Date__c ASC
+        ];
+      }
+      for (Inventory_Stock__c invt: invtoryList) {
+        List < Inventory_Stock__c > invlistformap = new List < Inventory_Stock__c > ();
+        if (proInvMap.containsKey(invt.Product__c)) invlistformap = proInvMap.get(invt.Product__c);
+        invlistformap.add(invt);
+        proInvMap.put(invt.Product__c, invlistformap);
+      }
+      for (String key: proInvMap.keyset()) {
+        Decimal Qty = 0;
+        for (Inventory_Stock__c inv: proInvMap.get(key)) {
+          Qty = Qty + inv.Number_of_Item_In_Stock__c;
         }
-
-        // Load product metadata (serial flag and names)
-        Map<Id, Product2> productsMap = new Map<Id, Product2>();
-        if (!productIds.isEmpty()) {
-            for (Product2 p : [SELECT Id, Name, Serialise__c FROM Product2 WHERE Id IN :productIds]) {
-                productsMap.put(p.Id, p);
-            }
-        }
-
-        // Insert or update logistic: user asked "insert" mainly — we'll insert if no Id, update if Id present
-        if (logistic.Id == null) {
-            if (!Schema.sObjectType.Logistic__c.isCreateable()) return 'No create access on Logistic';
-            insert logistic;
+        Decimal totalQty = 0;
+        if (prodStockQtyMap.containsKey(key)) totalQty = prodStockQtyMap.get(key);
+        totalQty = totalQty + Qty;
+        prodStockQtyMap.put(key, totalQty);
+      }
+    }
+    if (!String.isNotEmpty(Logistic.Purchase_Order__c)) {
+      for (String key: prodRequestedQtyMap.keyset()) {
+        if (prodStockQtyMap.containsKey(key)) {
+          if (prodStockQtyMap.get(key) < prodRequestedQtyMap.get(key)) {
+            res.message = 'Does not have inventory for product :' + proName.get(key) + ' on selected distribution Centers site';
+            return res;
+          }
         } else {
-            if (!Schema.sObjectType.Logistic__c.isUpdateable()) return 'No update access on Logistic';
-            update logistic;
+          res.message = 'Does not have inventory for product :' + proName.get(key) + ' on selected distribution Centers site';
+          return res;
         }
+      }
+    }
 
-        // Prepare logistic line items: name truncation + status + link to logistic
-        for (Logistic_Line_Item__c l : logisticLIs) {
-            if (l.Name != null && l.Name.length() > 80) l.Name = l.Name.substring(0, 80);
-            l.Status__c = 'Reserved';
-            l.Logistic__c = logistic.Id;
+    /* from here its not covered */
+    if (String.isNotEmpty(Logistic.Order_S__c)) {
+      Order SalOrder = new Order();
+      SalOrder = [SELECT Id, Name, Channel__c, Channel__r.Ship_From_Address__c, Shipment_Type__c, Shipment_Preference_Speed__c, BillToContactId, Bill_To_Address__c, Bill_To_Return__c, Billing_Account_Number_Return__c, Billing_Address_Return__c, Billing_Contact_Return__c FROM Order WHERE Id =: Logistic.Order_S__c];
+      if (SalOrder.Channel__c != null) {
+        if (Logistic.From_Address__c == null && SalOrder.Channel__r.Ship_From_Address__c != null) {
+          Logistic.From_Address__c = SalOrder.Channel__r.Ship_From_Address__c;
         }
-
-        // FLS-safe upsert of logistic line items
-        if (!logisticLIs.isEmpty()) {
-            if (!(Schema.sObjectType.Logistic_Line_Item__c.fields.Logistic__c.isCreateable() && Schema.sObjectType.Logistic_Line_Item__c.fields.Logistic__c.isUpdateable()))
-                return 'Does not have access to upsert logistic line items';
-
-            List<SObject> safeLogisticLI = FLSHelper.getSafeRecords(logisticLIs, 'Logistic_Line_Item__c', AccessType.UPDATABLE);
-            List<Logistic_Line_Item__c> typeLogisticLI = new List<Logistic_Line_Item__c>();
-            for (SObject s : safeLogisticLI) typeLogisticLI.add((Logistic_Line_Item__c)s);
-            if (!typeLogisticLI.isEmpty()) upsert typeLogisticLI;
-            // refresh to get Ids (useful for later mapping)
-            Map<Id, Logistic_Line_Item__c> persistedLLIById = new Map<Id, Logistic_Line_Item__c>();
-            for (Logistic_Line_Item__c l : typeLogisticLI) if (l.Id != null) persistedLLIById.put(l.Id, l);
+      }
+      if (Logistic.Shipment_Type__c == null || Logistic.Shipment_Type__c == '') Logistic.Shipment_Type__c = SalOrder.Shipment_Type__c;
+      system.debug('Logistic.Shipment_Type__c : ' + Logistic.Shipment_Type__c);
+    } else if (String.isNotEmpty(Logistic.Purchase_Order__c)) {
+      String PORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c', 'Purchase_Order');
+      Logistic.RecordTypeId = PORecTypeId;
+    }
+    if (Schema.sObjectType.Logistic__c.fields.From_Address__c.isCreateable() && Schema.sObjectType.Logistic__c.fields.From_Address__c.isUpdateable()) {
+      if (Schema.sObjectType.Logistic__c.isCreateable() && Schema.sObjectType.Logistic__c.isUpdateable()) {
+        upsert Logistic;
+      }
+    } else {
+      res.message = 'Don\'t have access to upsert logistic';
+      return res;
+    }
+    list < String > SOLIIds = new list < String > ();
+    list < String > ordItemIds = new list < String > ();
+    list < String > POItemIds = new list < String > ();
+    for (Logistic_Line_Item__c log: LogisticLI) {
+      String Name = log.Name;
+      if (Name.length() > 80) log.Name = Name.subString(0, 79);
+      log.Status__c = 'Reserved';
+      log.Logistic__c = Logistic.Id;
+      if (log.Order_Product__c != null) ordItemIds.add(log.Order_Product__c);
+      if (log.Purchase_Line_Items__c != null) POItemIds.add(log.Purchase_Line_Items__c);
+    }
+    if (LogisticLI.size() > 0) {
+      if (Schema.sObjectType.Logistic_Line_Item__c.fields.Logistic__c.isCreateable() && Schema.sObjectType.Logistic_Line_Item__c.fields.Logistic__c.isUpdateable()) {
+        List < SObject > safeLogisticLI = FLSHelper.getSafeRecords(LogisticLI, 'Logistic_Line_Item__c', AccessType.UPDATABLE);
+        for (SObject s: safeLogisticLI) {
+          typeLogisticLI.add((Logistic_Line_Item__c) s);
         }
-
-        // Build map of required quantities per product from persisted logistic LIs
-        Map<Id, Decimal> productRequestedQty = new Map<Id, Decimal>();
-        for (Logistic_Line_Item__c l : logisticLIs) {
-            if (l.Product__c != null && l.Quantity__c != null && l.Quantity__c > 0) {
-                Decimal existing = productRequestedQty.containsKey(l.Product__c) ? productRequestedQty.get(l.Product__c) : 0;
-                productRequestedQty.put(l.Product__c, existing + l.Quantity__c);
-            }
+        if (!typeLogisticLI.isEmpty()) {
+          upsert typeLogisticLI;
         }
-
-        // Query existing inventory rows for relevant products at the distribution center site (FIFO order)
-        Map<Id, List<Inventory_Stock__c>> inventoryByProduct = new Map<Id, List<Inventory_Stock__c>>();
-        if (!productRequestedQty.isEmpty()) {
-            List<Inventory_Stock__c> invRows = [
-                SELECT Id, Product__c, Number_of_Item_In_Stock__c, Serial__c, Batch_Lot__c, Checked_In_Date__c
-                FROM Inventory_Stock__c
-                WHERE Product__c IN :productRequestedQty.keySet()
-                  AND Warehouse__c = :dc.Site__c
-                  AND Active__c = true
-                  AND Name != 'Awaiting Stock'
-                  AND Number_of_Item_In_Stock__c > 0
-                ORDER BY Checked_In_Date__c ASC
-            ];
-            for (Inventory_Stock__c inv : invRows) {
-                if (!inventoryByProduct.containsKey(inv.Product__c)) inventoryByProduct.put(inv.Product__c, new List<Inventory_Stock__c>());
-                inventoryByProduct.get(inv.Product__c).add(inv);
-            }
-        }
-
-        // Create Stock Outward Line Items (SWLI)
-        List<Stock_Outward_Line_Item__c> swliToUpsert = new List<Stock_Outward_Line_Item__c>();
-        List<Inventory_Stock__c> serialInventoryToInsert = new List<Inventory_Stock__c>();
-        Map<Id, Inventory_Stock__c> tempInvMap = new Map<Id, Inventory_Stock__c>(); // key: logisticLineItem.Id -> created inventory (temp keyed by composite below)
-
-        // We'll iterate each logistic LI and reserve from inventoryByProduct (FIFO)
-        for (Logistic_Line_Item__c logLI : logisticLIs) {
-            if (logLI.Product__c == null || logLI.Quantity__c == null || logLI.Quantity__c <= 0) continue;
-
-            Boolean isSerial = productsMap.containsKey(logLI.Product__c) && (productsMap.get(logLI.Product__c).Serialise__c == true);
-            Decimal remaining = logLI.Quantity__c;
-
-            if (isSerial) {
-                // For serial-tracked: create ONE serial stock holder inventory record and one SWLI that references it
-                Inventory_Stock__c serialInv = new Inventory_Stock__c(
-                    Active__c = true,
-                    Product__c = logLI.Product__c,
-                    Name = 'Serial Stock Holder',
-                    Warehouse__c = dc.Site__c
-                );
-                serialInventoryToInsert.add(serialInv);
-
-                // Create SWLI placeholder now; we will wire Site_Product_Service_Inventory_Stock__c after insert
+      } else {
+        res.message = 'Don\'t have access to upsert logistic line items';
+        return res;
+      }
+    }
+    List < Stock_Outward_Line_Item__c > SWLIToUpsert = new List < Stock_Outward_Line_Item__c > ();
+    Map < Id, Inventory_Stock__c > pliStock = new Map < Id, Inventory_Stock__c > ();
+    Map < Id, Stock_Outward_Line_Item__c > pliStockInward = new Map < Id, Stock_Outward_Line_Item__c > ();
+    List < Inventory_Stock__c > Inventory2Upsert = new List < Inventory_Stock__c > ();
+    for (Logistic_Line_Item__c log: typeLogisticLI) {
+      if (log.Product__c != null && log.Quantity__c > 0 && ((Logistic.Order_S__c != null && log.Order_Product__c != null))) {
+        if (Logistic.Purchase_Order__c == null && proInvMap.containsKey(log.Product__c) && proSerial.containsKey(log.Product__c)) {
+          Decimal remainintQty = log.Quantity__c;
+          for (Inventory_Stock__c inv: proInvMap.get(log.Product__c)) {
+            if (remainintQty > 0) {
+              Decimal qtytoprocess = 0;
+              if (proSerial.get(log.Product__c)) {
+                Inventory_Stock__c inv2Create = new Inventory_Stock__c(Active__c = true, Product__c = log.Product__c, Name = 'Serial Stock Holder', Warehouse__c = dc.Site__c);
+                Inventory2Upsert.add(inv2Create);
+                system.debug('inhere serial');
+                qtytoprocess = 0;
                 Stock_Outward_Line_Item__c sto = new Stock_Outward_Line_Item__c();
                 sto.Name = 'Serial Stock Holder';
-                sto.Product__c = logLI.Product__c;
+                sto.Product__c = log.Product__c;
                 sto.Active__c = true;
                 sto.Status__c = 'Reserved';
-                sto.Logistic_Line_Item__c = logLI.Id;
-                // Assign order/product links if provided on logistic line item
-                if (logLI.Order_Product__c != null) sto.Order_Product__c = logLI.Order_Product__c;
-                //if (logLI.Logistic__c != null) sto.Logistic__c = logLI.Logistic__c;
-                // For serial we assign full remaining quantity to the single SWLI
-                sto.Quantity__c = remaining;
-                // Keep mapping so we can assign the created inventory id after insert
-                // Use map key as index of insertion list: use pseudo-key approach by storing index later
-                swliToUpsert.add(sto);
-                // We'll map the SWLI index to its created Inventory after insert by matching insertion order
-                // Store association: add a specially constructed placeholder to tempInvMap using negative composite id (we'll use size of serialInventoryToInsert -1 as key)
-                // But maps keyed by Id not allowed; instead use list alignment: we will insert serialInventoryToInsert and then assign IDs to corresponding SWLIs in same order
-            } else {
-                // Non-serial: consume from existing inventory FIFO list
-                List<Inventory_Stock__c> invList = inventoryByProduct.containsKey(logLI.Product__c) ? inventoryByProduct.get(logLI.Product__c) : new List<Inventory_Stock__c>();
-                Integer idx = 0;
-                while (remaining > 0 && idx < invList.size()) {
-                    Inventory_Stock__c inv = invList[idx];
-                    Decimal invQty = inv.Number_of_Item_In_Stock__c == null ? 0 : inv.Number_of_Item_In_Stock__c;
-                    if (invQty <= 0) { idx++; continue; }
-
-                    Decimal qtyToTake = (invQty <= remaining) ? invQty : remaining;
-                    Stock_Outward_Line_Item__c sto = new Stock_Outward_Line_Item__c();
-                    sto.Name = logLI.Name != null ? logLI.Name : 'Stock Outward';
-                    sto.Product__c = logLI.Product__c;
-                    sto.Active__c = true;
-                    sto.Status__c = 'Reserved';
-                    sto.Logistic_Line_Item__c = logli.Id;
-                    if (logLI.Order_Product__c != null) sto.Order_Product__c = logLI.Order_Product__c;
-                   // if (logLI.Logistic__c != null) sto.Logistic__c = logLI.Logistic__c;
-                    sto.Quantity__c = qtyToTake;
-                    sto.Site_Product_Service_Inventory_Stock__c = inv.Id;
-                    // Optionally set batch/serial fields if desired
-                    if (inv.Serial__c != null) sto.Serial__c = inv.Serial__c;
-                    if (inv.Batch_Lot__c != null) sto.Material_Batch_Lot__c = inv.Batch_Lot__c;
-
-                    swliToUpsert.add(sto);
-
-                    // reduce remaining and move to next inventory row if needed
-                    remaining = remaining - qtyToTake;
-                    idx++;
+                if (log.Order_Product__c != null) sto.Order_Product__c = log.Order_Product__c;
+                if (Logistic.Order_S__c != null) sto.Order__c = Logistic.Order_S__c;
+                sto.Logistic_Line_Item__c = log.Id;
+                sto.Quantity__c = remainintQty;
+                SWLIToUpsert.add(sto);
+                pliStock.put(log.Id, inv2Create);
+                pliStockInward.put(log.Id, sto);
+                remainintQty = 0;
+                system.debug('qtytoprocess~>' + qtytoprocess);
+                system.debug('remainintQty~>' + remainintQty);
+              } else {
+                system.debug('inhere non serial inv.Number_of_Item_In_Stock__c~>' + inv.Number_of_Item_In_Stock__c);
+                if (inv.Number_of_Item_In_Stock__c < remainintQty) {
+                  system.debug('inhere inv.Number_of_Item_In_Stock__c < remainintQty');
+                  qtytoprocess = inv.Number_of_Item_In_Stock__c;
+                  remainintQty = remainintQty - inv.Number_of_Item_In_Stock__c;
+                } else {
+                  system.debug('inhere else inv.Number_of_Item_In_Stock__c >= remainintQty');
+                  qtytoprocess = remainintQty;
+                  remainintQty = remainintQty - qtytoprocess;
                 }
-
-                if (remaining > 0) {
-                    // Not enough inventory available
-                    return 'Does not have inventory for product: ' + (productsMap.containsKey(logLI.Product__c) ? productsMap.get(logLI.Product__c).Name : String.valueOf(logLI.Product__c)) + ' on selected distribution center site';
-                }
+                system.debug('qtytoprocess~>' + qtytoprocess);
+                system.debug('remainintQty~>' + remainintQty);
+              }
+              if (qtytoprocess > 0) {
+                Stock_Outward_Line_Item__c sto = new Stock_Outward_Line_Item__c();
+                sto.Name = log.Name;
+                if (log.Order_Product__c != null) sto.Order_Product__c = log.Order_Product__c;
+                if (Logistic.Order_S__c != null) sto.Order__c = Logistic.Order_S__c;
+                sto.Product__c = log.Product__c;
+                sto.Active__c = true;
+                sto.Status__c = 'Reserved';
+                if (proSerial.get(log.Product__c)) sto.Quantity__c = 1;
+                else sto.Quantity__c = qtytoprocess;
+                system.debug('inv.Id for stock outward~>' + inv.Id);
+                sto.Site_Product_Service_Inventory_Stock__c = inv.Id;
+                system.debug('log.Id for stock outward~>' + log.Id);
+                sto.Logistic_Line_Item__c = log.Id;
+                if (MRPmap.containsKey(log.Product__c)) sto.MRP_Material_Requirements_Planning__c = MRPmap.get(log.Product__c).Id;
+                system.debug('inv.Serial__c~>' + inv.Serial__c);
+                if (inv.Serial__c != null) sto.Serial__c = inv.Serial__c;
+                if (inv.Batch_Lot__c != null) sto.Material_Batch_Lot__c = inv.Batch_Lot__c;
+                SWLIToUpsert.add(sto);
+              }
             }
-        } // end loop logisticLIs
-
-        // Insert created serial inventory entries (all serialInventoryToInsert correspond to serial SWLIs in same order they were added)
-        if (!serialInventoryToInsert.isEmpty()) {
-            insert serialInventoryToInsert;
-            // Wire newly created inventory ids to the corresponding SWLIs (map by relative order)
-            Integer serialIndex = 0;
-            for (Integer i = 0; i < swliToUpsert.size(); i++) {
-                Stock_Outward_Line_Item__c sto = swliToUpsert[i];
-                // Only assign if this SWLI is the serial one (we detect by name 'Serial Stock Holder' and Product in serial list)
-                if (sto != null && sto.Name == 'Serial Stock Holder') {
-                    if (serialIndex < serialInventoryToInsert.size()) {
-                        Inventory_Stock__c insertedInv = serialInventoryToInsert[serialIndex];
-                        sto.Site_Product_Service_Inventory_Stock__c = insertedInv.Id;
-                        serialIndex++;
-                    }
-                }
-            }
+          }
         }
-
-        // Upsert SWLIs (check create/update permission)
-        if (!swliToUpsert.isEmpty()) {
-            if (!(Schema.sObjectType.Stock_Outward_Line_Item__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.isUpdateable()))
-                return 'Don\'t have access to upsert Stock Outward Line Items';
-
-            upsert swliToUpsert;
-            for (Stock_Outward_Line_Item__c s : swliToUpsert) {
-                System.debug('Upserted SWLI Id: ' + s.Id);
-            }
-        }
-
-        // NOTE: Per your request we are skipping POLI updates and any MRP/BOM/kit handling.
-
-        return null; // success
-    } catch (Exception e) {
-        System.debug('Exception in createLogisticsMinimal: ' + e.getMessage() + ' stack: ' + e.getStackTraceString());
-        throw new AuraHandledException(e.getMessage());
+      }
     }
+    system.debug('SWLIToUpsert size~>' + SWLIToUpsert.size());
+    if (Inventory2Upsert.size() > 0) insert Inventory2Upsert;
+    for (Id pliId: pliStockInward.KeySet()) {
+      pliStockInward.get(pliId).Site_Product_Service_Inventory_Stock__c = pliStock.get(pliId).Id;
+    }
+    if (SWLIToUpsert.size() > 0) {
+      if (Schema.sObjectType.Stock_Outward_Line_Item__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.isUpdateable()) {
+        system.debug('SWLIToUpsert size~>' + SWLIToUpsert.size());
+        upsert SWLIToUpsert;
+        for (Stock_Outward_Line_Item__c soli: SWLIToUpsert) {
+          System.debug('Upserted SOLI ID: ' + soli.Id);
+        }
+      } else {
+        res.message = 'Don\'t have access to upsert Stock Outward';
+        return res;
+      }
+    }
+    if (POItemIds.size() > 0) {
+      list < Logistic_Line_Item__c > LogLIList = new list < Logistic_Line_Item__c > ();
+      LogLIList = [SELECT Id, Name, Quantity__c, Purchase_Line_Items__c FROM Logistic_Line_Item__c WHERE Purchase_Line_Items__c IN: POItemIds];
+      list < Purchase_Line_Items__c > poliItems2Update = new List < Purchase_Line_Items__c > ();
+      for (Purchase_Line_Items__c poli: [SELECT Id, Logistic_Quantity__c FROM Purchase_Line_Items__c WHERE Id IN: POItemIds]) {
+        Decimal LogQuantity = 0;
+        for (Logistic_Line_Item__c logLi: LogLIList) {
+          if (logLi.Purchase_Line_Items__c == poli.Id) LogQuantity += logLi.Quantity__c;
+        }
+        if (Schema.sObjectType.Purchase_Line_Items__c.fields.Logistic_Quantity__c.isUpdateable()) poli.Logistic_Quantity__c = LogQuantity;
+        poliItems2Update.add(poli);
+      }
+      try {
+        if (poliItems2Update.size() > 0 && Schema.sObjectType.Purchase_Line_Items__c.isUpdateable()) {
+          update poliItems2Update;
+        } else {
+          res.message = 'User is not allowed to update POLI';
+          return res;
+        }
+      } catch (DMLException e) {
+        res.message = 'DML Exception on PO Line Items update: ' + e.getMessage() + ',' + e.getStackTraceString();
+        return res;
+      }
+    }
+    res.message = 'Logistic created successfully';
+    res.logistic = Logistic;
+    return res;
+    /* until here not covered*/
+  } catch (Exception e) {
+    System.debug('Exception ~> ' + e.getMessage() + '; at line ~> ' + e.getStackTraceString());
+    throw new AuraHandledException(e.getMessage() + '; at line ~> ' + e.getStackTraceString());
+  }
 }
+
+    @AuraEnabled(cacheable=true)
+    public static Boolean getShipmentDetails(Id logisticId) {
+        if (logisticId == null) { return false; } return [ SELECT COUNT() FROM Shipment__c WHERE Logistic__c = :logisticId ] > 0; }
 
 }

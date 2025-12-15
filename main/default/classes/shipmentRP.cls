@@ -404,6 +404,7 @@ public static RateResponseLTL getQuoteRatesLTL(
     resp.missingCredentials = new List<String>();
 
     FetchInitWrapper init = shipmentRP.fetchInitialData();
+
     Map<String,Credentials__c> cm = init.credentialsMap;
     System.debug('deserialiing');
     List<PackageInputWrapper> pkgList = new List<PackageInputWrapper>();
@@ -1726,23 +1727,511 @@ public class ProductStockSummary {
         }
     }
 // for order to logistic here 
-@AuraEnabled(cacheable=true)
-public static Map<String, Object> getOrderAndDcDetails(Id orderId,  Id dcId) {
+// @AuraEnabled(cacheable=true)
+// public static Map<String, Object> getOrderAndDcDetails(Id orderId,  Id dcId) {
 
-    Map<String, Object> out = new Map<String, Object>(); String orderQuery = 'SELECT ' + UtilClass.selectStarFromSObject('Order') + ' , Channel__r.Id, Channel__r.Name,Contact__r.Id,Contact__r.Name,Ship_To_Address__r.Id,Ship_To_Address__r.Name,Account.Name FROM Order WHERE Id = :orderId'; SObject orderRec = Database.query(orderQuery); out.put('order', orderRec); String itemQuery = 'SELECT ' + UtilClass.selectStarFromSObject('OrderItem') + ', Product2.Id, Product2.Name FROM OrderItem WHERE OrderId = :orderId'; List<SObject> itemRecs = Database.query(itemQuery); List<Map<String, Object>> analysis = new List<Map<String, Object>>(); Set<Id> productIds = new Set<Id>(); for (SObject s : itemRecs) { Decimal qty  = (Decimal)s.get('Quantity'); Decimal logQ = s.get('Logistic_Quantity__c') == null ? 0 : (Decimal)s.get('Logistic_Quantity__c'); Decimal rem  = qty - logQ; Map<String, Object> row = new Map<String, Object>(); row.put('record', s); row.put('remainingQty', rem); row.put('totalQty', qty); row.put('logisticQty', logQ); analysis.add(row); productIds.add((Id)s.get('Product2Id')); } out.put('items', analysis); if (dcId != null) { Distribution_Channel__c topDC = [ SELECT Id, Name, Priority__c, Site__c, Site__r.Name,Active__c, Site__r.Address__c, Site__r.Address__r.Name, Site__r.Primary_Contact__c, Site__r.Primary_Contact__r.Name, Site__r.Address__r.City__c, Site__r.Address__r.State__c, Site__r.Address__r.Country__c FROM Distribution_Channel__c WHERE Id = :dcId ORDER BY Priority__c ASC LIMIT 1 ]; if (topDC != null) { Map<String, Object> dcMap = new Map<String, Object>{ 'Id' => topDC.Id, 'Name' => topDC.Name, 'Priority__c' => topDC.Priority__c, 'Active__c' => topDC.Active__c }; dcMap.put('Site', new Map<String, Object>{ 'siteId' => topDC.Site__c, 'siteName' => topDC.Site__r?.Name, 'siteAddressId' => topDC.Site__r?.Address__c, 'siteAddressName' => topDC.Site__r?.Address__r?.Name, 'sitePrimaryContactId' => topDC.Site__r?.Primary_Contact__c, 'sitePrimaryContactName' => topDC.Site__r?.Primary_Contact__r?.Name }); out.put('distributionChannel', dcMap); } } List<Logistic__c> logisticRecs = [ SELECT Id, Name, Account__c, Account__r.Name, Contact__c, Contact__r.Name, From_Contact__c, From_Contact__r.Name, To_Address__c, To_Address__r.Name, From_Address__c, From_Address__r.Name FROM Logistic__c WHERE Order_S__c = :orderId ]; out.put('logistics', logisticRecs); return out;
+//     Map<String, Object> out = new Map<String, Object>(); String orderQuery = 'SELECT ' + UtilClass.selectStarFromSObject('Order') + ' , Channel__r.Id, Channel__r.Name,Contact__r.Id,Contact__r.Name,Ship_To_Address__r.Id,Ship_To_Address__r.Name,Account.Name FROM Order WHERE Id = :orderId'; SObject orderRec = Database.query(orderQuery); out.put('order', orderRec); String itemQuery = 'SELECT ' + UtilClass.selectStarFromSObject('OrderItem') + ', Product2.Id, Product2.Name FROM OrderItem WHERE OrderId = :orderId'; List<SObject> itemRecs = Database.query(itemQuery); List<Map<String, Object>> analysis = new List<Map<String, Object>>(); Set<Id> productIds = new Set<Id>(); for (SObject s : itemRecs) { Decimal qty  = (Decimal)s.get('Quantity'); Decimal logQ = s.get('Logistic_Quantity__c') == null ? 0 : (Decimal)s.get('Logistic_Quantity__c'); Decimal rem  = qty - logQ; Map<String, Object> row = new Map<String, Object>(); row.put('record', s); row.put('remainingQty', rem); row.put('totalQty', qty); row.put('logisticQty', logQ); analysis.add(row); productIds.add((Id)s.get('Product2Id')); } out.put('items', analysis); if (dcId != null) { Distribution_Channel__c topDC = [ SELECT Id, Name, Priority__c, Site__c, Site__r.Name,Active__c, Site__r.Address__c, Site__r.Address__r.Name, Site__r.Primary_Contact__c, Site__r.Primary_Contact__r.Name, Site__r.Address__r.City__c, Site__r.Address__r.State__c, Site__r.Address__r.Country__c FROM Distribution_Channel__c WHERE Id = :dcId ORDER BY Priority__c ASC LIMIT 1 ]; if (topDC != null) { Map<String, Object> dcMap = new Map<String, Object>{ 'Id' => topDC.Id, 'Name' => topDC.Name, 'Priority__c' => topDC.Priority__c, 'Active__c' => topDC.Active__c }; dcMap.put('Site', new Map<String, Object>{ 'siteId' => topDC.Site__c, 'siteName' => topDC.Site__r?.Name, 'siteAddressId' => topDC.Site__r?.Address__c, 'siteAddressName' => topDC.Site__r?.Address__r?.Name, 'sitePrimaryContactId' => topDC.Site__r?.Primary_Contact__c, 'sitePrimaryContactName' => topDC.Site__r?.Primary_Contact__r?.Name }); out.put('distributionChannel', dcMap); } } List<Logistic__c> logisticRecs = [ SELECT Id, Name, Account__c, Account__r.Name, Contact__c, Contact__r.Name, From_Contact__c, From_Contact__r.Name, To_Address__c, To_Address__r.Name, From_Address__c, From_Address__r.Name FROM Logistic__c WHERE Order_S__c = :orderId ]; out.put('logistics', logisticRecs); return out;
+// }
+
+@AuraEnabled(cacheable = true)
+public static Map < String, Object > getOrderAndDcDetails(Id orderId, Id dcId) {
+
+  Map < String, Object > out = new Map < String, Object > ();
+  String orderQuery = 'SELECT ' + UtilClass.selectStarFromSObject('Order') + ' , Channel__r.Id, Channel__r.Name,Contact__r.Id,Contact__r.Name,Ship_To_Address__r.Id,Ship_To_Address__r.Name,Account.Name FROM Order WHERE Id = :orderId';
+  SObject orderRec = Database.query(orderQuery);
+  out.put('order', orderRec);
+  String itemQuery = 'SELECT ' + UtilClass.selectStarFromSObject('OrderItem') + ', Product2.Id, Product2.Name FROM OrderItem WHERE OrderId = :orderId';
+  List < SObject > itemRecs = Database.query(itemQuery);
+  List < Map < String, Object >> analysis = new List < Map < String, Object >> ();
+  Set < Id > productIds = new Set < Id > ();
+  for (SObject s: itemRecs) {
+    Decimal qty = (Decimal) s.get('Quantity');
+    Decimal logQ = s.get('Logistic_Quantity__c') == null ? 0 : (Decimal) s.get('Logistic_Quantity__c');
+    Decimal rem = qty - logQ;
+    Map < String, Object > row = new Map < String, Object > ();
+    row.put('record', s);
+    row.put('remainingQty', rem);
+    row.put('totalQty', qty);
+    row.put('logisticQty', logQ);
+    analysis.add(row);
+    productIds.add((Id) s.get('Product2Id'));
+  }
+  out.put('items', analysis);
+  if (dcId != null) {
+    Distribution_Channel__c topDC = [SELECT Id, Name, Priority__c, Site__c, Site__r.Name, Active__c, Site__r.Address__c, Site__r.Address__r.Name, Site__r.Primary_Contact__c, Site__r.Primary_Contact__r.Name, Site__r.Address__r.City__c, Site__r.Address__r.State__c, Site__r.Address__r.Country__c FROM Distribution_Channel__c WHERE Id =: dcId ORDER BY Priority__c ASC LIMIT 1];
+    if (topDC != null) {
+      Map < String, Object > dcMap = new Map < String, Object > {
+        'Id' => topDC.Id,
+        'Name' => topDC.Name,
+        'Priority__c' => topDC.Priority__c,
+        'Active__c' => topDC.Active__c
+      };
+      dcMap.put('Site', new Map < String, Object > {
+        'siteId' => topDC.Site__c,
+        'siteName' => topDC.Site__r?.Name,
+        'siteAddressId' => topDC.Site__r?.Address__c,
+        'siteAddressName' => topDC.Site__r?.Address__r?.Name,
+        'sitePrimaryContactId' => topDC.Site__r?.Primary_Contact__c,
+        'sitePrimaryContactName' => topDC.Site__r?.Primary_Contact__r?.Name
+      });
+      out.put('distributionChannel', dcMap);
+    }
+  }
+  List < Logistic__c > logisticRecs = [SELECT Id, Name, Account__c, Account__r.Name, Contact__c, Contact__r.Name, From_Contact__c, From_Contact__r.Name, To_Address__c, To_Address__r.Name, From_Address__c, From_Address__r.Name FROM Logistic__c WHERE Order_S__c =: orderId];
+  out.put('logistics', logisticRecs);
+  return out;
 }
 
+// @AuraEnabled(cacheable=true)
+// public static Map<String, Object> getOrderAndItemsAnalysis(Id orderId) {
 
-
-@AuraEnabled(cacheable=true)
-public static Map<String, Object> getOrderAndItemsAnalysis(Id orderId) {
-
-    Map<String, Object> out = new Map<String, Object>(); String orderQuery = 'SELECT ' + UtilClass.selectStarFromSObject('Order') + ' , Channel__r.Id, Channel__r.Name,Contact__r.Id,Contact__r.Name,Ship_To_Address__r.Id,Ship_To_Address__r.Name,Account.Name FROM Order WHERE Id = :orderId'; SObject orderRec = Database.query(orderQuery); out.put('order', orderRec); String itemQuery = 'SELECT ' + UtilClass.selectStarFromSObject('OrderItem') + ', Product2.Id, Product2.Name FROM OrderItem WHERE OrderId = :orderId'; List<SObject> itemRecs = Database.query(itemQuery); List<Map<String, Object>> analysis = new List<Map<String, Object>>(); Set<Id> productIds = new Set<Id>(); for (SObject s : itemRecs) { Decimal qty  = (Decimal)s.get('Quantity'); Decimal logQ = s.get('Logistic_Quantity__c') == null ? 0 : (Decimal)s.get('Logistic_Quantity__c'); Decimal rem  = qty - logQ; Map<String, Object> row = new Map<String, Object>(); row.put('record', s); row.put('remainingQty', rem); row.put('totalQty', qty); row.put('logisticQty', logQ); analysis.add(row); productIds.add((Id)s.get('Product2Id')); } out.put('items', analysis); Id chId = (Id)orderRec.get('Channel__c'); if (chId != null) { Distribution_Channel__c topDC = [ SELECT Id, Name, Priority__c, Site__c, Site__r.Name,Active__c, Site__r.Address__c, Site__r.Address__r.Name, Site__r.Primary_Contact__c, Site__r.Primary_Contact__r.Name, Site__r.Address__r.City__c, Site__r.Address__r.State__c, Site__r.Address__r.Country__c FROM Distribution_Channel__c WHERE Channel__c = :chId ORDER BY Priority__c ASC LIMIT 1 ]; if (topDC != null) { Map<String, Object> dcMap = new Map<String, Object>{ 'Id' => topDC.Id, 'Name' => topDC.Name, 'Priority__c' => topDC.Priority__c, 'Active__c' => topDC.Active__c }; dcMap.put('Site', new Map<String, Object>{ 'siteId' => topDC.Site__c, 'siteName' => topDC.Site__r?.Name, 'siteAddressId' => topDC.Site__r?.Address__c, 'siteAddressName' => topDC.Site__r?.Address__r?.Name, 'sitePrimaryContactId' => topDC.Site__r?.Primary_Contact__c, 'sitePrimaryContactName' => topDC.Site__r?.Primary_Contact__r?.Name }); out.put('distributionChannel', dcMap); } } List<Logistic__c> logisticRecs = [ SELECT Id, Name, Account__c, Account__r.Name, Contact__c, Contact__r.Name, From_Contact__c, From_Contact__r.Name, To_Address__c, To_Address__r.Name, From_Address__c, From_Address__r.Name FROM Logistic__c WHERE Order_S__c = :orderId ]; out.put('logistics', logisticRecs); Integer logisticCount = [SELECT COUNT() FROM Logistic__c WHERE Order_S__c = :orderId]; String orderNum = (String)orderRec.get('OrderNumber'); String newLogisticName = orderNum + '-Logistic-' + String.valueOf(logisticCount + 1); out.put('newLogisticName', newLogisticName); return out;
-}
+//     Map<String, Object> out = new Map<String, Object>(); String orderQuery = 'SELECT ' + UtilClass.selectStarFromSObject('Order') + ' , Channel__r.Id, Channel__r.Name,Contact__r.Id,Contact__r.Name,Ship_To_Address__r.Id,Ship_To_Address__r.Name,Account.Name FROM Order WHERE Id = :orderId'; SObject orderRec = Database.query(orderQuery); out.put('order', orderRec); String itemQuery = 'SELECT ' + UtilClass.selectStarFromSObject('OrderItem') + ', Product2.Id, Product2.Name FROM OrderItem WHERE OrderId = :orderId'; List<SObject> itemRecs = Database.query(itemQuery); List<Map<String, Object>> analysis = new List<Map<String, Object>>(); Set<Id> productIds = new Set<Id>(); for (SObject s : itemRecs) { Decimal qty  = (Decimal)s.get('Quantity'); Decimal logQ = s.get('Logistic_Quantity__c') == null ? 0 : (Decimal)s.get('Logistic_Quantity__c'); Decimal rem  = qty - logQ; Map<String, Object> row = new Map<String, Object>(); row.put('record', s); row.put('remainingQty', rem); row.put('totalQty', qty); row.put('logisticQty', logQ); analysis.add(row); productIds.add((Id)s.get('Product2Id')); } out.put('items', analysis); Id chId = (Id)orderRec.get('Channel__c'); if (chId != null) { Distribution_Channel__c topDC = [ SELECT Id, Name, Priority__c, Site__c, Site__r.Name,Active__c, Site__r.Address__c, Site__r.Address__r.Name, Site__r.Primary_Contact__c, Site__r.Primary_Contact__r.Name, Site__r.Address__r.City__c, Site__r.Address__r.State__c, Site__r.Address__r.Country__c FROM Distribution_Channel__c WHERE Channel__c = :chId ORDER BY Priority__c ASC LIMIT 1 ]; if (topDC != null) { Map<String, Object> dcMap = new Map<String, Object>{ 'Id' => topDC.Id, 'Name' => topDC.Name, 'Priority__c' => topDC.Priority__c, 'Active__c' => topDC.Active__c }; dcMap.put('Site', new Map<String, Object>{ 'siteId' => topDC.Site__c, 'siteName' => topDC.Site__r?.Name, 'siteAddressId' => topDC.Site__r?.Address__c, 'siteAddressName' => topDC.Site__r?.Address__r?.Name, 'sitePrimaryContactId' => topDC.Site__r?.Primary_Contact__c, 'sitePrimaryContactName' => topDC.Site__r?.Primary_Contact__r?.Name }); out.put('distributionChannel', dcMap); } } List<Logistic__c> logisticRecs = [ SELECT Id, Name, Account__c, Account__r.Name, Contact__c, Contact__r.Name, From_Contact__c, From_Contact__r.Name, To_Address__c, To_Address__r.Name, From_Address__c, From_Address__r.Name FROM Logistic__c WHERE Order_S__c = :orderId ]; out.put('logistics', logisticRecs); Integer logisticCount = [SELECT COUNT() FROM Logistic__c WHERE Order_S__c = :orderId]; String orderNum = (String)orderRec.get('OrderNumber'); String newLogisticName = orderNum + '-Logistic-' + String.valueOf(logisticCount + 1); out.put('newLogisticName', newLogisticName); return out;
+// }
     
+
+@AuraEnabled(cacheable = true)
+public static Map < String, Object > getOrderAndItemsAnalysis(Id orderId) {
+
+  Map < String, Object > out = new Map < String, Object > ();
+  String orderQuery = 'SELECT ' + UtilClass.selectStarFromSObject('Order') + ' , Channel__r.Id, Channel__r.Name,Contact__r.Id,Contact__r.Name,Ship_To_Address__r.Id,Ship_To_Address__r.Name,Account.Name FROM Order WHERE Id = :orderId';
+  SObject orderRec = Database.query(orderQuery);
+  out.put('order', orderRec);
+  String itemQuery = 'SELECT ' + UtilClass.selectStarFromSObject('OrderItem') + ', Product2.Id, Product2.Name FROM OrderItem WHERE OrderId = :orderId';
+  List < SObject > itemRecs = Database.query(itemQuery);
+  List < Map < String, Object >> analysis = new List < Map < String, Object >> ();
+  Set < Id > productIds = new Set < Id > ();
+  for (SObject s: itemRecs) {
+    Decimal qty = (Decimal) s.get('Quantity');
+    Decimal logQ = s.get('Logistic_Quantity__c') == null ? 0 : (Decimal) s.get('Logistic_Quantity__c');
+    Decimal rem = qty - logQ;
+    Map < String, Object > row = new Map < String, Object > ();
+    row.put('record', s);
+    row.put('remainingQty', rem);
+    row.put('totalQty', qty);
+    row.put('logisticQty', logQ);
+    analysis.add(row);
+    productIds.add((Id) s.get('Product2Id'));
+  }
+  out.put('items', analysis);
+  Id chId = (Id) orderRec.get('Channel__c');
+  if (chId != null) {
+    Distribution_Channel__c topDC = [SELECT Id, Name, Priority__c, Site__c, Site__r.Name, Active__c, Site__r.Address__c, Site__r.Address__r.Name, Site__r.Primary_Contact__c, Site__r.Primary_Contact__r.Name, Site__r.Address__r.City__c, Site__r.Address__r.State__c, Site__r.Address__r.Country__c FROM Distribution_Channel__c WHERE Channel__c =: chId ORDER BY Priority__c ASC LIMIT 1];
+    if (topDC != null) {
+      Map < String, Object > dcMap = new Map < String, Object > {
+        'Id' => topDC.Id,
+        'Name' => topDC.Name,
+        'Priority__c' => topDC.Priority__c,
+        'Active__c' => topDC.Active__c
+      };
+      dcMap.put('Site', new Map < String, Object > {
+        'siteId' => topDC.Site__c,
+        'siteName' => topDC.Site__r?.Name,
+        'siteAddressId' => topDC.Site__r?.Address__c,
+        'siteAddressName' => topDC.Site__r?.Address__r?.Name,
+        'sitePrimaryContactId' => topDC.Site__r?.Primary_Contact__c,
+        'sitePrimaryContactName' => topDC.Site__r?.Primary_Contact__r?.Name
+      });
+      out.put('distributionChannel', dcMap);
+    }
+  }
+  List < Logistic__c > logisticRecs = [SELECT Id, Name, Account__c, Account__r.Name, Contact__c, Contact__r.Name, From_Contact__c, From_Contact__r.Name, To_Address__c, To_Address__r.Name, From_Address__c, From_Address__r.Name FROM Logistic__c WHERE Order_S__c =: orderId];
+  out.put('logistics', logisticRecs);
+  Integer logisticCount = [SELECT COUNT() FROM Logistic__c WHERE Order_S__c =: orderId];
+  String orderNum = (String) orderRec.get('OrderNumber');
+  String newLogisticName = orderNum + '-Logistic-' + String.valueOf(logisticCount + 1);
+  out.put('newLogisticName', newLogisticName);
+  return out;
+}
 // abuzar
-@AuraEnabled(cacheable=true)
- public static Map<Id, ProductStockSummary> getTotalStockPerProduct( List<Id> productIds, String channel, String distributionChannel ) { System.debug('productIds --> '+productIds); System.debug('channel --> '+channel); System.debug('distributionChannel --> '+distributionChannel); Map<Id, ProductStockSummary> result = new Map<Id, ProductStockSummary>(); if (productIds == null || productIds.isEmpty() || String.isBlank(distributionChannel)) { return result; } Id dcId; try { dcId = (Id)distributionChannel; } catch (Exception e) { return result; } Distribution_Channel__c dc = [ SELECT Id, Site__c FROM Distribution_Channel__c WHERE Id = :dcId LIMIT 1 ]; if (dc.Site__c == null) { return result; } Id siteId = dc.Site__c; System.debug('SiteId: ' + siteId); String soql = 'SELECT Product__c productId,' + '       SUM(Number_of_Item_In_Stock__c) totalQty' + '  FROM Inventory_Stock__c' + ' WHERE Product__c IN :productIds' + '   AND Active__c = true' + '   AND Number_of_Item_In_Stock__c >= 0' + '   AND Name NOT IN (\'Awaiting Stock\', \'Serial Stock Holder\')' + '   AND Warehouse__c = :siteId' + ' GROUP BY Product__c'; List<AggregateResult> ars = Database.query(soql); for (AggregateResult ar : ars) { Id      productId = (Id)ar.get('productId'); Decimal totalQty  = (Decimal)ar.get('totalQty'); result.put(productId, new ProductStockSummary(productId, totalQty)); } for (Id pId : productIds) { if (!result.containsKey(pId)) { result.put(pId, new ProductStockSummary(pId, 0)); } } return result; } public class Result { @AuraEnabled public Logistic__c logistic { get; set; } @AuraEnabled public String message   { get; set; } } @AuraEnabled public static Result getCreateLogistics(String LogisticJSON, String LLIListJSON,String OrderLIneItems,String BomItems){ Result res = new Result(); res.logistic = new Logistic__c(); res.message = ''; try{ system.debug('getCreateLogistic called'); list<OrderItem> Orditem = (OrderLIneItems != null && OrderLIneItems != '') ? (list<OrderItem>) JSON.deserialize(OrderLIneItems, list<OrderItem> .class) : new list<OrderItem>(); list<BOM_Line_Item__c> bomitem = (BomItems != null && BomItems != '') ? (list<BOM_Line_Item__c>) JSON.deserialize(BomItems, list<BOM_Line_Item__c> .class) : new list<BOM_Line_Item__c>(); Id rTpe_MRPKIT; rTpe_MRPKIT = Schema.SObjectType.MRP__c.getRecordTypeInfosByDeveloperName().get('MRP_Kit').getRecordTypeId(); list<MRP__c> MRPS2Insert = new list<MRP__c>(); map<string,MRP__c> MRPmap = new map<string,MRP__c>(); PreventRecursiveLedgerEntry.testCasesTransactions = true; for(OrderItem orditm:Orditem){ if(orditm.Product2.Is_Kit__c){ for(BOM_Line_Item__c bom:bomitem){ MRP__c MRP = new MRP__c(); } } } upsert MRPS2Insert; system.debug('inside MRP Creation1-->:'); for(MRP__c Mrp :MRPS2Insert){ MRPmap.put(Mrp.MRP_Product__c,Mrp); } system.debug('MRPmap:-->'+MRPmap); Logistic__c Logistic = (Logistic__c) JSON.deserialize(LogisticJSON, Logistic__c .class); system.debug('Logistic : '+Logistic.Shipping_Preferences__c); System.debug('Logistic Order : '+Logistic.Order_S__c); Id orderId = Logistic.Order_S__c; String SORecTypeId=''; if(String.isNotEmpty(Logistic.Order_S__c)) SORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c','Order'); if(String.isNotEmpty(Logistic.Purchase_Order__c)) SORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c','Purchase_Order'); Logistic.RecordTypeId = SORecTypeId; system.debug('RecordTypeId : '+Logistic.RecordTypeId); list<Logistic_Line_Item__c> LogisticLI = (list<Logistic_Line_Item__c>) JSON.deserialize(LLIListJSON, list<Logistic_Line_Item__c> .class); List<Logistic_Line_Item__c> typeLogisticLI = new List<Logistic_Line_Item__c>(); set<String> proList=new set<String>(); set<Id> OrderProdIds=new set<Id>(); Map<String,Decimal> prodRequestedQtyMap = new Map<String,Decimal>(); Map<String,Decimal> OrderRequestedQtyMap = new Map<String,Decimal>(); for(Logistic_Line_Item__c log :LogisticLI){ if(log.Product__c != null && !proList.contains(log.Product__c)){ proList.add(log.Product__c); prodRequestedQtyMap.put(log.Product__c,log.Quantity__c); } if(log.Order_Product__c != null) { OrderProdIds.add(log.Order_Product__c); OrderRequestedQtyMap.put(log.Order_Product__c,log.Quantity__c); } } if (OrderProdIds.size() > 0) { List<OrderItem> ordItemsList = [SELECT Id, OrderItemNumber, Quantity, Is_Kit__c, Logistic_Quantity__c FROM OrderItem WHERE Id IN :OrderProdIds]; for (OrderItem ord : ordItemsList) { if (!ord.Is_Kit__c && OrderRequestedQtyMap.containsKey(ord.Id)) { Decimal logQty = OrderRequestedQtyMap.get(ord.Id); system.debug('logQty : '+logQty); if ((logQty + ord.Logistic_Quantity__c) > ord.Quantity) { res.message = 'Logistic cannot be created for more than order quantity'; return res; } } } } List<Product2> proList1 = [Select Id,Name,Serialise__c,Lot_Tracked__c,Track_Inventory__c from Product2 where Id In:proList]; Map<String,String> proName=new Map<String,String>(); Map<String,Boolean> proSerial=new Map<String,Boolean>(); for(Product2 pr:proList1){ proName.put(pr.Id,pr.Name); proSerial.put(pr.Id,pr.Serialise__c); } Distribution_Channel__c dc = [Select Id,Name,Site__c from Distribution_Channel__c where Id=:Logistic.Distribution_Channel__c Limit 1]; List<Manufacturing_Order__c> SOMOs = new List<Manufacturing_Order__c>(); List<PO__c> SOPOs = new List<PO__c>(); List<Inventory_Stock__c> invtoryList = new List<Inventory_Stock__c>(); List<Inventory_Stock__c> MOPOinvtoryList = new List<Inventory_Stock__c>(); system.debug('orderId~>'+orderId); if(orderId != null && OrderProdIds.size() > 0 && proList.size() > 0){ SOMOs = [Select Id,Name from Manufacturing_Order__c where (Order_Product__c IN:OrderProdIds and Order__c =:orderId) and Product__c IN:proList]; System.debug('SOMOs : '+SOMOs.size()); SOPOs = [Select Id,Name from PO__c where Order__c =:orderId and Ready_To_Receive__c =:true]; System.debug('SOPOs : '+SOPOs.size()); } Map<String,List<Inventory_Stock__c>> proInvMap = new Map<String,List<Inventory_Stock__c>>(); Map<String,Decimal> prodStockQtyMap = new Map<String,Decimal>(); if(SOMOs.size() > 0 || SOPOs.size() > 0){ set<Id> MoIds = new set<Id>();set<Id> PoIds = new set<Id>(); set<Id> InvIds = new set<Id>(); for(Manufacturing_Order__c MO : SOMOs) MoIds.add(MO.Id); for(PO__c PO : SOPOs) PoIds.add(PO.Id); system.debug('MoIds ~>'+MoIds); List<Stock_Inward_Line_Item__c> stinlist = [Select Id,Name,Product__c,Site_ProductService_InventoryStock__c from Stock_Inward_Line_Item__c  where Active__c = true and Product__c IN :proList and Scrap__c = false AND (Purchase_Orders__c IN:PoIds or Manufacturing_Order__c IN: MoIds) AND Quantity__c > 0 AND Status__c != 'Awaiting Stock']; for(Stock_Inward_Line_Item__c sin : stinlist) InvIds.add(sin.Site_ProductService_InventoryStock__c); system.debug('MoIds InvIds ~>'+InvIds); MOPOinvtoryList = [Select Id, Name, Active__c, Company__c,  Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Product__c,  Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c From Inventory_Stock__c Where product__c != null and Product__c In:proList And Active__c = true And Warehouse__c =:dc.Site__c AND Id IN:InvIds AND Name != 'Awaiting Stock' And Number_of_Item_In_Stock__c > 0 Order By Checked_In_Date__c ASC]; system.debug('MOPOinvtoryList~>'+MOPOinvtoryList.size()); for(Inventory_Stock__c invt:MOPOinvtoryList){ List<Inventory_Stock__c> invlistformap = new List<Inventory_Stock__c>(); if(proInvMap.containsKey(invt.Product__c)) invlistformap = proInvMap.get(invt.Product__c);  invlistformap.add(invt); proInvMap.put(invt.Product__c,invlistformap); } for(String key: proInvMap.keyset()){ Decimal Qty = 0;  for(Inventory_Stock__c inv : proInvMap.get(key)){ Qty = Qty + inv.Number_of_Item_In_Stock__c;  } prodStockQtyMap.put(key,Qty); } } Boolean checkInventoryList = false; for(String key : prodRequestedQtyMap.keyset()){ if(prodStockQtyMap.containsKey(key)){ system.debug('prodStockQtyMap.get(key) first check~>'+prodStockQtyMap.get(key));  if(prodStockQtyMap.get(key) < prodRequestedQtyMap.get(key)){checkInventoryList = true; break; } }else{ checkInventoryList = true; break; } } system.debug('checkInventoryList~>'+checkInventoryList); if(checkInventoryList){ system.debug('MOPOinvtoryList size~>'+MOPOinvtoryList.size()); if(MOPOinvtoryList.size() > 0){ invtoryList = [Select Id,Name,Product__c,Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c  from Inventory_Stock__c where product__c != null AND product__c In:proList And Active__c = true AND Warehouse__c =:dc.Site__c  AND Name != 'Awaiting Stock' And Number_of_Item_In_Stock__c > 0 AND Id NOT IN:MOPOinvtoryList ORDER BY Checked_In_Date__c ASC]; }else{ invtoryList = [Select Id,Name,Product__c,Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c  from Inventory_Stock__c where product__c != null AND product__c In:proList And Active__c = true AND Warehouse__c =:dc.Site__c AND Name != 'Awaiting Stock' And Number_of_Item_In_Stock__c > 0 ORDER BY Checked_In_Date__c ASC]; } for(Inventory_Stock__c invt:invtoryList){ List<Inventory_Stock__c> invlistformap = new List<Inventory_Stock__c>(); if(proInvMap.containsKey(invt.Product__c)) invlistformap = proInvMap.get(invt.Product__c); invlistformap.add(invt); proInvMap.put(invt.Product__c,invlistformap); } for(String key: proInvMap.keyset()){ Decimal Qty = 0; for(Inventory_Stock__c inv : proInvMap.get(key)){ Qty = Qty + inv.Number_of_Item_In_Stock__c; } Decimal totalQty = 0; if(prodStockQtyMap.containsKey(key)) totalQty = prodStockQtyMap.get(key); totalQty = totalQty + Qty; prodStockQtyMap.put(key,totalQty); } } if(!String.isNotEmpty(Logistic.Purchase_Order__c)){ for(String key : prodRequestedQtyMap.keyset()){ if(prodStockQtyMap.containsKey(key)){ if(prodStockQtyMap.get(key) < prodRequestedQtyMap.get(key)){ res.message = 'Does not have inventory for product :'+proName.get(key)+' on selected distribution Centers site'; return res; } }else{ res.message = 'Does not have inventory for product :'+proName.get(key)+' on selected distribution Centers site'; return res; } } } if(String.isNotEmpty(Logistic.Order_S__c)){ Order SalOrder=new Order(); SalOrder=[SELECT Id, Name, Channel__c, Channel__r.Ship_From_Address__c,Shipment_Type__c, Shipment_Preference_Speed__c, BillToContactId, Bill_To_Address__c, Bill_To_Return__c, Billing_Account_Number_Return__c, Billing_Address_Return__c, Billing_Contact_Return__c FROM Order WHERE Id=:Logistic.Order_S__c]; if(SalOrder.Channel__c != null){ if(Logistic.From_Address__c == null && SalOrder.Channel__r.Ship_From_Address__c != null){Logistic.From_Address__c = SalOrder.Channel__r.Ship_From_Address__c; } } if(Logistic.Shipment_Type__c == null || Logistic.Shipment_Type__c == '') Logistic.Shipment_Type__c = SalOrder.Shipment_Type__c; system.debug('Logistic.Shipment_Type__c : '+Logistic.Shipment_Type__c); } else if(String.isNotEmpty(Logistic.Purchase_Order__c)){String PORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c','Purchase_Order'); Logistic.RecordTypeId = PORecTypeId; } if(Schema.sObjectType.Logistic__c.fields.From_Address__c.isCreateable() && Schema.sObjectType.Logistic__c.fields.From_Address__c.isUpdateable()){ if (Schema.sObjectType.Logistic__c.isCreateable() && Schema.sObjectType.Logistic__c.isUpdateable()){ upsert Logistic; } } else{ res.message = 'Don\'t have access to upsert logistic'; return res;  } list<String> SOLIIds=new list<String>(); list<String> ordItemIds=new list<String>(); list<String> POItemIds=new list<String>(); for(Logistic_Line_Item__c log:LogisticLI){ String Name = log.Name; if(Name.length() > 80) log.Name = Name.subString(0,79); log.Status__c = 'Reserved'; log.Logistic__c = Logistic.Id; if(log.Order_Product__c !=null) ordItemIds.add(log.Order_Product__c); if(log.Purchase_Line_Items__c !=null) POItemIds.add(log.Purchase_Line_Items__c); } if(LogisticLI.size() > 0){ if(Schema.sObjectType.Logistic_Line_Item__c.fields.Logistic__c.isCreateable() && Schema.sObjectType.Logistic_Line_Item__c.fields.Logistic__c.isUpdateable()){ List<SObject> safeLogisticLI = FLSHelper.getSafeRecords( LogisticLI, 'Logistic_Line_Item__c', AccessType.UPDATABLE ); for (SObject s : safeLogisticLI) { typeLogisticLI.add((Logistic_Line_Item__c)s); } if (!typeLogisticLI.isEmpty()) { upsert typeLogisticLI; } } else{ res.message = 'Don\'t have access to upsert logistic line items'; return res;} } List<Stock_Outward_Line_Item__c> SWLIToUpsert = new List<Stock_Outward_Line_Item__c>(); Map<Id, Inventory_Stock__c> pliStock = new Map<Id, Inventory_Stock__c>(); Map<Id, Stock_Outward_Line_Item__c> pliStockInward = new Map<Id, Stock_Outward_Line_Item__c>(); List<Inventory_Stock__c> Inventory2Upsert = new List<Inventory_Stock__c>(); for(Logistic_Line_Item__c log:typeLogisticLI){if(log.Product__c != null && log.Quantity__c > 0 && ((Logistic.Order_S__c != null && log.Order_Product__c != null))){if(Logistic.Purchase_Order__c == null && proInvMap.containsKey(log.Product__c) && proSerial.containsKey(log.Product__c)){ Decimal remainintQty = log.Quantity__c; for(Inventory_Stock__c inv : proInvMap.get(log.Product__c)){ if(remainintQty > 0){ Decimal qtytoprocess = 0; if(proSerial.get(log.Product__c)){ Inventory_Stock__c inv2Create = new Inventory_Stock__c(Active__c = true, Product__c = log.Product__c, Name = 'Serial Stock Holder', Warehouse__c = dc.Site__c);Inventory2Upsert.add(inv2Create); system.debug('inhere serial'); qtytoprocess = 0; Stock_Outward_Line_Item__c sto = new Stock_Outward_Line_Item__c(); sto.Name = 'Serial Stock Holder';  sto.Product__c = log.Product__c;   sto.Active__c = true;  sto.Status__c = 'Reserved'; if(log.Order_Product__c != null) sto.Order_Product__c = log.Order_Product__c; if(Logistic.Order_S__c != null) sto.Order__c = Logistic.Order_S__c; sto.Logistic_Line_Item__c = log.Id; sto.Quantity__c = remainintQty; SWLIToUpsert.add(sto); pliStock.put(log.Id,inv2Create);pliStockInward.put(log.Id,sto); remainintQty = 0; system.debug('qtytoprocess~>'+qtytoprocess); system.debug('remainintQty~>'+remainintQty); } else{ system.debug('inhere non serial inv.Number_of_Item_In_Stock__c~>'+inv.Number_of_Item_In_Stock__c); if(inv.Number_of_Item_In_Stock__c < remainintQty){ system.debug('inhere inv.Number_of_Item_In_Stock__c < remainintQty'); qtytoprocess = inv.Number_of_Item_In_Stock__c; remainintQty = remainintQty - inv.Number_of_Item_In_Stock__c; }else{ system.debug('inhere else inv.Number_of_Item_In_Stock__c >= remainintQty'); qtytoprocess = remainintQty; remainintQty = remainintQty - qtytoprocess; } system.debug('qtytoprocess~>'+qtytoprocess); system.debug('remainintQty~>'+remainintQty); } if(qtytoprocess > 0){ Stock_Outward_Line_Item__c sto = new Stock_Outward_Line_Item__c(); sto.Name = log.Name; if(log.Order_Product__c != null) sto.Order_Product__c = log.Order_Product__c;  if(Logistic.Order_S__c != null) sto.Order__c = Logistic.Order_S__c; sto.Product__c = log.Product__c;  sto.Active__c = true;  sto.Status__c = 'Reserved'; if(proSerial.get(log.Product__c)) sto.Quantity__c = 1; else sto.Quantity__c = qtytoprocess; system.debug('inv.Id for stock outward~>'+inv.Id); sto.Site_Product_Service_Inventory_Stock__c = inv.Id; system.debug('log.Id for stock outward~>'+log.Id); sto.Logistic_Line_Item__c = log.Id; if(MRPmap.containsKey(log.Product__c)) sto.MRP_Material_Requirements_Planning__c = MRPmap.get(log.Product__c).Id; system.debug('inv.Serial__c~>'+inv.Serial__c); if(inv.Serial__c != null) sto.Serial__c = inv.Serial__c; if(inv.Batch_Lot__c != null) sto.Material_Batch_Lot__c = inv.Batch_Lot__c; SWLIToUpsert.add(sto); } } } } } } system.debug('SWLIToUpsert size~>'+SWLIToUpsert.size()); if(Inventory2Upsert.size() > 0) insert Inventory2Upsert; for(Id pliId : pliStockInward.KeySet()){ pliStockInward.get(pliId).Site_Product_Service_Inventory_Stock__c= pliStock.get(pliId).Id; } if(SWLIToUpsert.size() > 0){ if(Schema.sObjectType.Stock_Outward_Line_Item__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.isUpdateable()) { system.debug('SWLIToUpsert size~>'+SWLIToUpsert.size()); upsert SWLIToUpsert;   for(Stock_Outward_Line_Item__c soli : SWLIToUpsert) { System.debug('Upserted SOLI ID: ' + soli.Id); }}  else{ res.message = 'Don\'t have access to upsert Stock Outward'; return res; } } if(POItemIds.size() > 0){ list<Logistic_Line_Item__c> LogLIList=new list<Logistic_Line_Item__c>(); LogLIList=[SELECT Id, Name, Quantity__c, Purchase_Line_Items__c FROM Logistic_Line_Item__c WHERE Purchase_Line_Items__c IN:POItemIds]; list<Purchase_Line_Items__c> poliItems2Update = new List<Purchase_Line_Items__c>(); for(Purchase_Line_Items__c poli:[SELECT Id, Logistic_Quantity__c FROM Purchase_Line_Items__c WHERE Id IN:POItemIds]){ Decimal LogQuantity=0; for(Logistic_Line_Item__c logLi:LogLIList) { if(logLi.Purchase_Line_Items__c==poli.Id) LogQuantity+=logLi.Quantity__c; } if(Schema.sObjectType.Purchase_Line_Items__c.fields.Logistic_Quantity__c.isUpdateable()) poli.Logistic_Quantity__c=LogQuantity; poliItems2Update.add(poli); } try{  if(poliItems2Update.size() > 0 && Schema.sObjectType.Purchase_Line_Items__c.isUpdateable())  { update poliItems2Update; } else{ res.message = 'User is not allowed to update POLI'; return res; } }catch(DMLException e){ res.message = 'DML Exception on PO Line Items update: '+ e.getMessage() +','+e.getStackTraceString(); return res;} } res.message = 'Logistic created successfully'; res.logistic = Logistic; return res; }catch(Exception e){ System.debug('Exception ~> '+ e.getMessage()+'; at line ~> '+e.getStackTraceString()); throw new AuraHandledException(e.getMessage()+'; at line ~> '+e.getStackTraceString()); } }
+// @AuraEnabled(cacheable=true)
+//  public static Map<Id, ProductStockSummary> getTotalStockPerProduct( List<Id> productIds, String channel, String distributionChannel ) { System.debug('productIds --> '+productIds); System.debug('channel --> '+channel); System.debug('distributionChannel --> '+distributionChannel); Map<Id, ProductStockSummary> result = new Map<Id, ProductStockSummary>(); if (productIds == null || productIds.isEmpty() || String.isBlank(distributionChannel)) { return result; } Id dcId; try { dcId = (Id)distributionChannel; } catch (Exception e) { return result; } Distribution_Channel__c dc = [ SELECT Id, Site__c FROM Distribution_Channel__c WHERE Id = :dcId LIMIT 1 ]; if (dc.Site__c == null) { return result; } Id siteId = dc.Site__c; System.debug('SiteId: ' + siteId); String soql = 'SELECT Product__c productId,' + '       SUM(Number_of_Item_In_Stock__c) totalQty' + '  FROM Inventory_Stock__c' + ' WHERE Product__c IN :productIds' + '   AND Active__c = true' + '   AND Number_of_Item_In_Stock__c >= 0' + '   AND Name NOT IN (\'Awaiting Stock\', \'Serial Stock Holder\')' + '   AND Warehouse__c = :siteId' + ' GROUP BY Product__c'; List<AggregateResult> ars = Database.query(soql); for (AggregateResult ar : ars) { Id      productId = (Id)ar.get('productId'); Decimal totalQty  = (Decimal)ar.get('totalQty'); result.put(productId, new ProductStockSummary(productId, totalQty)); } for (Id pId : productIds) { if (!result.containsKey(pId)) { result.put(pId, new ProductStockSummary(pId, 0)); } } return result; } public class Result { @AuraEnabled public Logistic__c logistic { get; set; } @AuraEnabled public String message   { get; set; } } @AuraEnabled public static Result getCreateLogistics(String LogisticJSON, String LLIListJSON,String OrderLIneItems,String BomItems){ Result res = new Result(); res.logistic = new Logistic__c(); res.message = ''; try{ system.debug('getCreateLogistic called'); list<OrderItem> Orditem = (OrderLIneItems != null && OrderLIneItems != '') ? (list<OrderItem>) JSON.deserialize(OrderLIneItems, list<OrderItem> .class) : new list<OrderItem>(); list<BOM_Line_Item__c> bomitem = (BomItems != null && BomItems != '') ? (list<BOM_Line_Item__c>) JSON.deserialize(BomItems, list<BOM_Line_Item__c> .class) : new list<BOM_Line_Item__c>(); Id rTpe_MRPKIT; rTpe_MRPKIT = Schema.SObjectType.MRP__c.getRecordTypeInfosByDeveloperName().get('MRP_Kit').getRecordTypeId(); list<MRP__c> MRPS2Insert = new list<MRP__c>(); map<string,MRP__c> MRPmap = new map<string,MRP__c>(); PreventRecursiveLedgerEntry.testCasesTransactions = true; for(OrderItem orditm:Orditem){ if(orditm.Product2.Is_Kit__c){ for(BOM_Line_Item__c bom:bomitem){ MRP__c MRP = new MRP__c(); } } } upsert MRPS2Insert; system.debug('inside MRP Creation1-->:'); for(MRP__c Mrp :MRPS2Insert){ MRPmap.put(Mrp.MRP_Product__c,Mrp); } system.debug('MRPmap:-->'+MRPmap); Logistic__c Logistic = (Logistic__c) JSON.deserialize(LogisticJSON, Logistic__c .class); system.debug('Logistic : '+Logistic.Shipping_Preferences__c); System.debug('Logistic Order : '+Logistic.Order_S__c); Id orderId = Logistic.Order_S__c; String SORecTypeId=''; if(String.isNotEmpty(Logistic.Order_S__c)) SORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c','Order'); if(String.isNotEmpty(Logistic.Purchase_Order__c)) SORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c','Purchase_Order'); Logistic.RecordTypeId = SORecTypeId; system.debug('RecordTypeId : '+Logistic.RecordTypeId); list<Logistic_Line_Item__c> LogisticLI = (list<Logistic_Line_Item__c>) JSON.deserialize(LLIListJSON, list<Logistic_Line_Item__c> .class); List<Logistic_Line_Item__c> typeLogisticLI = new List<Logistic_Line_Item__c>(); set<String> proList=new set<String>(); set<Id> OrderProdIds=new set<Id>(); Map<String,Decimal> prodRequestedQtyMap = new Map<String,Decimal>(); Map<String,Decimal> OrderRequestedQtyMap = new Map<String,Decimal>(); for(Logistic_Line_Item__c log :LogisticLI){ if(log.Product__c != null && !proList.contains(log.Product__c)){ proList.add(log.Product__c); prodRequestedQtyMap.put(log.Product__c,log.Quantity__c); } if(log.Order_Product__c != null) { OrderProdIds.add(log.Order_Product__c); OrderRequestedQtyMap.put(log.Order_Product__c,log.Quantity__c); } } if (OrderProdIds.size() > 0) { List<OrderItem> ordItemsList = [SELECT Id, OrderItemNumber, Quantity, Is_Kit__c, Logistic_Quantity__c FROM OrderItem WHERE Id IN :OrderProdIds]; for (OrderItem ord : ordItemsList) { if (!ord.Is_Kit__c && OrderRequestedQtyMap.containsKey(ord.Id)) { Decimal logQty = OrderRequestedQtyMap.get(ord.Id); system.debug('logQty : '+logQty); if ((logQty + ord.Logistic_Quantity__c) > ord.Quantity) { res.message = 'Logistic cannot be created for more than order quantity'; return res; } } } } List<Product2> proList1 = [Select Id,Name,Serialise__c,Lot_Tracked__c,Track_Inventory__c from Product2 where Id In:proList]; Map<String,String> proName=new Map<String,String>(); Map<String,Boolean> proSerial=new Map<String,Boolean>(); for(Product2 pr:proList1){ proName.put(pr.Id,pr.Name); proSerial.put(pr.Id,pr.Serialise__c); } Distribution_Channel__c dc = [Select Id,Name,Site__c from Distribution_Channel__c where Id=:Logistic.Distribution_Channel__c Limit 1]; List<Manufacturing_Order__c> SOMOs = new List<Manufacturing_Order__c>(); List<PO__c> SOPOs = new List<PO__c>(); List<Inventory_Stock__c> invtoryList = new List<Inventory_Stock__c>(); List<Inventory_Stock__c> MOPOinvtoryList = new List<Inventory_Stock__c>(); system.debug('orderId~>'+orderId); if(orderId != null && OrderProdIds.size() > 0 && proList.size() > 0){ SOMOs = [Select Id,Name from Manufacturing_Order__c where (Order_Product__c IN:OrderProdIds and Order__c =:orderId) and Product__c IN:proList]; System.debug('SOMOs : '+SOMOs.size()); SOPOs = [Select Id,Name from PO__c where Order__c =:orderId and Ready_To_Receive__c =:true]; System.debug('SOPOs : '+SOPOs.size()); } Map<String,List<Inventory_Stock__c>> proInvMap = new Map<String,List<Inventory_Stock__c>>(); Map<String,Decimal> prodStockQtyMap = new Map<String,Decimal>(); if(SOMOs.size() > 0 || SOPOs.size() > 0){ set<Id> MoIds = new set<Id>();set<Id> PoIds = new set<Id>(); set<Id> InvIds = new set<Id>(); for(Manufacturing_Order__c MO : SOMOs) MoIds.add(MO.Id); for(PO__c PO : SOPOs) PoIds.add(PO.Id); system.debug('MoIds ~>'+MoIds); List<Stock_Inward_Line_Item__c> stinlist = [Select Id,Name,Product__c,Site_ProductService_InventoryStock__c from Stock_Inward_Line_Item__c  where Active__c = true and Product__c IN :proList and Scrap__c = false AND (Purchase_Orders__c IN:PoIds or Manufacturing_Order__c IN: MoIds) AND Quantity__c > 0 AND Status__c != 'Awaiting Stock']; for(Stock_Inward_Line_Item__c sin : stinlist) InvIds.add(sin.Site_ProductService_InventoryStock__c); system.debug('MoIds InvIds ~>'+InvIds); MOPOinvtoryList = [Select Id, Name, Active__c, Company__c,  Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Product__c,  Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c From Inventory_Stock__c Where product__c != null and Product__c In:proList And Active__c = true And Warehouse__c =:dc.Site__c AND Id IN:InvIds AND Name != 'Awaiting Stock' And Number_of_Item_In_Stock__c > 0 Order By Checked_In_Date__c ASC]; system.debug('MOPOinvtoryList~>'+MOPOinvtoryList.size()); for(Inventory_Stock__c invt:MOPOinvtoryList){ List<Inventory_Stock__c> invlistformap = new List<Inventory_Stock__c>(); if(proInvMap.containsKey(invt.Product__c)) invlistformap = proInvMap.get(invt.Product__c);  invlistformap.add(invt); proInvMap.put(invt.Product__c,invlistformap); } for(String key: proInvMap.keyset()){ Decimal Qty = 0;  for(Inventory_Stock__c inv : proInvMap.get(key)){ Qty = Qty + inv.Number_of_Item_In_Stock__c;  } prodStockQtyMap.put(key,Qty); } } Boolean checkInventoryList = false; for(String key : prodRequestedQtyMap.keyset()){ if(prodStockQtyMap.containsKey(key)){ system.debug('prodStockQtyMap.get(key) first check~>'+prodStockQtyMap.get(key));  if(prodStockQtyMap.get(key) < prodRequestedQtyMap.get(key)){checkInventoryList = true; break; } }else{ checkInventoryList = true; break; } } system.debug('checkInventoryList~>'+checkInventoryList); if(checkInventoryList){ system.debug('MOPOinvtoryList size~>'+MOPOinvtoryList.size()); if(MOPOinvtoryList.size() > 0){ invtoryList = [Select Id,Name,Product__c,Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c  from Inventory_Stock__c where product__c != null AND product__c In:proList And Active__c = true AND Warehouse__c =:dc.Site__c  AND Name != 'Awaiting Stock' And Number_of_Item_In_Stock__c > 0 AND Id NOT IN:MOPOinvtoryList ORDER BY Checked_In_Date__c ASC]; }else{ invtoryList = [Select Id,Name,Product__c,Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c  from Inventory_Stock__c where product__c != null AND product__c In:proList And Active__c = true AND Warehouse__c =:dc.Site__c AND Name != 'Awaiting Stock' And Number_of_Item_In_Stock__c > 0 ORDER BY Checked_In_Date__c ASC]; } for(Inventory_Stock__c invt:invtoryList){ List<Inventory_Stock__c> invlistformap = new List<Inventory_Stock__c>(); if(proInvMap.containsKey(invt.Product__c)) invlistformap = proInvMap.get(invt.Product__c); invlistformap.add(invt); proInvMap.put(invt.Product__c,invlistformap); } for(String key: proInvMap.keyset()){ Decimal Qty = 0; for(Inventory_Stock__c inv : proInvMap.get(key)){ Qty = Qty + inv.Number_of_Item_In_Stock__c; } Decimal totalQty = 0; if(prodStockQtyMap.containsKey(key)) totalQty = prodStockQtyMap.get(key); totalQty = totalQty + Qty; prodStockQtyMap.put(key,totalQty); } } if(!String.isNotEmpty(Logistic.Purchase_Order__c)){ for(String key : prodRequestedQtyMap.keyset()){ if(prodStockQtyMap.containsKey(key)){ if(prodStockQtyMap.get(key) < prodRequestedQtyMap.get(key)){ res.message = 'Does not have inventory for product :'+proName.get(key)+' on selected distribution Centers site'; return res; } }else{ res.message = 'Does not have inventory for product :'+proName.get(key)+' on selected distribution Centers site'; return res; } } } if(String.isNotEmpty(Logistic.Order_S__c)){ Order SalOrder=new Order(); SalOrder=[SELECT Id, Name, Channel__c, Channel__r.Ship_From_Address__c,Shipment_Type__c, Shipment_Preference_Speed__c, BillToContactId, Bill_To_Address__c, Bill_To_Return__c, Billing_Account_Number_Return__c, Billing_Address_Return__c, Billing_Contact_Return__c FROM Order WHERE Id=:Logistic.Order_S__c]; if(SalOrder.Channel__c != null){ if(Logistic.From_Address__c == null && SalOrder.Channel__r.Ship_From_Address__c != null){Logistic.From_Address__c = SalOrder.Channel__r.Ship_From_Address__c; } } if(Logistic.Shipment_Type__c == null || Logistic.Shipment_Type__c == '') Logistic.Shipment_Type__c = SalOrder.Shipment_Type__c; system.debug('Logistic.Shipment_Type__c : '+Logistic.Shipment_Type__c); } else if(String.isNotEmpty(Logistic.Purchase_Order__c)){String PORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c','Purchase_Order'); Logistic.RecordTypeId = PORecTypeId; } if(Schema.sObjectType.Logistic__c.fields.From_Address__c.isCreateable() && Schema.sObjectType.Logistic__c.fields.From_Address__c.isUpdateable()){ if (Schema.sObjectType.Logistic__c.isCreateable() && Schema.sObjectType.Logistic__c.isUpdateable()){ upsert Logistic; } } else{ res.message = 'Don\'t have access to upsert logistic'; return res;  } list<String> SOLIIds=new list<String>(); list<String> ordItemIds=new list<String>(); list<String> POItemIds=new list<String>(); for(Logistic_Line_Item__c log:LogisticLI){ String Name = log.Name; if(Name.length() > 80) log.Name = Name.subString(0,79); log.Status__c = 'Reserved'; log.Logistic__c = Logistic.Id; if(log.Order_Product__c !=null) ordItemIds.add(log.Order_Product__c); if(log.Purchase_Line_Items__c !=null) POItemIds.add(log.Purchase_Line_Items__c); } if(LogisticLI.size() > 0){ if(Schema.sObjectType.Logistic_Line_Item__c.fields.Logistic__c.isCreateable() && Schema.sObjectType.Logistic_Line_Item__c.fields.Logistic__c.isUpdateable()){ List<SObject> safeLogisticLI = FLSHelper.getSafeRecords( LogisticLI, 'Logistic_Line_Item__c', AccessType.UPDATABLE ); for (SObject s : safeLogisticLI) { typeLogisticLI.add((Logistic_Line_Item__c)s); } if (!typeLogisticLI.isEmpty()) { upsert typeLogisticLI; } } else{ res.message = 'Don\'t have access to upsert logistic line items'; return res;} } List<Stock_Outward_Line_Item__c> SWLIToUpsert = new List<Stock_Outward_Line_Item__c>(); Map<Id, Inventory_Stock__c> pliStock = new Map<Id, Inventory_Stock__c>(); Map<Id, Stock_Outward_Line_Item__c> pliStockInward = new Map<Id, Stock_Outward_Line_Item__c>(); List<Inventory_Stock__c> Inventory2Upsert = new List<Inventory_Stock__c>(); for(Logistic_Line_Item__c log:typeLogisticLI){if(log.Product__c != null && log.Quantity__c > 0 && ((Logistic.Order_S__c != null && log.Order_Product__c != null))){if(Logistic.Purchase_Order__c == null && proInvMap.containsKey(log.Product__c) && proSerial.containsKey(log.Product__c)){ Decimal remainintQty = log.Quantity__c; for(Inventory_Stock__c inv : proInvMap.get(log.Product__c)){ if(remainintQty > 0){ Decimal qtytoprocess = 0; if(proSerial.get(log.Product__c)){ Inventory_Stock__c inv2Create = new Inventory_Stock__c(Active__c = true, Product__c = log.Product__c, Name = 'Serial Stock Holder', Warehouse__c = dc.Site__c);Inventory2Upsert.add(inv2Create); system.debug('inhere serial'); qtytoprocess = 0; Stock_Outward_Line_Item__c sto = new Stock_Outward_Line_Item__c(); sto.Name = 'Serial Stock Holder';  sto.Product__c = log.Product__c;   sto.Active__c = true;  sto.Status__c = 'Reserved'; if(log.Order_Product__c != null) sto.Order_Product__c = log.Order_Product__c; if(Logistic.Order_S__c != null) sto.Order__c = Logistic.Order_S__c; sto.Logistic_Line_Item__c = log.Id; sto.Quantity__c = remainintQty; SWLIToUpsert.add(sto); pliStock.put(log.Id,inv2Create);pliStockInward.put(log.Id,sto); remainintQty = 0; system.debug('qtytoprocess~>'+qtytoprocess); system.debug('remainintQty~>'+remainintQty); } else{ system.debug('inhere non serial inv.Number_of_Item_In_Stock__c~>'+inv.Number_of_Item_In_Stock__c); if(inv.Number_of_Item_In_Stock__c < remainintQty){ system.debug('inhere inv.Number_of_Item_In_Stock__c < remainintQty'); qtytoprocess = inv.Number_of_Item_In_Stock__c; remainintQty = remainintQty - inv.Number_of_Item_In_Stock__c; }else{ system.debug('inhere else inv.Number_of_Item_In_Stock__c >= remainintQty'); qtytoprocess = remainintQty; remainintQty = remainintQty - qtytoprocess; } system.debug('qtytoprocess~>'+qtytoprocess); system.debug('remainintQty~>'+remainintQty); } if(qtytoprocess > 0){ Stock_Outward_Line_Item__c sto = new Stock_Outward_Line_Item__c(); sto.Name = log.Name; if(log.Order_Product__c != null) sto.Order_Product__c = log.Order_Product__c;  if(Logistic.Order_S__c != null) sto.Order__c = Logistic.Order_S__c; sto.Product__c = log.Product__c;  sto.Active__c = true;  sto.Status__c = 'Reserved'; if(proSerial.get(log.Product__c)) sto.Quantity__c = 1; else sto.Quantity__c = qtytoprocess; system.debug('inv.Id for stock outward~>'+inv.Id); sto.Site_Product_Service_Inventory_Stock__c = inv.Id; system.debug('log.Id for stock outward~>'+log.Id); sto.Logistic_Line_Item__c = log.Id; if(MRPmap.containsKey(log.Product__c)) sto.MRP_Material_Requirements_Planning__c = MRPmap.get(log.Product__c).Id; system.debug('inv.Serial__c~>'+inv.Serial__c); if(inv.Serial__c != null) sto.Serial__c = inv.Serial__c; if(inv.Batch_Lot__c != null) sto.Material_Batch_Lot__c = inv.Batch_Lot__c; SWLIToUpsert.add(sto); } } } } } } system.debug('SWLIToUpsert size~>'+SWLIToUpsert.size()); if(Inventory2Upsert.size() > 0) insert Inventory2Upsert; for(Id pliId : pliStockInward.KeySet()){ pliStockInward.get(pliId).Site_Product_Service_Inventory_Stock__c= pliStock.get(pliId).Id; } if(SWLIToUpsert.size() > 0){ if(Schema.sObjectType.Stock_Outward_Line_Item__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.isUpdateable()) { system.debug('SWLIToUpsert size~>'+SWLIToUpsert.size()); upsert SWLIToUpsert;   for(Stock_Outward_Line_Item__c soli : SWLIToUpsert) { System.debug('Upserted SOLI ID: ' + soli.Id); }}  else{ res.message = 'Don\'t have access to upsert Stock Outward'; return res; } } if(POItemIds.size() > 0){ list<Logistic_Line_Item__c> LogLIList=new list<Logistic_Line_Item__c>(); LogLIList=[SELECT Id, Name, Quantity__c, Purchase_Line_Items__c FROM Logistic_Line_Item__c WHERE Purchase_Line_Items__c IN:POItemIds]; list<Purchase_Line_Items__c> poliItems2Update = new List<Purchase_Line_Items__c>(); for(Purchase_Line_Items__c poli:[SELECT Id, Logistic_Quantity__c FROM Purchase_Line_Items__c WHERE Id IN:POItemIds]){ Decimal LogQuantity=0; for(Logistic_Line_Item__c logLi:LogLIList) { if(logLi.Purchase_Line_Items__c==poli.Id) LogQuantity+=logLi.Quantity__c; } if(Schema.sObjectType.Purchase_Line_Items__c.fields.Logistic_Quantity__c.isUpdateable()) poli.Logistic_Quantity__c=LogQuantity; poliItems2Update.add(poli); } try{  if(poliItems2Update.size() > 0 && Schema.sObjectType.Purchase_Line_Items__c.isUpdateable())  { update poliItems2Update; } else{ res.message = 'User is not allowed to update POLI'; return res; } }catch(DMLException e){ res.message = 'DML Exception on PO Line Items update: '+ e.getMessage() +','+e.getStackTraceString(); return res;} } res.message = 'Logistic created successfully'; res.logistic = Logistic; return res; }catch(Exception e){ System.debug('Exception ~> '+ e.getMessage()+'; at line ~> '+e.getStackTraceString()); throw new AuraHandledException(e.getMessage()+'; at line ~> '+e.getStackTraceString()); } }
+
+
+@AuraEnabled(cacheable = true)
+public static Map < Id, ProductStockSummary > getTotalStockPerProduct(List < Id > productIds, String channel, String distributionChannel) {
+  System.debug('productIds --> ' + productIds);
+  System.debug('channel --> ' + channel);
+  System.debug('distributionChannel --> ' + distributionChannel);
+  Map < Id, ProductStockSummary > result = new Map < Id, ProductStockSummary > ();
+  if (productIds == null || productIds.isEmpty() || String.isBlank(distributionChannel)) {
+    return result;
+  }
+  Id dcId;
+  try {
+    dcId = (Id) distributionChannel;
+  } catch (Exception e) {
+    return result;
+  }
+  Distribution_Channel__c dc = [SELECT Id, Site__c FROM Distribution_Channel__c WHERE Id =: dcId LIMIT 1];
+  if (dc.Site__c == null) {
+    return result;
+  }
+  Id siteId = dc.Site__c;
+  System.debug('SiteId: ' + siteId);
+  String soql = 'SELECT Product__c productId,' + '       SUM(Number_of_Item_In_Stock__c) totalQty' + '  FROM Inventory_Stock__c' + ' WHERE Product__c IN :productIds' + '   AND Active__c = true' + '   AND Number_of_Item_In_Stock__c >= 0' + '   AND Name NOT IN (\'Awaiting Stock\', \'Serial Stock Holder\')' + '   AND Warehouse__c = :siteId' + ' GROUP BY Product__c';
+  List < AggregateResult > ars = Database.query(soql);
+  for (AggregateResult ar: ars) {
+    Id productId = (Id) ar.get('productId');
+    Decimal totalQty = (Decimal) ar.get('totalQty');
+    result.put(productId, new ProductStockSummary(productId, totalQty));
+  }
+  for (Id pId: productIds) {
+    if (!result.containsKey(pId)) {
+      result.put(pId, new ProductStockSummary(pId, 0));
+    }
+  }
+  return result;
+}
+public class Result {
+  @AuraEnabled
+   public Logistic__c logistic {
+    get;
+    set;
+  }
+  @AuraEnabled
+   public String message {
+    get;
+    set;
+  }
+}
+@AuraEnabled
+ public static Result getCreateLogistics(String LogisticJSON, String LLIListJSON, String OrderLIneItems, String BomItems) {
+  Result res = new Result();
+  res.logistic = new Logistic__c();
+  res.message = '';
+  try {
+    system.debug('getCreateLogistic called');
+    list < OrderItem > Orditem = (OrderLIneItems != null && OrderLIneItems != '') ? (list < OrderItem > ) JSON.deserialize(OrderLIneItems, list < OrderItem > .class) : new list < OrderItem > ();
+    list < BOM_Line_Item__c > bomitem = (BomItems != null && BomItems != '') ? (list < BOM_Line_Item__c > ) JSON.deserialize(BomItems, list < BOM_Line_Item__c > .class) : new list < BOM_Line_Item__c > ();
+    Id rTpe_MRPKIT;
+    rTpe_MRPKIT = Schema.SObjectType.MRP__c.getRecordTypeInfosByDeveloperName().get('MRP_Kit').getRecordTypeId();
+    list < MRP__c > MRPS2Insert = new list < MRP__c > ();
+    map < string, MRP__c > MRPmap = new map < string, MRP__c > ();
+    PreventRecursiveLedgerEntry.testCasesTransactions = true;
+    for (OrderItem orditm: Orditem) {
+      if (orditm.Product2.Is_Kit__c) {
+        for (BOM_Line_Item__c bom: bomitem) {
+          MRP__c MRP = new MRP__c();
+        }
+      }
+    }
+    upsert MRPS2Insert;
+    system.debug('inside MRP Creation1-->:');
+    for (MRP__c Mrp: MRPS2Insert) {
+      MRPmap.put(Mrp.MRP_Product__c, Mrp);
+    }
+    system.debug('MRPmap:-->' + MRPmap);
+    Logistic__c Logistic = (Logistic__c) JSON.deserialize(LogisticJSON, Logistic__c.class);
+    system.debug('Logistic : ' + Logistic.Shipping_Preferences__c);
+    System.debug('Logistic Order : ' + Logistic.Order_S__c);
+    Id orderId = Logistic.Order_S__c;
+    String SORecTypeId = '';
+    if (String.isNotEmpty(Logistic.Order_S__c)) SORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c', 'Order');
+    if (String.isNotEmpty(Logistic.Purchase_Order__c)) SORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c', 'Purchase_Order');
+    Logistic.RecordTypeId = SORecTypeId;
+    system.debug('RecordTypeId : ' + Logistic.RecordTypeId);
+    list < Logistic_Line_Item__c > LogisticLI = (list < Logistic_Line_Item__c > ) JSON.deserialize(LLIListJSON, list < Logistic_Line_Item__c > .class);
+    List < Logistic_Line_Item__c > typeLogisticLI = new List < Logistic_Line_Item__c > ();
+    set < String > proList = new set < String > ();
+    set < Id > OrderProdIds = new set < Id > ();
+    Map < String, Decimal > prodRequestedQtyMap = new Map < String, Decimal > ();
+    Map < String, Decimal > OrderRequestedQtyMap = new Map < String, Decimal > ();
+    for (Logistic_Line_Item__c log: LogisticLI) {
+      if (log.Product__c != null && !proList.contains(log.Product__c)) {
+        proList.add(log.Product__c);
+        prodRequestedQtyMap.put(log.Product__c, log.Quantity__c);
+      }
+      if (log.Order_Product__c != null) {
+        OrderProdIds.add(log.Order_Product__c);
+        OrderRequestedQtyMap.put(log.Order_Product__c, log.Quantity__c);
+      }
+    }
+    if (OrderProdIds.size() > 0) {
+      List < OrderItem > ordItemsList = [SELECT Id, OrderItemNumber, Quantity, Is_Kit__c, Logistic_Quantity__c FROM OrderItem WHERE Id IN: OrderProdIds];
+      for (OrderItem ord: ordItemsList) {
+        if (!ord.Is_Kit__c && OrderRequestedQtyMap.containsKey(ord.Id)) {
+          Decimal logQty = OrderRequestedQtyMap.get(ord.Id);
+          system.debug('logQty : ' + logQty);
+          if ((logQty + ord.Logistic_Quantity__c) > ord.Quantity) {
+            res.message = 'Logistic cannot be created for more than order quantity';
+            return res;
+          }
+        }
+      }
+    }
+    List < Product2 > proList1 = [Select Id, Name, Serialise__c, Lot_Tracked__c, Track_Inventory__c from Product2 where Id In: proList];
+    Map < String, String > proName = new Map < String, String > ();
+    Map < String, Boolean > proSerial = new Map < String, Boolean > ();
+    for (Product2 pr: proList1) {
+      proName.put(pr.Id, pr.Name);
+      proSerial.put(pr.Id, pr.Serialise__c);
+    }
+    Distribution_Channel__c dc = [Select Id, Name, Site__c from Distribution_Channel__c where Id =: Logistic.Distribution_Channel__c Limit 1];
+    List < Manufacturing_Order__c > SOMOs = new List < Manufacturing_Order__c > ();
+    List < PO__c > SOPOs = new List < PO__c > ();
+    List < Inventory_Stock__c > invtoryList = new List < Inventory_Stock__c > ();
+    List < Inventory_Stock__c > MOPOinvtoryList = new List < Inventory_Stock__c > ();
+    system.debug('orderId~>' + orderId);
+    if (orderId != null && OrderProdIds.size() > 0 && proList.size() > 0) {
+      SOMOs = [Select Id, Name from Manufacturing_Order__c where(Order_Product__c IN: OrderProdIds and Order__c =: orderId) and Product__c IN: proList];
+      System.debug('SOMOs : ' + SOMOs.size());
+      SOPOs = [Select Id, Name from PO__c where Order__c =: orderId and Ready_To_Receive__c =: true];
+      System.debug('SOPOs : ' + SOPOs.size());
+    }
+    Map < String, List < Inventory_Stock__c >> proInvMap = new Map < String, List < Inventory_Stock__c >> ();
+    Map < String, Decimal > prodStockQtyMap = new Map < String, Decimal > ();
+    if (SOMOs.size() > 0 || SOPOs.size() > 0) {
+      set < Id > MoIds = new set < Id > ();
+      set < Id > PoIds = new set < Id > ();
+      set < Id > InvIds = new set < Id > ();
+      for (Manufacturing_Order__c MO: SOMOs) MoIds.add(MO.Id);
+      for (PO__c PO: SOPOs) PoIds.add(PO.Id);
+      system.debug('MoIds ~>' + MoIds);
+      List < Stock_Inward_Line_Item__c > stinlist = [Select Id, Name, Product__c, Site_ProductService_InventoryStock__c from Stock_Inward_Line_Item__c where Active__c = true and Product__c IN: proList and Scrap__c = false AND(Purchase_Orders__c IN: PoIds or Manufacturing_Order__c IN: MoIds) AND Quantity__c > 0 AND Status__c != 'Awaiting Stock'];
+      for (Stock_Inward_Line_Item__c sin: stinlist) InvIds.add(sin.Site_ProductService_InventoryStock__c);
+      system.debug('MoIds InvIds ~>' + InvIds);
+      MOPOinvtoryList = [Select Id, Name, Active__c, Company__c, Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Product__c, Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c From Inventory_Stock__c Where product__c != null and Product__c In: proList And Active__c = true And Warehouse__c =: dc.Site__c AND Id IN: InvIds AND Name != 'Awaiting Stock'
+        And Number_of_Item_In_Stock__c > 0 Order By Checked_In_Date__c ASC
+      ];
+      system.debug('MOPOinvtoryList~>' + MOPOinvtoryList.size());
+      for (Inventory_Stock__c invt: MOPOinvtoryList) {
+        List < Inventory_Stock__c > invlistformap = new List < Inventory_Stock__c > ();
+        if (proInvMap.containsKey(invt.Product__c)) invlistformap = proInvMap.get(invt.Product__c);
+        invlistformap.add(invt);
+        proInvMap.put(invt.Product__c, invlistformap);
+      }
+      for (String key: proInvMap.keyset()) {
+        Decimal Qty = 0;
+        for (Inventory_Stock__c inv: proInvMap.get(key)) {
+          Qty = Qty + inv.Number_of_Item_In_Stock__c;
+        }
+        prodStockQtyMap.put(key, Qty);
+      }
+    }
+    Boolean checkInventoryList = false;
+    for (String key: prodRequestedQtyMap.keyset()) {
+      if (prodStockQtyMap.containsKey(key)) {
+        system.debug('prodStockQtyMap.get(key) first check~>' + prodStockQtyMap.get(key));
+        if (prodStockQtyMap.get(key) < prodRequestedQtyMap.get(key)) {
+          checkInventoryList = true;
+          break;
+        }
+      } else {
+        checkInventoryList = true;
+        break;
+      }
+    }
+    system.debug('checkInventoryList~>' + checkInventoryList);
+    if (checkInventoryList) {
+      system.debug('MOPOinvtoryList size~>' + MOPOinvtoryList.size());
+      if (MOPOinvtoryList.size() > 0) {
+        invtoryList = [Select Id, Name, Product__c, Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c from Inventory_Stock__c where product__c != null AND product__c In: proList And Active__c = true AND Warehouse__c =: dc.Site__c AND Name != 'Awaiting Stock'
+          And Number_of_Item_In_Stock__c > 0 AND Id NOT IN: MOPOinvtoryList ORDER BY Checked_In_Date__c ASC
+        ];
+      } else {
+        invtoryList = [Select Id, Name, Product__c, Warehouse__c, Fixed_Asset__c, Batch_Lot__c, Serial__c, Number_of_Item_In_Stock__c, Number_of_Item_Purchased_In__c, Number_of_Items_Dispatched__c, No_of_Items_Sold__c, Checked_In_Date__c from Inventory_Stock__c where product__c != null AND product__c In: proList And Active__c = true AND Warehouse__c =: dc.Site__c AND Name != 'Awaiting Stock'
+          And Number_of_Item_In_Stock__c > 0 ORDER BY Checked_In_Date__c ASC
+        ];
+      }
+      for (Inventory_Stock__c invt: invtoryList) {
+        List < Inventory_Stock__c > invlistformap = new List < Inventory_Stock__c > ();
+        if (proInvMap.containsKey(invt.Product__c)) invlistformap = proInvMap.get(invt.Product__c);
+        invlistformap.add(invt);
+        proInvMap.put(invt.Product__c, invlistformap);
+      }
+      for (String key: proInvMap.keyset()) {
+        Decimal Qty = 0;
+        for (Inventory_Stock__c inv: proInvMap.get(key)) {
+          Qty = Qty + inv.Number_of_Item_In_Stock__c;
+        }
+        Decimal totalQty = 0;
+        if (prodStockQtyMap.containsKey(key)) totalQty = prodStockQtyMap.get(key);
+        totalQty = totalQty + Qty;
+        prodStockQtyMap.put(key, totalQty);
+      }
+    }
+    if (!String.isNotEmpty(Logistic.Purchase_Order__c)) {
+      for (String key: prodRequestedQtyMap.keyset()) {
+        if (prodStockQtyMap.containsKey(key)) {
+          if (prodStockQtyMap.get(key) < prodRequestedQtyMap.get(key)) {
+            res.message = 'Does not have inventory for product :' + proName.get(key) + ' on selected distribution Centers site';
+            return res;
+          }
+        } else {
+          res.message = 'Does not have inventory for product :' + proName.get(key) + ' on selected distribution Centers site';
+          return res;
+        }
+      }
+    }
+
+    /* from here its not covered */
+    if (String.isNotEmpty(Logistic.Order_S__c)) {
+      Order SalOrder = new Order();
+      SalOrder = [SELECT Id, Name, Channel__c, Channel__r.Ship_From_Address__c, Shipment_Type__c, Shipment_Preference_Speed__c, BillToContactId, Bill_To_Address__c, Bill_To_Return__c, Billing_Account_Number_Return__c, Billing_Address_Return__c, Billing_Contact_Return__c FROM Order WHERE Id =: Logistic.Order_S__c];
+      if (SalOrder.Channel__c != null) {
+        if (Logistic.From_Address__c == null && SalOrder.Channel__r.Ship_From_Address__c != null) {
+          Logistic.From_Address__c = SalOrder.Channel__r.Ship_From_Address__c;
+        }
+      }
+      if (Logistic.Shipment_Type__c == null || Logistic.Shipment_Type__c == '') Logistic.Shipment_Type__c = SalOrder.Shipment_Type__c;
+      system.debug('Logistic.Shipment_Type__c : ' + Logistic.Shipment_Type__c);
+    } else if (String.isNotEmpty(Logistic.Purchase_Order__c)) {
+      String PORecTypeId = RecordTypeUtil.getObjectRecordTypeIds('Logistic__c', 'Purchase_Order');
+      Logistic.RecordTypeId = PORecTypeId;
+    }
+    if (Schema.sObjectType.Logistic__c.fields.From_Address__c.isCreateable() && Schema.sObjectType.Logistic__c.fields.From_Address__c.isUpdateable()) {
+      if (Schema.sObjectType.Logistic__c.isCreateable() && Schema.sObjectType.Logistic__c.isUpdateable()) {
+        upsert Logistic;
+      }
+    } else {
+      res.message = 'Don\'t have access to upsert logistic';
+      return res;
+    }
+    list < String > SOLIIds = new list < String > ();
+    list < String > ordItemIds = new list < String > ();
+    list < String > POItemIds = new list < String > ();
+    for (Logistic_Line_Item__c log: LogisticLI) {
+      String Name = log.Name;
+      if (Name.length() > 80) log.Name = Name.subString(0, 79);
+      log.Status__c = 'Reserved';
+      log.Logistic__c = Logistic.Id;
+      if (log.Order_Product__c != null) ordItemIds.add(log.Order_Product__c);
+      if (log.Purchase_Line_Items__c != null) POItemIds.add(log.Purchase_Line_Items__c);
+    }
+    if (LogisticLI.size() > 0) {
+      if (Schema.sObjectType.Logistic_Line_Item__c.fields.Logistic__c.isCreateable() && Schema.sObjectType.Logistic_Line_Item__c.fields.Logistic__c.isUpdateable()) {
+        List < SObject > safeLogisticLI = FLSHelper.getSafeRecords(LogisticLI, 'Logistic_Line_Item__c', AccessType.UPDATABLE);
+        for (SObject s: safeLogisticLI) {
+          typeLogisticLI.add((Logistic_Line_Item__c) s);
+        }
+        if (!typeLogisticLI.isEmpty()) {
+          upsert typeLogisticLI;
+        }
+      } else {
+        res.message = 'Don\'t have access to upsert logistic line items';
+        return res;
+      }
+    }
+    List < Stock_Outward_Line_Item__c > SWLIToUpsert = new List < Stock_Outward_Line_Item__c > ();
+    Map < Id, Inventory_Stock__c > pliStock = new Map < Id, Inventory_Stock__c > ();
+    Map < Id, Stock_Outward_Line_Item__c > pliStockInward = new Map < Id, Stock_Outward_Line_Item__c > ();
+    List < Inventory_Stock__c > Inventory2Upsert = new List < Inventory_Stock__c > ();
+    for (Logistic_Line_Item__c log: typeLogisticLI) {
+      if (log.Product__c != null && log.Quantity__c > 0 && ((Logistic.Order_S__c != null && log.Order_Product__c != null))) {
+        if (Logistic.Purchase_Order__c == null && proInvMap.containsKey(log.Product__c) && proSerial.containsKey(log.Product__c)) {
+          Decimal remainintQty = log.Quantity__c;
+          for (Inventory_Stock__c inv: proInvMap.get(log.Product__c)) {
+            if (remainintQty > 0) {
+              Decimal qtytoprocess = 0;
+              if (proSerial.get(log.Product__c)) {
+                Inventory_Stock__c inv2Create = new Inventory_Stock__c(Active__c = true, Product__c = log.Product__c, Name = 'Serial Stock Holder', Warehouse__c = dc.Site__c);
+                Inventory2Upsert.add(inv2Create);
+                system.debug('inhere serial');
+                qtytoprocess = 0;
+                Stock_Outward_Line_Item__c sto = new Stock_Outward_Line_Item__c();
+                sto.Name = 'Serial Stock Holder';
+                sto.Product__c = log.Product__c;
+                sto.Active__c = true;
+                sto.Status__c = 'Reserved';
+                if (log.Order_Product__c != null) sto.Order_Product__c = log.Order_Product__c;
+                if (Logistic.Order_S__c != null) sto.Order__c = Logistic.Order_S__c;
+                sto.Logistic_Line_Item__c = log.Id;
+                sto.Quantity__c = remainintQty;
+                SWLIToUpsert.add(sto);
+                pliStock.put(log.Id, inv2Create);
+                pliStockInward.put(log.Id, sto);
+                remainintQty = 0;
+                system.debug('qtytoprocess~>' + qtytoprocess);
+                system.debug('remainintQty~>' + remainintQty);
+              } else {
+                system.debug('inhere non serial inv.Number_of_Item_In_Stock__c~>' + inv.Number_of_Item_In_Stock__c);
+                if (inv.Number_of_Item_In_Stock__c < remainintQty) {
+                  system.debug('inhere inv.Number_of_Item_In_Stock__c < remainintQty');
+                  qtytoprocess = inv.Number_of_Item_In_Stock__c;
+                  remainintQty = remainintQty - inv.Number_of_Item_In_Stock__c;
+                } else {
+                  system.debug('inhere else inv.Number_of_Item_In_Stock__c >= remainintQty');
+                  qtytoprocess = remainintQty;
+                  remainintQty = remainintQty - qtytoprocess;
+                }
+                system.debug('qtytoprocess~>' + qtytoprocess);
+                system.debug('remainintQty~>' + remainintQty);
+              }
+              if (qtytoprocess > 0) {
+                Stock_Outward_Line_Item__c sto = new Stock_Outward_Line_Item__c();
+                sto.Name = log.Name;
+                if (log.Order_Product__c != null) sto.Order_Product__c = log.Order_Product__c;
+                if (Logistic.Order_S__c != null) sto.Order__c = Logistic.Order_S__c;
+                sto.Product__c = log.Product__c;
+                sto.Active__c = true;
+                sto.Status__c = 'Reserved';
+                if (proSerial.get(log.Product__c)) sto.Quantity__c = 1;
+                else sto.Quantity__c = qtytoprocess;
+                system.debug('inv.Id for stock outward~>' + inv.Id);
+                sto.Site_Product_Service_Inventory_Stock__c = inv.Id;
+                system.debug('log.Id for stock outward~>' + log.Id);
+                sto.Logistic_Line_Item__c = log.Id;
+                if (MRPmap.containsKey(log.Product__c)) sto.MRP_Material_Requirements_Planning__c = MRPmap.get(log.Product__c).Id;
+                system.debug('inv.Serial__c~>' + inv.Serial__c);
+                if (inv.Serial__c != null) sto.Serial__c = inv.Serial__c;
+                if (inv.Batch_Lot__c != null) sto.Material_Batch_Lot__c = inv.Batch_Lot__c;
+                SWLIToUpsert.add(sto);
+              }
+            }
+          }
+        }
+      }
+    }
+    system.debug('SWLIToUpsert size~>' + SWLIToUpsert.size());
+    if (Inventory2Upsert.size() > 0) insert Inventory2Upsert;
+    for (Id pliId: pliStockInward.KeySet()) {
+      pliStockInward.get(pliId).Site_Product_Service_Inventory_Stock__c = pliStock.get(pliId).Id;
+    }
+    if (SWLIToUpsert.size() > 0) {
+      if (Schema.sObjectType.Stock_Outward_Line_Item__c.isCreateable() && Schema.sObjectType.Stock_Outward_Line_Item__c.isUpdateable()) {
+        system.debug('SWLIToUpsert size~>' + SWLIToUpsert.size());
+        upsert SWLIToUpsert;
+        for (Stock_Outward_Line_Item__c soli: SWLIToUpsert) {
+          System.debug('Upserted SOLI ID: ' + soli.Id);
+        }
+      } else {
+        res.message = 'Don\'t have access to upsert Stock Outward';
+        return res;
+      }
+    }
+    if (POItemIds.size() > 0) {
+      list < Logistic_Line_Item__c > LogLIList = new list < Logistic_Line_Item__c > ();
+      LogLIList = [SELECT Id, Name, Quantity__c, Purchase_Line_Items__c FROM Logistic_Line_Item__c WHERE Purchase_Line_Items__c IN: POItemIds];
+      list < Purchase_Line_Items__c > poliItems2Update = new List < Purchase_Line_Items__c > ();
+      for (Purchase_Line_Items__c poli: [SELECT Id, Logistic_Quantity__c FROM Purchase_Line_Items__c WHERE Id IN: POItemIds]) {
+        Decimal LogQuantity = 0;
+        for (Logistic_Line_Item__c logLi: LogLIList) {
+          if (logLi.Purchase_Line_Items__c == poli.Id) LogQuantity += logLi.Quantity__c;
+        }
+        if (Schema.sObjectType.Purchase_Line_Items__c.fields.Logistic_Quantity__c.isUpdateable()) poli.Logistic_Quantity__c = LogQuantity;
+        poliItems2Update.add(poli);
+      }
+      try {
+        if (poliItems2Update.size() > 0 && Schema.sObjectType.Purchase_Line_Items__c.isUpdateable()) {
+          update poliItems2Update;
+        } else {
+          res.message = 'User is not allowed to update POLI';
+          return res;
+        }
+      } catch (DMLException e) {
+        res.message = 'DML Exception on PO Line Items update: ' + e.getMessage() + ',' + e.getStackTraceString();
+        return res;
+      }
+    }
+    res.message = 'Logistic created successfully';
+    res.logistic = Logistic;
+    return res;
+    /* until here not covered*/
+  } catch (Exception e) {
+    System.debug('Exception ~> ' + e.getMessage() + '; at line ~> ' + e.getStackTraceString());
+    throw new AuraHandledException(e.getMessage() + '; at line ~> ' + e.getStackTraceString());
+  }
+}
 
     @AuraEnabled(cacheable=true)
     public static Boolean getShipmentDetails(Id logisticId) {
