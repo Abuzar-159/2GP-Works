@@ -1,22 +1,36 @@
 public with sharing class shipmentRP {
     private static final Set<String> FV_DOC_TYPES = new Set<String>{ 'bol', 'label', 'label-pdf' };
-     @AuraEnabled(cacheable=true)
-    public static List<Logistic_Line_Item__c> getLogisticLineItems(Id logisticId) {
-        return [
-            SELECT Id,
-                   Logistic__r.Name,
-                   Logistic__r.Order_S__r.Name,
-                   Logistic__r.Distribution_Channel__r.Name,
-                   Logistic__r.Total_Quantity__c,
-                   Logistic__r.Type__c,
-                   Product__c,
-                   Product__r.Name,
-                   Quantity__c
-                   // add more fields if needed from Logistic__r or line item
-            FROM Logistic_Line_Item__c
-            WHERE Logistic__c = :logisticId
-        ];
+  @AuraEnabled(cacheable=true)
+public static List<Logistic_Line_Item__c> getLogisticLineItems(Id logisticId) {
+
+    String lineItemFields = UtilClass.selectStarFromSObject('Logistic_Line_Item__c');
+
+    // Ensure no trailing comma
+    if (lineItemFields.endsWith(',')) {
+        lineItemFields = lineItemFields.substring(0, lineItemFields.length() - 1);
     }
+
+    String soql =
+        'SELECT ' + lineItemFields + ', ' +
+        'Product__r.Id, ' +
+        'Product__r.Name, ' +
+        'Product__r.Weight__c, ' +
+        'Product__r.Height__c, ' +
+        'Product__r.Width__c, ' +
+        'Product__r.Length__c, ' +
+        'Logistic__r.Type__c, ' +
+        'Logistic__r.Order_S__c, ' +
+        'Logistic__r.Order_S__r.Name, ' +
+        'Logistic__r.Distribution_Channel__r.Name, ' +
+        'Logistic__r.Name ' +
+        'FROM Logistic_Line_Item__c ' +
+        'WHERE Logistic__c = :logisticId';
+
+    System.debug('🔥 Final LLI Query: ' + soql);
+
+    return Database.query(soql);
+}
+
 
      @AuraEnabled(cacheable=true)
     public static Package_Details__c getPackageDetails(String packageType) {
@@ -115,166 +129,6 @@ public static LogisticDetailsWrapper getLogisticDetails(Id logisticId) {
     return wrap;
 }
 
-    // @AuraEnabled(cacheable=true)
-    // public static LogisticDetailsWrapper getLogisticDetails(Id logisticId) {
-    //     LogisticDetailsWrapper wrap = new LogisticDetailsWrapper();
-
-    //     if (logisticId == null) {
-    //         return wrap;
-    //     }
-
-    //     Logistic__c logi = [
-    //         SELECT
-    //             Id,
-    //             Name,
-
-    //             /* Logistic__c fields (add more as needed) */
-    //             /*Status__c,
-    //             Shipment_Mode__c,*/
-    //             From_Address__c,
-    //             To_Address__c,
-    //             Contact__c,
-    //             From_Contact__c,
-    //             Account__c,
-
-    //             /* Account fields */
-    //             Account__r.Id,
-    //             Account__r.Name,
-    //             Account__r.Phone,
-    //             Account__r.Email__c,
-    //             Account__r.Company__c,
-
-    //             /* =======================
-    //                TO Address + relations
-    //                ======================= */
-    //             To_Address__r.Id,
-    //             To_Address__r.Name,
-    //             To_Address__r.Customer__c,
-    //             To_Address__r.Contact__c,
-    //             To_Address__r.Is_Billing_Address__c,
-    //             To_Address__r.Active__c,
-    //             To_Address__r.Is_Shipping_Address__c,
-    //             To_Address__r.Primary__c,
-    //             To_Address__r.opens_at__c,
-    //             To_Address__r.closes_at__c,
-    //             To_Address__r.Country__c,
-    //             To_Address__r.Address_Line1__c,
-    //             To_Address__r.Address_Line2__c,
-    //             To_Address__r.Address_Line3__c,
-    //             To_Address__r.City__c,
-    //             To_Address__r.State__c,
-    //             To_Address__r.Postal_Code__c,
-    //             To_Address__r.Company__c,
-
-    //                 /* To Address → Contact__c */
-    //                 To_Address__r.Contact__r.Id,
-    //                 To_Address__r.Contact__r.Name,
-    //                 To_Address__r.Contact__r.Phone,
-    //                 To_Address__r.Contact__r.Email,
-
-    //                 /* To Address → Customer__c */
-    //                 To_Address__r.Customer__r.Id,
-    //                 To_Address__r.Customer__r.Name,
-    //                 To_Address__r.Customer__r.Phone,
-    //                 To_Address__r.Customer__r.Email__c,
-    //                 To_Address__r.Customer__r.Company__c,
-
-    //             /* =========================
-    //                FROM Address + relations
-    //                ========================= */
-    //             From_Address__r.Id,
-    //             From_Address__r.Name,
-    //             From_Address__r.Customer__c,
-    //             From_Address__r.Contact__c,
-    //             From_Address__r.Is_Billing_Address__c,
-    //             From_Address__r.Active__c,
-    //             From_Address__r.Is_Shipping_Address__c,
-    //             From_Address__r.Primary__c,
-    //             From_Address__r.opens_at__c,
-    //             From_Address__r.closes_at__c,
-    //             From_Address__r.Country__c,
-    //             From_Address__r.Address_Line1__c,
-    //             From_Address__r.Address_Line2__c,
-    //             From_Address__r.Address_Line3__c,
-    //             From_Address__r.City__c,
-    //             From_Address__r.State__c,
-    //             From_Address__r.Postal_Code__c,
-    //             From_Address__r.Company__c,
-    //             From_Address__r.Company__r.Name,
-    //             From_Address__r.Contact__r.Company__r.Name,
-    //             From_Address__r.Contact__r.Company__r.Name,
-
-    //                 /* From Address → Contact__c */
-    //                 From_Address__r.Contact__r.Id,
-    //                 From_Address__r.Contact__r.Name,
-    //                 From_Address__r.Contact__r.Phone,
-    //                 From_Address__r.Contact__r.Email,
-
-    //                 /* From Address → Customer__c */
-    //                 From_Address__r.Customer__r.Id,
-    //                 From_Address__r.Customer__r.Name,
-    //                 From_Address__r.Customer__r.Phone,
-    //                 From_Address__r.Customer__r.Email__c,
-    //                 From_Address__r.Customer__r.Company__c,
-
-    //             /* Logistic__c main Contact__c (TO) */
-    //             Contact__r.Id,
-    //             Contact__r.Name,
-    //             Contact__r.Phone,
-    //             Contact__r.Email,
-    //             Contact__r.Company__c,  
-    //             Contact__r.Company__r.Name,
-    //             Contact__r.Account.Name, 
-
-    //             /* Logistic__c From_Contact__c (FROM) */
-    //             From_Contact__r.Id,
-    //             From_Contact__r.Name,
-    //             From_Contact__r.Phone,
-    //             From_Contact__r.Email
-    //             From_Contact__r.Company__c,   
-    //             From_Contact__r.Company__r.Name,   
-    //             From_Contact__r.Account.Name 
-    //         FROM Logistic__c
-    //         WHERE Id = :logisticId
-    //         LIMIT 1
-    //     ];
-
-    //     // Basic assignments
-    //     wrap.logistic    = logi;
-    //     wrap.fromAddress = logi.From_Address__r;
-    //     wrap.toAddress   = logi.To_Address__r;
-    //     wrap.account     = logi.Account__r;
-
-    //     /* ==========================
-    //        PRIORITY: FROM CONTACT
-    //        1. Logistic__c.From_Contact__r
-    //        2. From_Address__r.Contact__r
-    //        ========================== */
-    //     if (logi.From_Contact__r != null) {
-    //         wrap.fromContact = logi.From_Contact__r;
-    //     } else if (logi.From_Address__r != null &&
-    //                logi.From_Address__r.Contact__r != null) {
-    //         wrap.fromContact = logi.From_Address__r.Contact__r;
-    //     } else {
-    //         wrap.fromContact = null;
-    //     }
-
-    //     /* ==========================
-    //        PRIORITY: TO CONTACT
-    //        1. Logistic__c.Contact__r
-    //        2. To_Address__r.Contact__r
-    //        ========================== */
-    //     if (logi.Contact__r != null) {
-    //         wrap.contact = logi.Contact__r;
-    //     } else if (logi.To_Address__r != null &&
-    //                logi.To_Address__r.Contact__r != null) {
-    //         wrap.contact = logi.To_Address__r.Contact__r;
-    //     } else {
-    //         wrap.contact = null;
-    //     }
-
-    //     return wrap;
-    // }
     
 @AuraEnabled(cacheable=true)
 public static FetchInitWrapper fetchInitialData() {
@@ -286,6 +140,7 @@ public static FetchInitWrapper fetchInitialData() {
     data.freightClassOptions = getPicklistOptions(Package__c.freight_class__c);
     data.hazardClassOptions = getPicklistOptions(Package__c.Primary_Hazard_Class__c);
     data.packagingGroupOptions = getPicklistOptions(Package__c.Packaging_Group__c);
+    data.nmfcOptions = getPicklistOptions(Package__c.NMFC__c);
 
     // ----- Dynamic Credential Query -----
     Set<String> credNames = new Set<String>{
@@ -413,7 +268,7 @@ private static Map<String,Object> buildLocationMap(Address__c addr, Contact con,
     if (cred == null) return out;
 
     // Token call stays same
-    String token = freightView.getAccessToken(cred.Parent_Key__c, cred.Parent_Password__c, cred.URL__c);
+    String token = freightView.getAccessToken(cred.Username_Login__c, cred.Password_Transkey__c, cred.URL__c);
 
     // Payload building
           Contact shipFromContact = (Contact) JSON.deserialize(fromContactJson, Contact.class);
@@ -425,15 +280,31 @@ private static Map<String,Object> buildLocationMap(Address__c addr, Contact con,
 
     List<Map<String,Object>> items = new List<Map<String,Object>>();
     Boolean hasHazmat = false;
-
+    System.debug('pkgList --> '+pkgList);
     for(PackageInputWrapper p : pkgList){
         System.debug('package -->'+p);
         System.debug('package type -->'+p.FVPackageType);
         System.debug('package weight -->'+p.Weight);
+
+        String apiType = p.FVPackageType != null ? p.FVPackageType.toLowerCase() : '';
+
+        if (apiType.contains('pallet')) {
+            apiType = 'pallet';
+        }
+        else if (apiType.contains('pail')) {
+            apiType = 'pail';
+        }
+        else {
+            apiType = apiType != '' ? apiType : 'pallet';
+        }
+        System.debug('api type --> '+apiType);
+
+
         Map<String,Object> item = new Map<String,Object>{
             'description' => p.FVPackageType,
             'quantity'    => p.Quantity == null ? 1 : p.Quantity,
-            'type'        => p.FVPackageType != null ? p.FVPackageType.toLowerCase() : '',
+            //'type'        => p.FVPackageType != null ? p.FVPackageType.toLowerCase() : '',
+            'type'        => apiType,
             'weight'      => p.Weight,
             'weightUOM'   => p.WeightUnit != null ? p.WeightUnit.toLowerCase() : 'lbs',
             'length'      => p.Length,
@@ -441,8 +312,26 @@ private static Map<String,Object> buildLocationMap(Address__c addr, Contact con,
             'height'      => p.Height,
             'dimensionsUOM' => 'in',
             'freightClass'=> p.FreightClass != null ? Decimal.valueOf(p.FreightClass) : 50
-        };
 
+        };  
+          if (p.NMFC != null && p.NMFC != '') {
+             String nmfc = p.NMFC;
+            String[] parts = nmfc.split('-');
+
+            if (parts.size() == 2) {
+                // before hyphen
+                Integer nmfcNumber = Integer.valueOf(parts[0]);
+                // after hyphen
+                Integer nmfcSub = Integer.valueOf(parts[1]);
+
+                item.put('nmfcNumber', nmfcNumber);
+                item.put('nmfcSubNumber', nmfcSub);
+            }
+            else {
+                // fallback if no hyphen
+                item.put('nmfcNumber', Integer.valueOf(nmfc));
+            }
+        }
         if(p.isHazmat == true){
             hasHazmat = true;
         }
@@ -495,7 +384,6 @@ private static Map<String,Object> buildLocationMap(Address__c addr, Contact con,
     }
     return out;
 }
-
 @AuraEnabled
 public static RateResponseLTL getQuoteRatesLTL(
     List<String> providerList,
@@ -527,7 +415,7 @@ public static RateResponseLTL getQuoteRatesLTL(
             );
         }
 
-        System.debug('📦 Parsed Package List => ' + pkgList);
+    System.debug('📦 Parsed Package List => ' + pkgList);
 
     System.debug('bfA');
     Address__c fromA2;
@@ -570,13 +458,14 @@ public static RateResponseLTL getQuoteRatesLTL(
     if(hasUPS){
         System.debug('calling ups ');
         Credentials__c upsCred = cm.get(upsKey);
-      //  resp.quotesUPS = getRatesUPS(pkgList, fromA2, toA2, schedulePickup, pickupDT, upsCred, fromContact, toContact);
+       // resp.quotesUPS = getRatesUPS(pkgList, fromA2, toA2, schedulePickup, pickupDT, upsCred, fromContact, toContact);
         //resp.quotesUPS = getRatesUPS(pkgList, null, fromA, toA, schedulePickup, pickupDT,  cm.get(System.Label.UPSRESTAPIName));
     }
         
 
     if(providerList.contains('freightview') && hasFV){
          Credentials__c fvCred = cm.get(fvKey);
+         System.debug('fvcred --> '+fvCred);
         resp.quotesFreightView =  resp.quotesFreightView = getRatesFV(pkgList,fromA2,toA2,true,pickupDT,fvCred,fromContact,toContact);
         }
     return resp;
@@ -1440,7 +1329,316 @@ public static BookingResult saveFreightviewDocs(
     }
 }
 
+public class PackResponse {
+        @AuraEnabled public Package__c Package2Create;
+        @AuraEnabled public String exceptionError;
+        @AuraEnabled public String errorMsg2;
+        @AuraEnabled public Map<String, Object> debug;
+    }
 
+@AuraEnabled
+public static PackResponse populatePackDetails(
+    String Package2Create1,
+    String pkgTypeValue,
+    String logisticLineItemsJson
+) {
+    System.debug('=== populatePackDetails() START ===');
+    System.debug('INPUT Package JSON: ' + Package2Create1);
+    System.debug('INPUT pkgTypeValue: ' + pkgTypeValue);
+    System.debug('INPUT logisticLineItems JSON: ' + logisticLineItemsJson);
+
+    PackResponse res = new PackResponse();
+    res.debug = new Map<String,Object>();
+
+    try {
+        Package__c pkg = (Package__c) JSON.deserialize(Package2Create1, Package__c.class);
+        res.Package2Create = pkg;
+
+        System.debug('PARSED Package__c: ' + JSON.serializePretty(pkg));
+
+        if (String.isBlank(pkgTypeValue) || pkgTypeValue == '--None--') {
+            System.debug('Package type missing → returning error');
+            res.errorMsg2 = 'Please select a package type';
+            return res;
+        }
+
+        // ------------------------
+        // 1️⃣ Fetch Package_Details__c
+        // ------------------------
+        Package_Details__c pd;
+        try {
+            List<Package_Details__c> rows = [
+                SELECT Id, Package_Type__c, Length__c, Width__c, Height__c,
+                       Weight__c, Weight_Unit__c, Additional_Percentage__c,
+                       Type__c, Shipment_Description__c, API_Type__c
+                FROM Package_Details__c
+                WHERE (Package_Type__c = :pkgTypeValue OR Name = :pkgTypeValue)
+                LIMIT 1
+            ];
+            if (!rows.isEmpty()) pd = rows[0];
+        } catch (Exception e) {}
+
+        System.debug('Custom Setting Found = ' + (pd != null));
+        if (pd != null) {
+            System.debug('Package_Details__c Record: ' + JSON.serializePretty(pd));
+        }
+
+        // ------------------------
+        // 2️⃣ Parse LogisticLineItems
+        // ------------------------
+        List<Object> lliRaw = (List<Object>) JSON.deserializeUntyped(
+            logisticLineItemsJson == null ? '[]' : logisticLineItemsJson
+        );
+
+        List<Map<String,Object>> lli = new List<Map<String,Object>>();
+        Decimal totalUnits = 0;
+        Integer idx = 0;
+
+        for (Object o : lliRaw) {
+            if (o instanceof Map<String,Object>) {
+                Map<String,Object> m = (Map<String,Object>) o;
+                lli.add(m);
+
+                Decimal q = 0;
+                try {
+                    q = m.containsKey('Quantity') ?
+                            safeDecimal(m.get('Quantity')) :
+                            (m.containsKey('qty') ? safeDecimal(m.get('qty')) : 0);
+                } catch (Exception e) {}
+
+                totalUnits += q;
+
+                System.debug('LLI['+idx+']: ' + JSON.serializePretty(m));
+                System.debug('LLI['+idx+'] qty parsed = ' + q);
+
+                idx++;
+            }
+        }
+
+        System.debug('Total LLI Count = ' + lli.size());
+        System.debug('Total Units Summed = ' + totalUnits);
+
+        // ------------------------
+        // 3️⃣ Determine Units Per Pallet
+        // ------------------------
+        String lowerName = pkgTypeValue.toLowerCase();
+        Integer unitsPerPallet = null;
+
+        if (lowerName.contains('pails')) unitsPerPallet = 36;
+        else if (lowerName.contains('def jugs') ||
+                 lowerName.contains('defjugs') ||
+                 lowerName.contains('def-jug') ||
+                 lowerName.contains('def jug')) unitsPerPallet = 40;
+
+        System.debug('UnitsPerPallet inferred = ' + unitsPerPallet);
+
+        // ------------------------
+        // 4️⃣ Dimensions
+        // ------------------------
+        Decimal length = (pd != null && pd.Length__c != null) ? pd.Length__c : pkg.Length__c;
+        Decimal width  = (pd != null && pd.Width__c  != null) ? pd.Width__c  : pkg.Width__c;
+        Decimal height = (pd != null && pd.Height__c != null) ? pd.Height__c : pkg.Height__c;
+
+        System.debug('FINAL LENGTH=' + length + ', WIDTH=' + width);
+
+        // ------------------------
+        // 5️⃣ Weight Calculation
+        // ------------------------
+        Decimal weight = 0;
+        Boolean weightIsStatic = (pd != null && pd.Weight__c != null);
+
+        if (weightIsStatic) {
+            weight = pd.Weight__c;
+            System.debug('WEIGHT using static PD value = ' + weight);
+        } else {
+            System.debug('WEIGHT is calculated from LLI');
+            Integer wIndex = 0;
+
+            for (Map<String,Object> m : lli) {
+
+                System.debug('LLI['+wIndex+'] RAW KEYS = ' + m.keySet());
+                System.debug('LLI['+wIndex+'] RAW MAP = ' + JSON.serializePretty(m));
+
+                Decimal q = safeDecimal(m.get('Quantity') != null ? m.get('Quantity') : m.get('qty'));
+                Decimal unitWeight = 0;
+
+                if (m.containsKey('UnitWeight')) unitWeight = safeDecimal(m.get('UnitWeight'));
+                else if (m.containsKey('unitWeight')) unitWeight = safeDecimal(m.get('unitWeight'));
+                else if (m.containsKey('Weight')) unitWeight = safeDecimal(m.get('Weight'));
+                else if (m.containsKey('Unit_Weight__c')) unitWeight = safeDecimal(m.get('Unit_Weight__c'));
+
+                System.debug('LLI['+wIndex+'] q=' + q + ', resolved unitWeight=' + unitWeight);
+
+                weight += (unitWeight * q);
+                wIndex++;
+            }
+        }
+
+
+        System.debug('Weight before tare/additional% = ' + weight);
+
+        // ------------------------
+        // 6️⃣ Height Calculation
+        Decimal tallest = 0;
+
+        for (Map<String,Object> m : lli) {
+            Decimal uh = safeDecimal(m.get('UnitHeight') != null 
+                                    ? m.get('UnitHeight') 
+                                    : m.get('Unit_Height__c'));
+            if (uh > tallest) tallest = uh;
+        }
+
+        if (pd != null && pd.Height__c != null) {
+            // Static height from table → use it
+            height = pd.Height__c;
+        }
+        else if (lowerName.contains('pail') && lowerName.contains('ups')) {
+            // UPS/FedEx pail → from product height only
+            height = tallest;
+        }
+        else {
+            // All other cases with blank height → calculate tallest + 5
+            height = tallest + 5;
+        }
+
+
+        System.debug('Final Height = ' + height);
+
+        // ------------------------
+        // 7️⃣ Add Tare Weight if Required
+        // ------------------------
+        Boolean sheetAddsTare = (lowerName.contains('large') || lowerName.contains('small'));
+        if (!weightIsStatic && sheetAddsTare) {
+            System.debug('Adding tare weight 55 lbs');
+            weight = weight + 55;
+        }
+
+        // Additional %
+        if (pd != null && pd.Additional_Percentage__c != null) {
+            System.debug('Applying additional %: ' + pd.Additional_Percentage__c);
+            weight = weight * (1 + (pd.Additional_Percentage__c / 100));
+        }
+
+        System.debug('Final Weight = ' + weight);
+
+        // ------------------------
+        // 8️⃣ Calculate packageQty
+        // ------------------------
+        Integer packageQty = 1;
+
+        if (unitsPerPallet != null && unitsPerPallet > 0 && totalUnits > 0) {
+            Double dv = Double.valueOf(String.valueOf(totalUnits)) /
+                        Double.valueOf(String.valueOf(unitsPerPallet));
+
+            packageQty = Integer.valueOf(Math.ceil(dv));
+
+            System.debug('packageQty = Ceil(' + dv + ') = ' + packageQty);
+        }
+
+        // ------------------------
+        // 9️⃣ Declared Value
+        // ------------------------
+        Decimal declaredValue = 0;
+
+        if (lowerName.contains('pails') ||
+            lowerName.contains('def jugs') ||
+            lowerName.contains('tote') || 
+            lowerName.contains('defjugs') ||
+            lowerName.contains('def-jug')) {
+
+            System.debug('Declared value uses special FIRST ITEM rule');
+
+            if (!lli.isEmpty()) {
+                declaredValue = safeDecimal(lli[0].get('UnitPrice'));
+                if (declaredValue == 0)
+                    declaredValue = safeDecimal(lli[0].get('Price'));
+            }
+
+        } else {
+            System.debug('Declared value = sum(unitPrice * qty)');
+            Integer dIndex = 0;
+            for (Map<String,Object> m : lli) {
+                Decimal q = safeDecimal(m.get('Quantity') != null ? m.get('Quantity') : m.get('qty'));
+                Decimal up = safeDecimal(m.get('UnitPrice') != null ? m.get('UnitPrice') : m.get('Price'));
+
+                Decimal lineValue = up * q;
+                declaredValue += lineValue;
+
+                System.debug('Declared['+dIndex+'] lineValue=' + lineValue);
+                dIndex++;
+            }
+        }
+
+        System.debug('Declared Value FINAL = ' + declaredValue);
+
+        // ------------------------
+        //  🔟 Populate response
+        // ------------------------
+        res.Package2Create.Length__c = length;
+        res.Package2Create.Width__c  = width;
+        res.Package2Create.Height__c = height;
+        res.Package2Create.Weight__c = (weight == null ? 0 : weight.setScale(2));
+        String weightUnit;
+
+        if (pd != null && pd.Weight_Unit__c != null) {
+            weightUnit = pd.Weight_Unit__c;
+        } else if (pkg.Weight_Unit__c != null) {
+            weightUnit = pkg.Weight_Unit__c;
+        } else {
+            weightUnit = 'LBS';
+        }
+
+        res.Package2Create.Weight_Unit__c = weightUnit;
+        System.debug('WEIGHT UNIT USED = ' + weightUnit);
+
+        try { res.Package2Create.put('Quantity__c', packageQty); } catch (Exception e) {}
+        try { res.Package2Create.put('Declared_Value__c', declaredValue); } catch (Exception e) {}
+
+        System.debug('FINAL Package2Create sent to LWC: ' + JSON.serializePretty(res.Package2Create));
+        String apiType = null;
+
+            if (pd != null && pd.API_Type__c != null) {
+                apiType = pd.API_Type__c.trim().toLowerCase();
+            } else {
+                // fallback rule → all pallet-based types become “pallet”
+                if (lowerName.contains('pallet')) apiType = 'pallet';
+                else if (lowerName.contains('box')) apiType = 'box';
+                else if (lowerName.contains('tote')) apiType = 'tote';
+                else apiType = 'pallet'; // safe fallback
+            }
+
+            res.debug.put('apiTypeUsed', apiType);
+
+            // send to LWC
+            try { 
+                res.Package2Create.put('API_Package_Type__c', apiType);
+            } catch (Exception e) {}
+
+        return res;
+
+    } catch (Exception ex) {
+        System.debug('ERROR: ' + ex.getMessage() + 
+                     ' @ Line:' + ex.getLineNumber());
+
+        res.exceptionError = ex.getMessage() + ' Line:' + ex.getLineNumber();
+        return res;
+    }
+}
+
+    private static Decimal safeDecimal(Object o) {
+        if (o == null) return 0;
+        try {
+            if (o instanceof Decimal) return (Decimal) o;
+            if (o instanceof Integer) return Decimal.valueOf(String.valueOf(o));
+            if (o instanceof Double) return Decimal.valueOf((Double)o);
+            String s = String.valueOf(o);
+            if (String.isBlank(s)) return 0;
+            s = s.replaceAll('[^0-9\\.-]', '');
+            return s == '' ? 0 : Decimal.valueOf(s);
+        } catch (Exception e) {
+            return 0;
+        }
+    }
   
     public class SelectOptionWrapper {
         @AuraEnabled public String value;
@@ -1457,6 +1655,7 @@ public static BookingResult saveFreightviewDocs(
         @AuraEnabled public List<SelectOptionWrapper> freightClassOptions = new List<SelectOptionWrapper>();
         @AuraEnabled public List<SelectOptionWrapper> hazardClassOptions = new List<SelectOptionWrapper>();
         @AuraEnabled public List<SelectOptionWrapper> packagingGroupOptions = new List<SelectOptionWrapper>();
+        @AuraEnabled public List<SelectOptionWrapper> nmfcOptions  = new List<SelectOptionWrapper>();
 
         @AuraEnabled public Map<String, Credentials__c> credentialsMap = new Map<String, Credentials__c>();
     }
@@ -1495,7 +1694,9 @@ public class PackageInputWrapper {
     @AuraEnabled public String PackagingGroup;
     @AuraEnabled public String DeclaredValue;
     @AuraEnabled public String NMFCCode;
+    @AuraEnabled public String NMFC;
 }
+
 public class BookingResult {
     @AuraEnabled public Boolean success;
     @AuraEnabled public String  message;
@@ -1525,38 +1726,6 @@ public class ProductStockSummary {
         }
     }
 // for order to logistic here 
-// @AuraEnabled(cacheable=true)
-// public static Map<String, Object> getOrderAndItemsAnalysis(Id orderId) {
-
-//     Map<String, Object> out = new Map<String, Object>();
-
-//     String orderQuery = 'SELECT ' + UtilClass.selectStarFromSObject('Order') + 
-//                        ' FROM Order WHERE Id = :orderId';
-//     SObject orderRec = Database.query(orderQuery);
-//     out.put('order', orderRec);
-
-//    String itemQuery = 'SELECT ' + UtilClass.selectStarFromSObject('OrderItem') +
-//                    ', Product2.Name FROM OrderItem WHERE OrderId = :orderId';
-//     List<SObject> itemRecs = Database.query(itemQuery);
-
-//     List<Map<String, Object>> analysis = new List<Map<String, Object>>();
-//     Set<Id> ProductIds = new Set<Id>();
-//     for (SObject s : itemRecs) {
-//         Decimal qty  = (Decimal) s.get('Quantity');
-//         Decimal logQ = s.get('Logistic_Quantity__c') == null ? 0 : (Decimal)s.get('Logistic_Quantity__c');
-//         Decimal rem  = qty - logQ;
-
-//         Map<String, Object> row = new Map<String, Object>();
-//         row.put('record', s);
-//         productIds.add((Id)s.get('Product2Id'));
-//         row.put('remainingQty', rem);
-//         analysis.add(row);
-//     }
-
-//     out.put('items', analysis);
-
-//     return out;
-// }
 @AuraEnabled(cacheable=true)
 public static Map<String, Object> getOrderAndDcDetails(Id orderId,  Id dcId) {
 
@@ -1578,4 +1747,5 @@ public static Map<String, Object> getOrderAndItemsAnalysis(Id orderId) {
     @AuraEnabled(cacheable=true)
     public static Boolean getShipmentDetails(Id logisticId) {
         if (logisticId == null) { return false; } return [ SELECT COUNT() FROM Shipment__c WHERE Logistic__c = :logisticId ] > 0; }
+
 }

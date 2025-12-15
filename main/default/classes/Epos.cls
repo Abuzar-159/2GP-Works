@@ -447,7 +447,13 @@ global with sharing class Epos{
 
             if (ordShipToAdd != Null){
                 if (profile.Account_Profile__r.Tax_Sourcing_Rules__c == 'Destination'){
-                    if (ordShipToAdd.Postal_Code__c != Null && ordShipToAdd.Postal_Code__c != '') TaxPostalCode = ordShipToAdd.Postal_Code__c;                }
+                    if (ordShipToAdd.Postal_Code__c != Null && ordShipToAdd.Postal_Code__c != '') TaxPostalCode = ordShipToAdd.Postal_Code__c;               
+                    if (ordShipToAdd.City__c != Null && ordShipToAdd.City__c != '')//code from - added by Asra 12/12/25
+                        TaxCity = ordShipToAdd.City__c;
+                    if (ordShipToAdd.State__c != Null && ordShipToAdd.State__c != '') TaxProvince = ordShipToAdd.State__c;
+                    if (ordShipToAdd.Country__c != Null && ordShipToAdd.Country__c != '')
+                        TaxCountry = ordShipToAdd.Country__c;//to here was missing - added by Asra 12/12/25
+                     }
             }
 
             //=============Taxex Calculation end=====================
