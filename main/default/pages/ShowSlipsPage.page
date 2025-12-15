@@ -1,0 +1,39 @@
+<apex:page controller="ShowSlipsController" sidebar="false" showHeader="true">
+
+    <h1>Picking + Packing Slips</h1>
+    <button onclick="window.print()">Print All</button>
+
+    <hr/>
+
+    <!-- Loop through Logistics -->
+    <apex:repeat value="{!data}" var="log">
+
+    <h2>Logistics: {!log.logId}</h2>
+    <hr/>
+
+    <apex:repeat value="{!log.packages}" var="pkg">
+
+        <h3>Package: {!pkg.Name}</h3>
+
+        <!-- PICKING SLIP (expects loIds param) -->
+        <h4>Picking Slip</h4>
+        <iframe 
+            src="/apex/PickSlip?loIds={!log.logId}"
+            width="100%" height="800px" frameborder="0">
+        </iframe>
+
+        <!-- PACKING SLIP (expects pkIds param) -->
+        <h4>Packing Slip</h4>
+        <iframe 
+            src="/apex/PackSlip?pkIds={!pkg.Id}"
+            width="100%" height="800px" frameborder="0">
+        </iframe>
+
+        <hr/>
+
+    </apex:repeat>
+
+</apex:repeat>
+
+
+</apex:page>
