@@ -315,8 +315,7 @@ private static Map<String,Object> buildLocationMap(Address__c addr, Contact con,
 
         };  
           if (p.NMFC != null && p.NMFC != '') {
-             String nmfc = p.NMFC;
-            String[] parts = nmfc.split('-');
+             String nmfc = p.NMFC;            String[] parts = nmfc.split('-');
 
             if (parts.size() == 2) {
                 // before hyphen
@@ -324,8 +323,7 @@ private static Map<String,Object> buildLocationMap(Address__c addr, Contact con,
                 // after hyphen
                 Integer nmfcSub = Integer.valueOf(parts[1]);
 
-                item.put('nmfcNumber', nmfcNumber);
-                item.put('nmfcSubNumber', nmfcSub);
+                item.put('nmfcNumber', nmfcNumber);                item.put('nmfcSubNumber', nmfcSub);
             }
             else {
                 // fallback if no hyphen
@@ -386,6 +384,7 @@ private static Map<String,Object> buildLocationMap(Address__c addr, Contact con,
 }
 @AuraEnabled
 public static RateResponseLTL getQuoteRatesLTL(
+    String shipmentMode,
     List<String> providerList,
     String fromAddressJson,
     String toAddressJson,
@@ -403,7 +402,7 @@ public static RateResponseLTL getQuoteRatesLTL(
     resp.quotesFreightView = new List<quoteWrapper>();
     resp.missingCredentials = new List<String>();
 
-    FetchInitWrapper init = shipmentRP.fetchInitialData();
+    FetchInitWrapper init = fetchInitialData();
 
     Map<String,Credentials__c> cm = init.credentialsMap;
     System.debug('deserialiing');
@@ -417,6 +416,9 @@ public static RateResponseLTL getQuoteRatesLTL(
         }
 
     System.debug('📦 Parsed Package List => ' + pkgList);
+        String mode = String.isBlank(shipmentMode)    ? 'LTL'
+    : shipmentMode.trim().toUpperCase();
+    System.debug('mode '+mode);
 
     System.debug('bfA');
     Address__c fromA2;
@@ -450,27 +452,119 @@ public static RateResponseLTL getQuoteRatesLTL(
     if(providerList.contains('ups') && !hasUPS) resp.missingCredentials.add('UPS');
     if(providerList.contains('freightview') && !hasFV) resp.missingCredentials.add('FreightView');
 
-    if(providerList.contains('fedex') && hasFD){
-       // resp.quotesFedex =getRatesFEDEX(pkgList, null, fromA, toA, schedulePickup, pickupDT,  cm.get(System.Label.FedexRestAPIName));
-    }
+    // if(providerList.contains('fedex') && hasFD){
+    //    // resp.quotesFedex =getRatesFEDEX(pkgList, null, fromA, toA, schedulePickup, pickupDT,  cm.get(System.Label.FedexRestAPIName));
+    // }
         
 
-    // if(providerList.contains('ups') && hasUPS){
-    if(hasUPS){
-        System.debug('calling ups ');
-        Credentials__c upsCred = cm.get(upsKey);
-       // resp.quotesUPS = getRatesUPS(pkgList, fromA2, toA2, schedulePickup, pickupDT, upsCred, fromContact, toContact);
-        //resp.quotesUPS = getRatesUPS(pkgList, null, fromA, toA, schedulePickup, pickupDT,  cm.get(System.Label.UPSRESTAPIName));
-    }
+    // // if(providerList.contains('ups') && hasUPS){
+    // if(hasUPS){
+    //     System.debug('calling ups ');
+    //     Credentials__c upsCred = cm.get(upsKey);
+    //    // resp.quotesUPS = getRatesUPS(pkgList, fromA2, toA2, schedulePickup, pickupDT, upsCred, fromContact, toContact);
+    //     //resp.quotesUPS = getRatesUPS(pkgList, null, fromA, toA, schedulePickup, pickupDT,  cm.get(System.Label.UPSRESTAPIName));
+    // }
         
+    if (mode == 'LTL') {
+        if(providerList.contains('freightview') && hasFV){
+            Credentials__c fvCred = cm.get(fvKey);
+            System.debug('fvcred --> '+fvCred);
+            resp.quotesFreightView =  resp.quotesFreightView = getRatesFV(pkgList,fromA2,toA2,true,pickupDT,fvCred,fromContact,toContact);
+            }
+    }
+    else if (mode == 'PARCEL') {
 
-    if(providerList.contains('freightview') && hasFV){
-         Credentials__c fvCred = cm.get(fvKey);
-         System.debug('fvcred --> '+fvCred);
-        resp.quotesFreightView =  resp.quotesFreightView = getRatesFV(pkgList,fromA2,toA2,true,pickupDT,fvCred,fromContact,toContact);
+    // UPS
+        if (hasUPS) {
+            resp.quotesUPS =
+                getRatesUPSParcel(
+                    pkgList,
+                    fromAddressJson,
+                    toAddressJson,
+                    fromContact,
+                    toContact,
+                    pickupDT,
+                    cm.get(upsKey),
+                    logisticJson
+                );
         }
+    }
     return resp;
 }
+// ================= UPS PARCEL RATE ADAPTER =================
+private static List<quoteWrapper> getRatesUPSParcel(
+    List<PackageInputWrapper> pkgList,
+    String fromAddressJson,
+    String toAddressJson,
+    String fromContactJson,
+    String toContactJson,
+    String pickupDT,
+    Credentials__c upsCred,
+    String logisticJson
+) {
+    List<quoteWrapper> out = new List<quoteWrapper>();
+    if (upsCred == null || pkgList == null || pkgList.isEmpty()) {        return out;
+    }
+
+    try {
+        // 1️⃣ Convert PackageInputWrapper → Package__c
+        List<Package__c> packages = new List<Package__c>();
+        for (PackageInputWrapper p : pkgList) {
+            Package__c pkg = new Package__c();
+            pkg.Length__c = p.Length;
+            pkg.Width__c  = p.Width;
+            pkg.Height__c = p.Height;
+            pkg.Weight__c = p.Weight;
+            pkg.Weight_Unit__c = p.WeightUnit;
+            pkg.Package_Type__c = p.FVPackageType;
+            packages.add(pkg);
+        }
+
+        // 2️⃣ Build UPS credentialsWrap
+        UPSRestAPI.credentialsWrap cw = new UPSRestAPI.credentialsWrap();
+        cw.clientId     = upsCred.Parent_Key__c;
+        cw.clientSecret = upsCred.Parent_Password__c;
+        cw.accNumber    = upsCred.UPS_Account_Number__c;
+        cw.endPoint     = upsCred.URL__c;
+        cw.upsCredentials = upsCred;
+
+        // 3️⃣ Build Shipment__c
+        Shipment__c ship = new Shipment__c();
+        if (String.isNotBlank(logisticJson)) {
+            Logistic__c lg = (Logistic__c) JSON.deserialize(logisticJson, Logistic__c.class);
+            ship.Shipment_Billing_options__c = lg.Billing_Options__c;
+            ship.Billing_Account_Number__c   = lg.Billing_Account_Number__c;
+            ship.Billing_Address__c          = lg.Billing_Address__c;
+            ship.Billing_Contact__c          = lg.Billing_Contact__c;
+            ship.Description__c              = 'Parcel Shipment';
+        }
+
+        UPSRestAPI.mainWrap mw = UPSRestAPI.Service_And_Rate_Request(
+            packages,
+            fromAddressJson,
+            toAddressJson,
+            fromContactJson,
+            toContactJson,
+            pickupDT,
+            JSON.serialize(cw),
+            JSON.serialize(ship),
+            false
+        );
+
+        if (mw != null && mw.ratesList != null) {
+            for (UPSRestAPI.rateWrap r : mw.ratesList) {
+                quoteWrapper qw = new quoteWrapper();                qw.provider  = 'UPS';                qw.carrier   = 'UPS';                qw.service   = r.service;                qw.amount    = r.totalCharges;                qw.currencyQ = r.currencycode;
+                qw.quoteId   = 'UPS-' + r.code;                qw.serviceCode = r.code;
+                out.add(qw);            }
+        }
+    } catch (Exception e) {
+        System.debug('❌ UPS Parcel Error: ' + e.getMessage());
+    }
+
+    return out;
+}
+
+
 @AuraEnabled
 public static BookingResult bookSelectedQuote(
     String provider,
@@ -482,11 +576,15 @@ public static BookingResult bookSelectedQuote(
     String toAddressJson,
     String logisticJson,
     String fromContactJson,
-    String toContactJson
+    String toContactJson,
+    String pkgListJson,
+     String pickupDT
 ) {
     BookingResult br = new BookingResult();
 
     System.debug('in booking method');
+    System.debug('pkgListJson => ' + pkgListJson);
+
     if (String.isBlank(provider) || String.isBlank(quoteId)) {
         br.success = false;
         br.message = 'Missing provider or quoteId.';
@@ -534,463 +632,156 @@ public static BookingResult bookSelectedQuote(
 
         // 🔹 UPS (stub for now)
         if (p.contains('ups')) {
-            br.success = false;
-            br.message = 'UPS booking not implemented yet.';
-            return br;
+            String upsKey = System.Label.UPSRESTAPIName;
+            Credentials__c upsCred = cm.get(upsKey);
+
+            if (upsCred == null) {
+                br.success = false;
+                br.message = 'UPS credentials not configured.';
+                return br;
+            }
+
+            return bookUPSParcel(
+                quoteId,
+                pkgListJson,
+                fromAddressJson,
+                toAddressJson,
+                fromContactJson,
+                toContactJson,
+                logisticJson,
+                upsCred,
+                pickupDT
+            );
         }
 
         br.success = false;
         br.message = 'Unsupported provider: ' + provider;
         return br;
 
+    } catch (Exception e) {        br.success = false;        br.message = 'Error in bookSelectedQuote: ' + e.getMessage();        return br;
+    }
+}
+private static BookingResult bookUPSParcel(
+    String quoteId,
+    String pkgListJson,
+    String fromAddressJson,
+    String toAddressJson,
+    String fromContactJson,
+    String toContactJson,
+    String logisticJson,
+    Credentials__c upsCred,
+    String pickupDT 
+) {
+    BookingResult br = new BookingResult();
+    br.provider = 'UPS';
+    System.debug('in bookUPSParcel');
+    System.debug('UPS pkgListJson => ' + pkgListJson);
+
+    try {
+        // 🔹 Service code from quoteId
+        String serviceCode =
+            quoteId.contains('|')
+                ? quoteId.split('\\|')[1]
+                : quoteId.replace('UPS-', '');
+
+        // 🔹 Deserialize inputs
+        Logistic__c lg = (Logistic__c) JSON.deserialize(logisticJson, Logistic__c.class);
+
+        List<PackageInputWrapper> pkgInputs =
+            (List<PackageInputWrapper>) JSON.deserialize(
+                pkgListJson,
+                List<PackageInputWrapper>.class
+            );
+
+        // 🔹 Build transient Package__c list (NOT inserted)
+        List<Package__c> packs = new List<Package__c>();
+        Integer idx = 1;
+
+        for (PackageInputWrapper p : pkgInputs) {
+            Package__c pkg = new Package__c();
+            pkg.Length__c       = p.Length;
+            pkg.Width__c        = p.Width;
+            pkg.Height__c       = p.Height;
+            pkg.Weight__c       = p.Weight;
+            pkg.Weight_Unit__c  = p.WeightUnit;
+            pkg.Package_Type__c= p.FVPackageType;
+            pkg.Order__c        = lg.Order_S__c;
+            pkg.Logistic__c     = lg.Id;
+            String baseName;
+            if (lg != null && String.isNotBlank(lg.Name)) {
+                baseName = lg.Name;
+            } else if (lg.Order_S__c != null) {
+                baseName = 'Order Package';
+            } else {
+                baseName = 'Package';
+            }
+
+            pkg.Name = baseName + ' - ' + idx;
+
+            packs.add(pkg);
+            idx++;
+        }
+
+        // 🔹 Build UPS credentialsWrap
+        UPSRestAPI.credentialsWrap cw = new UPSRestAPI.credentialsWrap();
+        cw.clientId     = upsCred.Parent_Key__c;
+        cw.clientSecret = upsCred.Parent_Password__c;
+        cw.accNumber    = upsCred.UPS_Account_Number__c;
+        cw.endPoint     = upsCred.URL__c;
+        cw.upsCredentials = upsCred;
+
+        // 🔹 Shipment stub (pre-book only)
+        Shipment__c ship = new Shipment__c();
+        ship.Description__c = 'UPS Parcel Pre-Booking';
+        ship.Logistic__c    = lg.Id;
+        ship.Order__c       = lg.Order_S__c;
+        ship.Shipment_Billing_options__c = lg.Billing_Options__c;
+        System.debug('packs'+packs);
+       String shipDate = String.isNotBlank(pickupDT) ? pickupDT : String.valueOf(Date.today());
+
+
+        // 🔹 Call existing UPS engine
+        UPSRestAPI.Wrapper w = UPSRestAPI.Shipping_Request_Response(
+            packs,
+            fromAddressJson,
+            toAddressJson,
+            fromContactJson,
+            toContactJson,
+            shipDate,
+            JSON.serialize(cw),
+            JSON.serialize(ship),
+            false,
+            new List<Package_List__c>(),
+            'UPS',
+            serviceCode,
+            'USD',
+            null
+        );
+
+        if (w == null || w.error != null) {
+            br.success = false;
+            br.message = w != null ? w.error : 'UPS booking failed';
+            return br;
+        }
+        System.debug('W --> '+w);
+        // 🔹 Success response
+        br.success = true;        br.message = 'UPS shipment pre-booked successfully';        br.shipmentSalesforceId = w.shipment.Id;        br.trackingNumber = w.shipment.TrackingNumber__c;        br.amount = w.shipment.Shipping_Amount__c;
+        br.currencyCode = String.isNotBlank(w.currencyCodeUPS)                        ? w.currencyCodeUPS                        : null;
+
+        br.carrier = 'UPS';        br.service = w.shipment.UPS_Services__c;        br.responseRaw = w.response;
+        // 🔹 Post-book business update (like FreightView)
+        Shipment__c shipUpdate = new Shipment__c(            Id = w.shipment.Id,            Shipment_Provider__c = 'UPS',            is_prebooked__c      = true,            Carrier__c           = 'UPS',            Status__c            = 'Shipped'
+        );
+        update shipUpdate;        return br;
+
     } catch (Exception e) {
         br.success = false;
-        br.message = 'Error in bookSelectedQuote: ' + e.getMessage();
+        br.message = 'UPS booking error: ' + e.getMessage();
         return br;
     }
 }
-// private static BookingResult bookFreightviewLtl(
-//     String fvShipmentId,
-//     String quoteId,
-//     Boolean schedulePickup,
-//     Credentials__c cred,
-//     String mode
-// ) {
-//     System.debug('in booking FV');
-//     BookingResult br = new BookingResult();
-//     br.success = false;
 
-//     if (String.isBlank(fvShipmentId)) {
-//         br.message = 'Missing FreightView shipmentId from quote.';
-//         return br;
-//     }
-//     if (String.isBlank(quoteId)) {
-//         br.message = 'Missing FreightView quoteId.';
-//         return br;
-//     }
-//     if (cred == null) {
-//         br.message = 'FreightView credentials not provided.';
-//         return br;
-//     }
 
-//     try {
-//         // ---------- Auth ----------
-//         String token = freightView.getAccessToken(
-//             cred.Username_Login__c,
-//             cred.Password_Transkey__c,
-//             cred.URL__c
-//         );
-
-//         // ---------- Mode ----------
-//         String m = (mode == null ? '' : mode.trim().toLowerCase());
-//         if (m != 'truckload' && m != 'parcel' && m != 'ltl') m = 'ltl';
-//         Boolean isParcel    = (m == 'parcel');
-//         Boolean isTruckload = (m == 'truckload');
-//         Boolean isLTL       = (m == 'ltl');
-
-//         String encId = EncodingUtil.urlEncode(fvShipmentId, 'UTF-8');
-
-//         // ---------- Build endpoint ----------
-//         String endpoint;
-//         if (isTruckload) {
-//             endpoint = cred.URL__c + '/v2.0/shipments/truckload/' + encId + '/award';
-//         } else if (isParcel) {
-//             endpoint = cred.URL__c + '/v2.0/shipments/parcel/' + encId + '/book';
-//         } else {
-//             // default LTL
-//             endpoint = cred.URL__c + '/v2.0/shipments/ltl/' + encId + '/book';
-//         }
-
-//         Map<String,Object> body = new Map<String,Object>();
-//         body.put('quoteId', quoteId);
-
-//         if (isLTL) {
-//             body.put('schedulePickup', (schedulePickup == null ? true : schedulePickup));
-//         }
-
-//         HttpRequest req = new HttpRequest();
-//         req.setEndpoint(endpoint);
-//         req.setMethod('POST');
-//         req.setHeader('Content-Type', 'application/json');
-//         req.setHeader('Authorization', 'Bearer ' + token);
-//         req.setTimeout(30000);
-//         req.setBody(JSON.serialize(body));
-
-//         Http http = new Http();
-//         HttpResponse res = http.send(req);
-//         Integer sc = res.getStatusCode();
-//         String resBody = res.getBody();
-//         br.responseRaw = resBody;
-
-//         System.debug('FreightView booking SC=' + sc + ' BODY=' + resBody);
-
-//         // ---------- Error handling ----------
-//         if (sc != 200 && sc != 201 && sc != 204) {
-//             Map<String, Object> err = null;
-//             try {
-//                 err = (Map<String, Object>) JSON.deserializeUntyped(resBody);
-//             } catch (Exception ignore) {}
-
-//             String msg = 'Booking failed: ' + sc;
-//             if (err != null && err.containsKey('message')) {
-//                 msg = (String) err.get('message');
-//             }
-//             if (err != null && err.containsKey('errors')) {
-//                 List<Object> errs = (List<Object>) err.get('errors');
-//                 if (errs != null && !errs.isEmpty()) {
-//                     List<String> parts = new List<String>();
-//                     for (Object eObj : errs) {
-//                         Map<String,Object> e = (Map<String,Object>) eObj;
-//                         if (e != null && e.containsKey('message')) {
-//                             parts.add((String)e.get('message'));
-//                         }
-//                     }
-//                     if (!parts.isEmpty()) {
-//                         msg += ': ' + String.join(parts, ' | ');
-//                     }
-//                 }
-//             }
-//             br.success = false;
-//             br.message = msg;
-//             return br;
-//         }
-
-//         // 204 (no content) – e.g. some award endpoints
-//         if (sc == 204 || String.isBlank(resBody)) {
-//             br.success    = true;
-//             br.message    = 'Shipment booked successfully (no body returned).';
-//             br.shipmentId = fvShipmentId;
-//             br.status     = 'confirmed';
-//             return br;
-//         }
-
-//         // ---------- Parse success body ----------
-//         Map<String, Object> resp = (Map<String, Object>) JSON.deserializeUntyped(resBody);
-
-//         br.shipmentId = (String) resp.get('shipmentId');
-//         br.status     = (String) resp.get('status');
-
-//         if (resp.containsKey('tracking')) {
-//             Map<String, Object> tr = (Map<String, Object>) resp.get('tracking');
-//             br.trackingNumber = (String) tr.get('trackingNumber');
-//         }
-
-//         Map<String, Object> sel = (Map<String, Object>) resp.get('selectedQuote');
-//         if (sel != null) {
-//             br.carrier = (String) sel.get('assetCarrierName');
-//             br.service = (String) sel.get('serviceDescription');
-
-//             if (sel.containsKey('amount')) {
-//                 br.amount = Decimal.valueOf(String.valueOf(sel.get('amount')));
-//             }
-//             br.currencyCode = (String) sel.get('currency');
-//         }
-
-//         br.success = true;
-//         br.message = 'Shipment booked successfully.';
-//         return br;
-
-//     } catch (Exception e) {
-//         br.success = false;
-//         br.message = 'Error in bookFreightviewLtl: ' + e.getMessage();
-//         return br;
-//     }
-// }
-// version 2 
-// private static BookingResult bookFreightviewLtl(
-//     String fvShipmentId,
-//     String quoteId,
-//     Boolean schedulePickup,
-//     Credentials__c cred,
-//     String mode,
-//     String logisticJson,
-//     String fromContactJson,
-//     String toContactJson,
-//     String fromAddressJson,
-//     String toAddressJson
-// ) {
-//     System.debug('in booking FV');
-//     BookingResult br = new BookingResult();
-//     br.success = false;
-
-//     if (String.isBlank(fvShipmentId)) {
-//         br.message = 'Missing FreightView shipmentId from quote.';
-//         return br;
-//     }
-//     if (String.isBlank(quoteId)) {
-//         br.message = 'Missing FreightView quoteId.';
-//         return br;
-//     }
-//     if (cred == null) {
-//         br.message = 'FreightView credentials not provided.';
-//         return br;
-//     }
-
-//     try {
-//         // ---------- Auth ----------
-//         String token = freightView.getAccessToken(
-//             cred.Username_Login__c,
-//             cred.Password_Transkey__c,
-//             cred.URL__c
-//         );
-
-//         // ---------- Mode ----------
-//         String m = (mode == null ? '' : mode.trim().toLowerCase());
-//         if (m != 'truckload' && m != 'parcel' && m != 'ltl') m = 'ltl';
-//         Boolean isParcel    = (m == 'parcel');
-//         Boolean isTruckload = (m == 'truckload');
-//         Boolean isLTL       = (m == 'ltl');
-
-//         String encId = EncodingUtil.urlEncode(fvShipmentId, 'UTF-8');
-
-//         // ---------- Build endpoint ----------
-//         String endpoint;
-//         if (isTruckload) {
-//             endpoint = cred.URL__c + '/v2.0/shipments/truckload/' + encId + '/award';
-//         } else if (isParcel) {
-//             endpoint = cred.URL__c + '/v2.0/shipments/parcel/' + encId + '/book';
-//         } else {
-//             // default LTL
-//             endpoint = cred.URL__c + '/v2.0/shipments/ltl/' + encId + '/book';
-//         }
-
-//         Map<String,Object> body = new Map<String,Object>();
-//         body.put('quoteId', quoteId);
-
-//         if (isLTL) {
-//             body.put('schedulePickup', (schedulePickup == null ? true : schedulePickup));
-//         }
-
-//         HttpRequest req = new HttpRequest();
-//         req.setEndpoint(endpoint);
-//         req.setMethod('POST');
-//         req.setHeader('Content-Type', 'application/json');
-//         req.setHeader('Authorization', 'Bearer ' + token);
-//         req.setTimeout(30000);
-//         req.setBody(JSON.serialize(body));
-
-//         Http http = new Http();
-//         HttpResponse res = http.send(req);
-//         Integer sc = res.getStatusCode();
-//         String resBody = res.getBody();
-//         br.responseRaw = resBody;
-
-//         System.debug('FreightView booking SC=' + sc + ' BODY=' + resBody);
-
-//         // ---------- Error handling ----------
-//         if (sc != 200 && sc != 201 && sc != 204) {
-//             Map<String, Object> err = null;
-//             try {
-//                 err = (Map<String, Object>) JSON.deserializeUntyped(resBody);
-//             } catch (Exception ignore) {}
-
-//             String msg = 'Booking failed: ' + sc;
-//             if (err != null && err.containsKey('message')) {
-//                 msg = String.valueOf(err.get('message'));
-//             }
-//             if (err != null && err.containsKey('errors')) {
-//                 List<Object> errs = (List<Object>) err.get('errors');
-//                 if (errs != null && !errs.isEmpty()) {
-//                     List<String> parts = new List<String>();
-//                     for (Object eObj : errs) {
-//                         Map<String,Object> e = (Map<String,Object>) eObj;
-//                         if (e != null && e.containsKey('message')) {
-//                             parts.add(String.valueOf(e.get('message')));
-//                         }
-//                     }
-//                     if (!parts.isEmpty()) {
-//                         msg += ': ' + String.join(parts, ' | ');
-//                     }
-//                 }
-//             }
-//             br.success = false;
-//             br.message = msg;
-//             return br;
-//         }
-
-//         // ---------- Success (200 / 201 / 204) ----------
-//         if (sc == 200 || sc == 201 || sc == 204) {
-//             Map<String,Object> resp = String.isBlank(resBody)
-//                 ? new Map<String,Object>()
-//                 : (Map<String,Object>) JSON.deserializeUntyped(resBody);
-
-//             String shipmentId = (String) resp.get('shipmentId');
-//             if (String.isBlank(shipmentId)) {
-//                 // Fallback if not returned, at least store fvShipmentId
-//                 shipmentId = fvShipmentId;
-//             }
-
-//             // --- Prepare Shipment Record ---
-//             Shipment__c ship = new Shipment__c();
-//             ship.RecordTypeId = Schema.SObjectType.Shipment__c.getRecordTypeInfosByDeveloperName()
-//                                     .get('freightview').getRecordTypeId();
-//             ship.Active__c = true;
-//             ship.Name = 'Shipment';
-//             ship.shipmentID__c = shipmentId;
-//             ship.Carrier_Code__c = 'FV';
-
-//             // --- Parse logistics & address/contact JSON once ---
-//             Logistic__c lg = (Logistic__c) JSON.deserialize(logisticJson, Logistic__c.class);
-
-//             Map<String,Object> fromAddrMap = (Map<String,Object>) JSON.deserializeUntyped(fromAddressJson);
-//             Map<String,Object> toAddrMap   = (Map<String,Object>) JSON.deserializeUntyped(toAddressJson);
-//             Map<String,Object> fromConMap  = (Map<String,Object>) JSON.deserializeUntyped(fromContactJson);
-//             Map<String,Object> toConMap    = (Map<String,Object>) JSON.deserializeUntyped(toContactJson);
-
-//             Id fAId = (Id) fromAddrMap.get('Id');
-//             Id tAId = (Id) toAddrMap.get('Id');
-//             Id fCId = (Id) fromConMap.get('Id');
-//             Id tCId = (Id) toConMap.get('Id');
-//             Id custId = (Id) toAddrMap.get('Customer__c');
-//             // --- Assign Logistics & Order & Customer ---
-//             if (lg.Id != null)        ship.Logistic__c = lg.Id;
-//             if (lg.Order_S__c != null) ship.Order__c   = lg.Order_S__c;
-
-//             // Customer
-//            // Id cust = (Id) JSON.deserializeUntyped(toContactJson).get('Id');
-//             ship.Customer__c         = custId;
-//             ship.Customer_Contact__c = tCId;
-//             ship.Shipping_Address__c = tAId;
-
-//             // --- Billing Options Logic (from Logistics) ---
-//             String billingOpt = (lg.Billing_Options__c == null)
-//                 ? 'SENDER'
-//                 : lg.Billing_Options__c.toUpperCase();
-
-//             if (billingOpt == 'SENDER' && fAId != null) {
-//                 ship.Billing_Address__c = fAId;
-//                 ship.Billing_Contact__c = fCId;
-//             } else if (billingOpt == 'RECEIVER' && tAId != null) {
-//                 ship.Billing_Address__c = tAId;
-//                 ship.Billing_Contact__c = tCId;
-//             }
-//             // If you later want THIRD_PARTY, uncomment and adjust:
-//             /*
-//             else if (billingOpt == 'THIRD_PARTY') {
-//                 ship.Billing_Address__c   = null;
-//                 ship.Billing_Contact__c   = null;
-//                 ship.Third_Party_Account__c = lg.Third_Party_Account__c;
-//                 ship.Direction__c         = 'THIRD_PARTY';
-//             }
-//             */
-
-//             // --- Read important metadata from API ---
-//             if (resp.containsKey('pickupDate') && resp.get('pickupDate') != null) {
-//                 // Example: "2027-07-02"
-//                 ship.Shipment_Date__c = Date.valueOf(String.valueOf(resp.get('pickupDate')));
-//             }
-//             // if (resp.containsKey('bookedDate') && resp.get('bookedDate') != null) {
-//             //     // Example: "2025-12-01T09:21:30.570Z" → use JSON engine to parse ISO
-//             //     String bookedStr = String.valueOf(resp.get('bookedDate'));
-//             //     ship.Booked_Date__c = (Datetime) JSON.deserialize(
-//             //         '"' + bookedStr + '"',
-//             //         Datetime.class
-//             //     );
-//             // }
-//             if (resp.containsKey('status') && resp.get('status') != null) {
-//                 ship.Status__c = String.valueOf(resp.get('status'));
-//             }
-
-//             // --- Read LTL weight and cost ---
-//             // if (resp.containsKey('equipment') && resp.get('equipment') != null) {
-//             //     Map<String,Object> eq = (Map<String,Object>) resp.get('equipment');
-//             //     if (eq.containsKey('weight') && eq.get('weight') != null) {
-//             //         ship.Shipment_Weight__c = Decimal.valueOf(String.valueOf(eq.get('weight')));
-//             //     }
-//             // }
-//             Decimal amount = null;
-//             String currencyFV;
-//             String carrier;
-//             String service;
-//             if (resp.containsKey('selectedQuote') && resp.get('selectedQuote') != null) {
-//                 Map<String,Object> q = (Map<String,Object>) resp.get('selectedQuote');
-
-//                 if (q.containsKey('amount') && q.get('amount') != null){
-//                     amount = Decimal.valueOf(String.valueOf(q.get('amount')));
-//                 }
-//                 ship.Shipping_Amount__c = amount;  
-//                 currencyFV = q != null ? (String) q.get('currency') : null;
-//                 carrier = q != null ? (String) q.get('assetCarrierName')   : null;
-//                 service = q != null ? (String) q.get('serviceDescription') : null;
-//                 ship.Carrier__c = carrier;
-//                 ship.service_Description__c = service;
-//                 // if (q.containsKey('assetCarrierName') && q.get('assetCarrierName') != null)
-//                 //     ship.Carrier__c = String.valueOf(q.get('assetCarrierName'));
-//                 // if (q.containsKey('serviceDescription') && q.get('serviceDescription') != null)
-//                 //     ship.service_Description__c = String.valueOf(q.get('serviceDescription'));
-//             }
-
-//             // --- Tracking ---
-//             // if (resp.containsKey('tracking') && resp.get('tracking') != null) {
-//             //     Map<String,Object> t = (Map<String,Object>) resp.get('tracking');
-//             //     if (t.containsKey('status') && t.get('status') != null) {
-//             //         ship.Tracking_Status__c = String.valueOf(t.get('status'));
-//             //     }
-//             // }
-//             String trackingNumber;
-//                 if (resp.containsKey('tracking')) {
-//                     Map<String, Object> tr = (Map<String, Object>) resp.get('tracking');
-//                     trackingNumber = (String) tr.get('trackingNumber');
-//                 }
-//             br.trackingNumber = trackingNumber;
-//             // --- BOL number (if/when you want it) ---
-//             /*
-//             if (resp.containsKey('bol') && resp.get('bol') != null) {
-//                 Map<String,Object> b = (Map<String,Object>) resp.get('bol');
-//                 if (b.containsKey('bolNumber') && b.get('bolNumber') != null) {
-//                     ship.BOL_Number__c = String.valueOf(b.get('bolNumber'));
-//                 }
-//             }
-//             */
-
-//             // --- Finally upsert Shipment ---
-//             upsert ship;
-//              // Save docs (if any)
-//                 List<String> titles = new List<String>();
-//                 List<Id> docIds = new List<Id>();
-//                 try {
-//                     docIds = saveFreightviewDocs(resp,ship.Id, token, titles);
-//                 } catch (Exception exDocs) {
-//                     System.debug('Doc save error: ' + exDocs.getMessage());
-//                 }
-//                 // Doc type map for UI
-//         Map<String, Id> byType = new Map<String, Id>();
-//         for (Integer i = 0; i < titles.size(); i++) {
-//             String t = (titles[i] == null ? '' : titles[i]).toLowerCase();
-//             Id did = (docIds.size() > i ? docIds[i] : null);
-//             if (t.endsWith('-bol') || t.endsWith('-bol.pdf') || t.contains('-bol'))             byType.put('bol', did);
-//             else if (t.endsWith('-label') || t.endsWith('-label.pdf') || t.contains('-label')) byType.put('label', did);
-//             else if (t.endsWith('-customer-quote') || t.contains('-customer-quote'))           byType.put('customer-quote', did);
-//             else if (t.endsWith('-rate-detail')   || t.contains('-rate-detail'))               byType.put('rate-detail', did);
-//         }
-//             br.success   = true;
-//             br.message   = 'Shipment booked successfully.';
-//             br.shipmentId = shipmentId;
-//             br.status    = 'confirmed';
-//             br.amount = amount;
-//             br.currencyCode          = currencyFV;
-//             br.carrier               = carrier;
-//             br.service               = service;
-//             br.contentDocumentIds    = docIds;
-//             br.contentTitles         = titles;
-//             br.docByType             = byType;
-//             return br;
-//         }
-
-//         // Fallback (should not reach here)
-//         // br.success = false;
-//         // br.message = 'Shipment booked successfully.';
-//         // br.shipmentId = fvShipmentId;
-//         // br.status = 'confirmed';
-//         return br;
-
-//     } catch (Exception e) {
-//         br.success = false;
-//         br.message = 'Error in bookFreightviewLtl: ' + e.getMessage();
-//         return br;
-//     }
-// }
-// version 3 
 private static BookingResult bookFreightviewLtl(
     String fvShipmentId,
     String quoteId,
@@ -1015,9 +806,7 @@ private static BookingResult bookFreightviewLtl(
         br.message = 'Missing FreightView quoteId.';
         return br;
     }
-    if (cred == null) {
-        br.message = 'FreightView credentials not provided.';
-        return br;
+    if (cred == null) {        br.message = 'FreightView credentials not provided.';        return br;
     }
 
     try {
@@ -1039,10 +828,8 @@ private static BookingResult bookFreightviewLtl(
 
         // ---------- Build endpoint ----------
         String endpoint;
-        if (isTruckload) {
-            endpoint = cred.URL__c + '/v2.0/shipments/truckload/' + encId + '/award';
-        } else if (isParcel) {
-            endpoint = cred.URL__c + '/v2.0/shipments/parcel/' + encId + '/book';
+        if (isTruckload) {            endpoint = cred.URL__c + '/v2.0/shipments/truckload/' + encId + '/award';
+        } else if (isParcel) {            endpoint = cred.URL__c + '/v2.0/shipments/parcel/' + encId + '/book';
         } else {
             // default LTL
             endpoint = cred.URL__c + '/v2.0/shipments/ltl/' + encId + '/book';
@@ -1075,8 +862,7 @@ private static BookingResult bookFreightviewLtl(
         if (sc != 200 && sc != 201 && sc != 204) {
             Map<String, Object> err = null;
             try {
-                err = (Map<String, Object>) JSON.deserializeUntyped(resBody);
-            } catch (Exception ignore) {}
+                err = (Map<String, Object>) JSON.deserializeUntyped(resBody);            } catch (Exception ignore) {}
 
             String msg = 'Booking failed: ' + sc;
             if (err != null && err.containsKey('message')) {
@@ -1104,8 +890,7 @@ private static BookingResult bookFreightviewLtl(
 
         // ---------- Success (200 / 201 / 204) ----------
         if (sc == 200 || sc == 201 || sc == 204) {
-            Map<String,Object> resp = String.isBlank(resBody)
-                ? new Map<String,Object>()
+            Map<String,Object> resp = String.isBlank(resBody)                ? new Map<String,Object>()
                 : (Map<String,Object>) JSON.deserializeUntyped(resBody);
 
             String shipmentId = (String) resp.get('shipmentId');
@@ -1146,16 +931,11 @@ private static BookingResult bookFreightviewLtl(
             ship.Shipping_Address__c = tAId;
 
             // --- Billing Options Logic (from Logistics) ---
-            String billingOpt = (lg.Billing_Options__c == null)
-                ? 'SENDER'
+            String billingOpt = (lg.Billing_Options__c == null)                ? 'SENDER'
                 : lg.Billing_Options__c.toUpperCase();
 
-            if (billingOpt == 'SENDER' && fAId != null) {
-                ship.Billing_Address__c = fAId;
-                ship.Billing_Contact__c = fCId;
-            } else if (billingOpt == 'RECEIVER' && tAId != null) {
-                ship.Billing_Address__c = tAId;
-                ship.Billing_Contact__c = tCId;
+            if (billingOpt == 'SENDER' && fAId != null) {                ship.Billing_Address__c = fAId;                ship.Billing_Contact__c = fCId;
+            } else if (billingOpt == 'RECEIVER' && tAId != null) {                ship.Billing_Address__c = tAId;                ship.Billing_Contact__c = tCId;
             }
 
             // --- Read important metadata from API ---
@@ -1195,8 +975,7 @@ private static BookingResult bookFreightviewLtl(
             ship.Shipment_Provider__c='FreightView';
             String trackingNumber;
                 if (resp.containsKey('tracking')) {
-                    Map<String, Object> tr = (Map<String, Object>) resp.get('tracking');
-                    trackingNumber = (String) tr.get('trackingNumber');
+                    Map<String, Object> tr = (Map<String, Object>) resp.get('tracking');                    trackingNumber = (String) tr.get('trackingNumber');
                 }
             br.trackingNumber = trackingNumber;
             // --- Finally upsert Shipment ---
@@ -1204,10 +983,7 @@ private static BookingResult bookFreightviewLtl(
 
             br.success   = true; br.message   = 'Shipment booked successfully.'; br.shipmentId = shipmentId; br.shipmentSalesforceId  = ship.Id; br.status    = 'confirmed'; br.provider = 'freightView'; br.amount = amount; br.currencyCode          = currencyFV; br.carrier               = carrier; br.service               = service; return br; } return br;
 
-    } catch (Exception e) {
-        br.success = false;
-        br.message = 'Error in bookFreightviewLtl: ' + e.getMessage();
-        return br;
+    } catch (Exception e) {        br.success = false;        br.message = 'Error in bookFreightviewLtl: ' + e.getMessage();        return br;
     }
 }
 
@@ -1238,8 +1014,7 @@ public static BookingResult saveFreightviewDocs(
     if (String.isBlank(respRawJson) || shipmentId == null || 
         String.isBlank(username) || String.isBlank(password) || String.isBlank(url)) {
         System.debug('❌ [FV DOC SAVE] Missing input – exiting early');
-        br.message = 'Missing input for FreightView doc save.';
-        return br;
+        br.message = 'Missing input for FreightView doc save.';        return br;
     }
 
     try {
@@ -1308,25 +1083,14 @@ public static BookingResult saveFreightviewDocs(
             // ✅ Build exactly the format you want
             String title = 'FV-' + fvShip + '-' + docKey; 
 
-            cvs.add(new ContentVersion(
-                Title = title,
-                PathOnClient = title + '.pdf',
-                VersionData = blobData,
-                IsMajorVersion = true,
-                FirstPublishLocationId = shipmentId
-            ));
-            titles.add(title);
+            cvs.add(new ContentVersion(                Title = title,                PathOnClient = title + '.pdf',                VersionData = blobData,                IsMajorVersion = true,                FirstPublishLocationId = shipmentId            ));            titles.add(title);
             System.debug('✅ [FV DOC SAVE] Queued for insert: ' + title);
         }
 
         System.debug('🧾 Total docs ready to insert=' + cvs.size()); if (!cvs.isEmpty()) { System.debug('💾 Inserting ContentVersion records...'); insert cvs; System.debug('🎉 [FV DOC SAVE SUCCESS] Insert completed'); Set<Id> cdIds = new Set<Id>(); for (ContentVersion cv : cvs) { if (cv.ContentDocumentId != null) { cdIds.add(cv.ContentDocumentId); } } System.debug('📁 Collected ContentDocumentIds=' + cdIds); br.contentDocumentIds = new List<Id>(cdIds); br.contentTitles = titles; br.message = 'Documents saved successfully to Shipment.'; br.success = true; } else { System.debug('⚠️ [FV DOC SAVE] No docs were downloaded – nothing to save'); br.message = 'No docs downloaded from FreightView.'; return br; } System.debug('🏁 [FV DOC SAVE END] Final docIds returned=' + br.contentDocumentIds);
         return br;
 
-    } catch (Exception e) {
-        System.debug('🔥 [FV DOC SAVE ERROR]=' + e.getMessage());
-        br.message = 'Doc save error: ' + e.getMessage();
-        br.success = false;
-        return br;
+    } catch (Exception e) {        System.debug('🔥 [FV DOC SAVE ERROR]=' + e.getMessage());        br.message = 'Doc save error: ' + e.getMessage();        br.success = false;        return br;
     }
 }
 
@@ -1376,8 +1140,7 @@ public static PackResponse populatePackDetails(
                 WHERE (Package_Type__c = :pkgTypeValue OR Name = :pkgTypeValue)
                 LIMIT 1
             ];
-            if (!rows.isEmpty()) pd = rows[0];
-        } catch (Exception e) {}
+            if (!rows.isEmpty()) pd = rows[0];        } catch (Exception e) {}
 
         System.debug('Custom Setting Found = ' + (pd != null));
         if (pd != null) {
@@ -1632,12 +1395,9 @@ public static PackResponse populatePackDetails(
             if (o instanceof Decimal) return (Decimal) o;
             if (o instanceof Integer) return Decimal.valueOf(String.valueOf(o));
             if (o instanceof Double) return Decimal.valueOf((Double)o);
-            String s = String.valueOf(o);
-            if (String.isBlank(s)) return 0;
-            s = s.replaceAll('[^0-9\\.-]', '');
+            String s = String.valueOf(o);            if (String.isBlank(s)) return 0;            s = s.replaceAll('[^0-9\\.-]', '');
             return s == '' ? 0 : Decimal.valueOf(s);
-        } catch (Exception e) {
-            return 0;
+        } catch (Exception e) {            return 0;
         }
     }
   
@@ -1669,7 +1429,7 @@ public static PackResponse populatePackDetails(
     @AuraEnabled public String quoteId;
     @AuraEnabled public Boolean shipmentCreated;
     @AuraEnabled public String shipmentId;
-
+    @AuraEnabled public String serviceCode;
 }
 
 public class RateResponseLTL {
@@ -1942,8 +1702,7 @@ public class Result {
         prodRequestedQtyMap.put(log.Product__c, log.Quantity__c);
       }
       if (log.Order_Product__c != null) {
-        OrderProdIds.add(log.Order_Product__c);
-        OrderRequestedQtyMap.put(log.Order_Product__c, log.Quantity__c);
+        OrderProdIds.add(log.Order_Product__c);        OrderRequestedQtyMap.put(log.Order_Product__c, log.Quantity__c);
       }
     }
     if (OrderProdIds.size() > 0) {
@@ -1981,10 +1740,7 @@ public class Result {
     Map < String, List < Inventory_Stock__c >> proInvMap = new Map < String, List < Inventory_Stock__c >> ();
     Map < String, Decimal > prodStockQtyMap = new Map < String, Decimal > ();
     if (SOMOs.size() > 0 || SOPOs.size() > 0) {
-      set < Id > MoIds = new set < Id > ();
-      set < Id > PoIds = new set < Id > ();
-      set < Id > InvIds = new set < Id > ();
-      for (Manufacturing_Order__c MO: SOMOs) MoIds.add(MO.Id);
+      set < Id > MoIds = new set < Id > ();      set < Id > PoIds = new set < Id > ();      set < Id > InvIds = new set < Id > ();      for (Manufacturing_Order__c MO: SOMOs) MoIds.add(MO.Id);
       for (PO__c PO: SOPOs) PoIds.add(PO.Id);
       system.debug('MoIds ~>' + MoIds);
       List < Stock_Inward_Line_Item__c > stinlist = [Select Id, Name, Product__c, Site_ProductService_InventoryStock__c from Stock_Inward_Line_Item__c where Active__c = true and Product__c IN: proList and Scrap__c = false AND(Purchase_Orders__c IN: PoIds or Manufacturing_Order__c IN: MoIds) AND Quantity__c > 0 AND Status__c != 'Awaiting Stock'];
@@ -1994,8 +1750,7 @@ public class Result {
         And Number_of_Item_In_Stock__c > 0 Order By Checked_In_Date__c ASC
       ];
       system.debug('MOPOinvtoryList~>' + MOPOinvtoryList.size());
-      for (Inventory_Stock__c invt: MOPOinvtoryList) {
-        List < Inventory_Stock__c > invlistformap = new List < Inventory_Stock__c > ();
+      for (Inventory_Stock__c invt: MOPOinvtoryList) {        List < Inventory_Stock__c > invlistformap = new List < Inventory_Stock__c > ();
         if (proInvMap.containsKey(invt.Product__c)) invlistformap = proInvMap.get(invt.Product__c);
         invlistformap.add(invt);
         proInvMap.put(invt.Product__c, invlistformap);
@@ -2033,8 +1788,7 @@ public class Result {
           And Number_of_Item_In_Stock__c > 0 ORDER BY Checked_In_Date__c ASC
         ];
       }
-      for (Inventory_Stock__c invt: invtoryList) {
-        List < Inventory_Stock__c > invlistformap = new List < Inventory_Stock__c > ();
+      for (Inventory_Stock__c invt: invtoryList) {        List < Inventory_Stock__c > invlistformap = new List < Inventory_Stock__c > ();
         if (proInvMap.containsKey(invt.Product__c)) invlistformap = proInvMap.get(invt.Product__c);
         invlistformap.add(invt);
         proInvMap.put(invt.Product__c, invlistformap);
@@ -2087,10 +1841,8 @@ public class Result {
       res.message = 'Don\'t have access to upsert logistic';
       return res;
     }
-    list < String > SOLIIds = new list < String > ();
-    list < String > ordItemIds = new list < String > ();
-    list < String > POItemIds = new list < String > ();
-    for (Logistic_Line_Item__c log: LogisticLI) {
+    list < String > SOLIIds = new list < String > ();    list < String > ordItemIds = new list < String > ();
+    list < String > POItemIds = new list < String > ();    for (Logistic_Line_Item__c log: LogisticLI) {
       String Name = log.Name;
       if (Name.length() > 80) log.Name = Name.subString(0, 79);
       log.Status__c = 'Reserved';
@@ -2108,13 +1860,10 @@ public class Result {
           upsert typeLogisticLI;
         }
       } else {
-        res.message = 'Don\'t have access to upsert logistic line items';
-        return res;
+        res.message = 'Don\'t have access to upsert logistic line items';        return res;
       }
     }
-    List < Stock_Outward_Line_Item__c > SWLIToUpsert = new List < Stock_Outward_Line_Item__c > ();
-    Map < Id, Inventory_Stock__c > pliStock = new Map < Id, Inventory_Stock__c > ();
-    Map < Id, Stock_Outward_Line_Item__c > pliStockInward = new Map < Id, Stock_Outward_Line_Item__c > ();
+    List < Stock_Outward_Line_Item__c > SWLIToUpsert = new List < Stock_Outward_Line_Item__c > ();    Map < Id, Inventory_Stock__c > pliStock = new Map < Id, Inventory_Stock__c > ();    Map < Id, Stock_Outward_Line_Item__c > pliStockInward = new Map < Id, Stock_Outward_Line_Item__c > ();
     List < Inventory_Stock__c > Inventory2Upsert = new List < Inventory_Stock__c > ();
     for (Logistic_Line_Item__c log: typeLogisticLI) {
       if (log.Product__c != null && log.Quantity__c > 0 && ((Logistic.Order_S__c != null && log.Order_Product__c != null))) {
@@ -2127,32 +1876,20 @@ public class Result {
                 Inventory_Stock__c inv2Create = new Inventory_Stock__c(Active__c = true, Product__c = log.Product__c, Name = 'Serial Stock Holder', Warehouse__c = dc.Site__c);
                 Inventory2Upsert.add(inv2Create);
                 system.debug('inhere serial');
-                qtytoprocess = 0;
-                Stock_Outward_Line_Item__c sto = new Stock_Outward_Line_Item__c();
-                sto.Name = 'Serial Stock Holder';
-                sto.Product__c = log.Product__c;
-                sto.Active__c = true;
-                sto.Status__c = 'Reserved';
+                qtytoprocess = 0;                Stock_Outward_Line_Item__c sto = new Stock_Outward_Line_Item__c();                sto.Name = 'Serial Stock Holder';                sto.Product__c = log.Product__c;                sto.Active__c = true;                sto.Status__c = 'Reserved';
                 if (log.Order_Product__c != null) sto.Order_Product__c = log.Order_Product__c;
                 if (Logistic.Order_S__c != null) sto.Order__c = Logistic.Order_S__c;
-                sto.Logistic_Line_Item__c = log.Id;
-                sto.Quantity__c = remainintQty;
-                SWLIToUpsert.add(sto);
-                pliStock.put(log.Id, inv2Create);
-                pliStockInward.put(log.Id, sto);
-                remainintQty = 0;
+                sto.Logistic_Line_Item__c = log.Id;                sto.Quantity__c = remainintQty;                SWLIToUpsert.add(sto);                pliStock.put(log.Id, inv2Create);                pliStockInward.put(log.Id, sto);                remainintQty = 0;
                 system.debug('qtytoprocess~>' + qtytoprocess);
                 system.debug('remainintQty~>' + remainintQty);
               } else {
                 system.debug('inhere non serial inv.Number_of_Item_In_Stock__c~>' + inv.Number_of_Item_In_Stock__c);
                 if (inv.Number_of_Item_In_Stock__c < remainintQty) {
                   system.debug('inhere inv.Number_of_Item_In_Stock__c < remainintQty');
-                  qtytoprocess = inv.Number_of_Item_In_Stock__c;
-                  remainintQty = remainintQty - inv.Number_of_Item_In_Stock__c;
+                  qtytoprocess = inv.Number_of_Item_In_Stock__c;                  remainintQty = remainintQty - inv.Number_of_Item_In_Stock__c;
                 } else {
                   system.debug('inhere else inv.Number_of_Item_In_Stock__c >= remainintQty');
-                  qtytoprocess = remainintQty;
-                  remainintQty = remainintQty - qtytoprocess;
+                  qtytoprocess = remainintQty;                  remainintQty = remainintQty - qtytoprocess;
                 }
                 system.debug('qtytoprocess~>' + qtytoprocess);
                 system.debug('remainintQty~>' + remainintQty);
@@ -2218,9 +1955,7 @@ public class Result {
           res.message = 'User is not allowed to update POLI';
           return res;
         }
-      } catch (DMLException e) {
-        res.message = 'DML Exception on PO Line Items update: ' + e.getMessage() + ',' + e.getStackTraceString();
-        return res;
+      } catch (DMLException e) {        res.message = 'DML Exception on PO Line Items update: ' + e.getMessage() + ',' + e.getStackTraceString();	return res;
       }
     }
     res.message = 'Logistic created successfully';
